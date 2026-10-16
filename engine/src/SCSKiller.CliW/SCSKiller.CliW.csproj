@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- scskillerw.exe: the SCSKiller CLI (src\SCSKiller.Cli) built without a console window, as the official app ships it
+       for the "re-warm after a driver update" scheduled task (ScheduledTask.TaskExe prefers cli\scskillerw.exe). -->
+  <ItemGroup>
+    <ProjectReference Include="..\SCSKiller.Core\SCSKiller.Core.csproj" />
+    <Compile Include="..\SCSKiller.Cli\**\*.cs" Exclude="..\SCSKiller.Cli\obj\**;..\SCSKiller.Cli\bin\**" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>scskillerw</AssemblyName>
+    <RootNamespace>scskiller</RootNamespace>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>14.0</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+  </PropertyGroup>
+
+</Project>

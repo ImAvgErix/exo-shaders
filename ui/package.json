@@ -1,0 +1,26 @@
+{
+  "name": "exo-shaders-ui",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Exo Shaders: the web UI of an unofficial fork based on SCSKiller, shown in Exo Launcher's Library > Shaders sheet.",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "check": "tsc -b",
+    "capture-mock": "node scripts/capture-mock.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/geist": "5.3.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "vite": "8.3.0"
+  }
+}

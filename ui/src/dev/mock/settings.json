@@ -1,0 +1,85 @@
+{
+ "threads": 6,
+ "priority": "belowNormal",
+ "backgroundThreads": 6,
+ "pauseWhileGaming": true,
+ "maxCompileMemoryGB": 8,
+ "maximumPlans": false,
+ "compileRayTracing": true,
+ "hddMode": false,
+ "onDriverUpdate": "whenIdle",
+ "onNewShaders": "compileSilently",
+ "scanAtStart": true,
+ "recordAllGames": true,
+ "recordAntiCheatGames": false,
+ "recordingLimitMB": 0,
+ "keepCachesAside": true,
+ "experimentalIntel": false,
+ "beforeAfter": false,
+ "beforeAfterSound": true,
+ "beforeAfterOverlay": true,
+ "theme": "dark",
+ "startWithWindows": false,
+ "shareDiagnostics": false,
+ "meta": {
+  "processorCount": 12,
+  "autoCompileMemoryGB": 2,
+  "ramGB": 15,
+  "maxCompileMemoryGB": 16,
+  "maxCompileMemoryText": "8 GB",
+  "maxCompileMemoryNote": "Auto picks the best limit for this PC's memory (2 GB here, with 15 GB of RAM). Set it lower to keep more memory free while compiling, higher to compile faster.",
+  "priorityNote": "Below-normal priority. Fewer threads = slower compile, quieter PC.",
+  "recordingLimits": [
+   {
+    "mb": 32,
+    "label": "32 MB"
+   },
+   {
+    "mb": 128,
+    "label": "128 MB"
+   },
+   {
+    "mb": 256,
+    "label": "256 MB"
+   },
+   {
+    "mb": 512,
+    "label": "512 MB"
+   },
+   {
+    "mb": 1024,
+    "label": "1 GB"
+   },
+   {
+    "mb": 0,
+    "label": "Unlimited"
+   }
+  ],
+  "newShadersLabels": [
+   "Off",
+   "Notify me",
+   "Compile automatically and notify me",
+   "Compile automatically, silently"
+  ],
+  "gpuChoices": [],
+  "hasIntelGpu": false,
+  "cacheSizes": [
+   {
+    "index": 0,
+    "label": "16 GB (driver default)"
+   },
+   {
+    "index": 1,
+    "label": "32 GB"
+   },
+   {
+    "index": 2,
+    "label": "100 GB"
+   },
+   {
+    "index": 3,
+    "label": "Unlimited"
+   }
+  ]
+ }
+}

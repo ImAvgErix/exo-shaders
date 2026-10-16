@@ -1,0 +1,5004 @@
+{
+ "version": "1.3.0-beta.1",
+ "sections": [
+  {
+   "version": "1.3.0-beta.1",
+   "bullets": [
+    [
+     {
+      "text": "After this update",
+      "kind": "bold"
+     },
+     {
+      "text": ", SCSKiller checks every compiled game again, which can take several minutes with many games.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Official recordings",
+      "kind": "bold"
+     },
+     {
+      "text": ": SCSKiller's own recordings of a game version, marked \"Official recording\" on the game page.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "DirectX 11 games compile on AMD",
+      "kind": "bold"
+     },
+     {
+      "text": ".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Engine support updates from the server",
+      "kind": "bold"
+     },
+     {
+      "text": ": the rules that decide what a game compiles can be fixed or extended between releases.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Riot Client",
+      "kind": "bold"
+     },
+     {
+      "text": ": its games are found (VALORANT, League of Legends, Legends of Runeterra, 2XKO).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Naughty Dog games",
+      "kind": "bold"
+     },
+     {
+      "text": " (The Last of Us Part I, UNCHARTED 4: A Thief's End, UNCHARTED: The Lost Legacy): SCSKiller reads their shaders.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "God of War Ragnarök",
+      "kind": "bold"
+     },
+     {
+      "text": " compiles without a recording on NVIDIA.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Ghost of Tsushima DIRECTOR'S CUT",
+      "kind": "bold"
+     },
+     {
+      "text": " and ",
+      "kind": "text"
+     },
+     {
+      "text": "Ratchet & Clank: Rift Apart",
+      "kind": "bold"
+     },
+     {
+      "text": " compile without a recording on NVIDIA, and after a recording on AMD.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Horizon Zero Dawn Complete Edition",
+      "kind": "bold"
+     },
+     {
+      "text": " and ",
+      "kind": "text"
+     },
+     {
+      "text": "DEATH STRANDING DIRECTOR'S CUT",
+      "kind": "bold"
+     },
+     {
+      "text": ": SCSKiller reads their shaders.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Overwatch (Steam)",
+      "kind": "bold"
+     },
+     {
+      "text": " compiles its DirectX 11 shaders without a recording (on AMD, the pixel and compute shaders).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Source 2 games",
+      "kind": "bold"
+     },
+     {
+      "text": " like Counter-Strike 2 compile their DirectX 11 shaders without a recording (on AMD, all but the vertex shaders).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Notifications",
+      "kind": "bold"
+     },
+     {
+      "text": " under a bell at the top: news, notes on new rules and links, only ones SCSKiller signed.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "\"What's new\"",
+      "kind": "bold"
+     },
+     {
+      "text": " lists a version's changes once after an update.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Max compile",
+      "kind": "bold"
+     },
+     {
+      "text": " on a game's page compiles every combination of that game's shaders, once.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Maximum mode suggested per game",
+      "kind": "bold"
+     },
+     {
+      "text": ": a game whose Maximum mode is known to help on your GPU says so on its page, with \"Turn on for this game\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "AMD cache use",
+      "kind": "bold"
+     },
+     {
+      "text": ": Settings and the Cache page show the DirectX 12 cache against the driver's fixed 16 GB, and say when it's nearly full.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Cache page",
+      "kind": "bold"
+     },
+     {
+      "text": ": every shader cache on the PC with its size, by installed game, uninstalled game, old driver, earlier SCSKiller compiles and other GPU vendor, and the folder the driver reads and writes it in.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A game marked not supported after it was compiled offers to clear the cache compiled for it.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A driver cache folder moved to another drive with a junction is followed: Settings shows that drive's free space, and a link whose drive is missing holds compiles instead of marking games as cleared by the driver.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Library sorting and filters",
+      "kind": "bold"
+     },
+     {
+      "text": ": the Game, Pipelines and Cache headers sort each section, and a status filter shows only games that aren't supported, are ready to compile, are compiled, or were compiled by SCSKiller.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Game folders",
+      "kind": "bold"
+     },
+     {
+      "text": ": add a folder of games no store lists, and SCSKiller finds each game in it at every scan.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Scan progress",
+      "kind": "bold"
+     },
+     {
+      "text": " shows per store and per game, and a big library shows its last list at once while the scan runs.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "New shaders compile on their own",
+      "kind": "bold"
+     },
+     {
+      "text": " if you choose: when a compiled game gains pipelines from its recording, the community database or an update, SCSKiller compiles them while the PC is idle, never while you play.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Theme",
+      "kind": "bold"
+     },
+     {
+      "text": ": Light, Dark or the Windows setting, in Settings.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A click on the tray icon",
+      "kind": "bold"
+     },
+     {
+      "text": " opens a small window with SCSKiller's status and the compile's progress, and Pause, Open and Quit.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "\"Share diagnostics to help fix problems\"",
+      "kind": "bold"
+     },
+     {
+      "text": " in Settings (off by default): when a compile fails or the driver rejects pipelines, SCSKiller sends error codes and pipeline hashes, nothing else.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Shader hash sharing",
+      "kind": "bold"
+     },
+     {
+      "text": " also sends one report after a compile: which pipelines still compiled at the next launch, with your GPU model and driver.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Compile progress on the game page",
+      "kind": "bold"
+     },
+     {
+      "text": ": while a game compiles, its page shows the queue's progress and the time left.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Edit the compile queue in bulk",
+      "kind": "bold"
+     },
+     {
+      "text": ": select several games with Ctrl+click or Shift+click, then Remove selected.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Pick the DirectX",
+      "kind": "bold"
+     },
+     {
+      "text": " of a game when SCSKiller only guessed it: Auto, DirectX 11 or DirectX 12 next to its engine on the game page.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "GPU picker",
+      "kind": "bold"
+     },
+     {
+      "text": " in Settings, on a PC with more than one NVIDIA or AMD GPU: SCSKiller compiles for the one you pick instead of the one with the most video memory.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Earlier sessions",
+      "kind": "bold"
+     },
+     {
+      "text": " on a game's page: the last 20 launches with frame times, each with its date, play length, 1% low and stutters.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Send report",
+      "kind": "bold"
+     },
+     {
+      "text": ": once a game was compiled and played, or couldn't be compiled, its page can send an anonymous report of how it ran.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A new community recording",
+      "kind": "bold"
+     },
+     {
+      "text": " for a game you compiled rebuilds its plan while the PC is idle, and the game shows how many more pipelines it can compile.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A game whose engine SCSKiller reads better says \"SCSKiller can compile more\" instead of \"Game shaders changed\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "When new rules more than double a game's plan, the compile after a driver update leaves it for you to start.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A recompile compiles only what isn't compiled yet",
+      "kind": "bold"
+     },
+     {
+      "text": ", so adding a recording or turning on Maximum mode is quicker.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On NVIDIA, a game no longer asks to compile again after each session for pipelines whose shaders its last compile already compiled.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On NVIDIA, compiled ray tracing pipelines that a game creates on other threads (The Witcher 3) are found in the cache at launch instead of compiling again.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The Library holds still: a game that changes is updated in its row, the list keeps its place when a game moves to another section, and the scan's status line no longer pushes the list down.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Less memory with big community recordings",
+      "kind": "bold"
+     },
+     {
+      "text": ": a download is checked as it decodes and kept compressed, and a compile no longer holds every recorded shader in memory.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Bigger community recordings on NVIDIA",
+      "kind": "bold"
+     },
+     {
+      "text": ": up to 500,000 pipelines per game, once the community database serves them.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Building a plan can no longer run forever or take all the memory.",
+      "kind": "bold"
+     },
+     {
+      "text": " A plan that outgrows half the PC's RAM or 30 minutes stops with a clear error, and the next compile plans again.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "With \"Closes to System Tray\" on, closing the window no longer sometimes quits SCSKiller.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Updates",
+      "kind": "bold"
+     },
+     {
+      "text": ": after a failed download, SCSKiller waits longer before the next try (1 hour, then up to 12).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A ",
+      "kind": "text"
+     },
+     {
+      "text": "partly compiled",
+      "kind": "bold"
+     },
+     {
+      "text": " game's \"Last compile\" card says what the refused pipelines mean and what helps, and the coverage ring of a compiled game no longer counts the pipelines the driver refused.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "While a compile runs, the queue and the game page say \"memory limit: 4 of 32 threads\" when the compile's memory limit runs fewer threads than set.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Pipelines that crash the GPU driver",
+      "kind": "bold"
+     },
+     {
+      "text": " are all found and skipped in one compile (The Witcher 3 on AMD).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Pipelines that make the GPU driver fault",
+      "kind": "bold"
+     },
+     {
+      "text": " (PRAGMATA on AMD) are found and skipped the same way.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The \"Last compile\" card says \"Nothing failed.\" also when it skipped pipelines whose shaders aren't in this version of the game.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Start with Windows",
+      "kind": "bold"
+     },
+     {
+      "text": ": a portable or test copy of SCSKiller no longer removes the installed copy's autostart, or moves it to itself, when it starts.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "NVIDIA Auto Shader Compilation",
+      "kind": "bold"
+     },
+     {
+      "text": " in Settings: Apply changes only what differs.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "app.log",
+      "kind": "bold"
+     },
+     {
+      "text": " in SCSKiller's data folder keeps what the app did (scans, community sync, compiles and the recorder) for a bug report.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "GTA V Enhanced",
+      "kind": "bold"
+     },
+     {
+      "text": " compiles on NVIDIA without a recording.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Resident Evil Village",
+      "kind": "bold"
+     },
+     {
+      "text": " and ",
+      "kind": "text"
+     },
+     {
+      "text": "PRAGMATA",
+      "kind": "bold"
+     },
+     {
+      "text": " compile on NVIDIA without a recording.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Dragon's Dogma 2",
+      "kind": "bold"
+     },
+     {
+      "text": ": SCSKiller reads its game files, which it refused before.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Games that build all their shaders at the main menu",
+      "kind": "bold"
+     },
+     {
+      "text": " (Horizon Forbidden West, Detroit: Become Human) show as not supported, with that reason.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Encrypted Unreal games with anti-cheat",
+      "kind": "bold"
+     },
+     {
+      "text": " (VALORANT and others) get their key from the exe file on disk, so SCSKiller can read their files.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Encrypted Unreal games",
+      "kind": "bold"
+     },
+     {
+      "text": " take their correct AES key where it was refused or opened only some files: games with their own decryption (Dead by Daylight and other forks), files under a named key, and readable file lists whose files are encrypted.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Cyberpunk 2077",
+      "kind": "bold"
+     },
+     {
+      "text": " shows its engine as REDengine 4, and Alan Wake 2 and CONTROL Resonant as Northlight 2.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Cyberpunk 2077 on Steam",
+      "kind": "bold"
+     },
+     {
+      "text": " is found with its own exe, the one its launcher configuration names, not REDprelauncher.exe.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Returnal",
+      "kind": "bold"
+     },
+     {
+      "text": " no longer compiles tessellated pipelines the driver rejects.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Games whose shaders carry their own root signatures (Naughty Dog, RAGE, FromSoftware and others SCSKiller reads directly) no longer compile pipelines the driver rejects, where a shader uses resources the root signature lacks.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The Last of Us Part I",
+      "kind": "bold"
+     },
+     {
+      "text": ": a compute shader the game ships with several root signatures compiles once for each of them, instead of only the first.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "War Thunder",
+      "kind": "bold"
+     },
+     {
+      "text": " is on the known shader-stutter list, and no longer stays on \"Needs rebuilding\" when nothing new comes of it.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "ELDEN RING NIGHTREIGN",
+      "kind": "bold"
+     },
+     {
+      "text": " with its Digital Artbook & Mini Soundtrack installed no longer shows as a DirectX 11 Unity game.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Unreal Engine 4.25 games no longer show \"not tested on this engine version yet\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Unreal versions",
+      "kind": "bold"
+     },
+     {
+      "text": ": 5.7 and 5.8 games no longer show as 5.6, and a game on a newer Unreal than SCSKiller knows says \"Unreal 5.9 isn't supported yet\" instead of compiling as 5.8.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "DirectX 11 shaders that read a multisampled texture with more samples than the GPU supports compile.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Games started through EasyAntiCheat's bootstrap",
+      "kind": "bold"
+     },
+     {
+      "text": " (Gears of War: E-Day and Sea of Thieves from the Xbox app) compile for the game's own exe, the one the anti-cheat's settings name, instead of the bootstrap.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A game's page says the game may still run its own shader step when it starts.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A not supported game no longer shows its shader coverage after Clear cache.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "ReShade and HDR mods",
+      "kind": "bold"
+     },
+     {
+      "text": " like RenoDX show as a tag in the Library and on the game page, and \"Compiles through RenoDX\" under the game's status.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Luma mods no longer make the game page say some pipelines aren't precompiled (they change no DirectX 12 pipeline).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "When a mod loads a copy of the recorder from another folder, where it can't record, the game page says so.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "ReShade chaining another mod",
+      "kind": "bold"
+     },
+     {
+      "text": " through ReShade.ini's ",
+      "kind": "text"
+     },
+     {
+      "text": "[PROXY] ProxyLibrary",
+      "kind": "code"
+     },
+     {
+      "text": " (OptiScaler or a DLSS mod under another name) no longer compiles through a copy of ReShade that lacks that mod's DLL.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Recording in games with anti-cheat, at your own risk.",
+      "kind": "bold"
+     },
+     {
+      "text": " Until now the recorder always stayed out of these games, so they never got a recording of their own.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Frame times with frame generation on",
+      "kind": "bold"
+     },
+     {
+      "text": " (FSR 3): the graph shows the frames the game rendered.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Frame times in games with NVIDIA Streamline",
+      "kind": "bold"
+     },
+     {
+      "text": " (Ghost of Tsushima, Ratchet & Clank) on every GPU.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On NVIDIA, the recorder no longer makes a game crash as it closes.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The recorder no longer crashes a game now and then as it sets up its hooks.",
+      "kind": "bold"
+     },
+     {
+      "text": " It moved a few of a function's first instructions to make room for its jump, so a game thread paused among them could resume mid-jump and crash.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A game that makes its own crash dump or log folder",
+      "kind": "bold"
+     },
+     {
+      "text": " (Horizon Zero Dawn's coredumps) no longer turns the recorder off.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A portable or test copy",
+      "kind": "bold"
+     },
+     {
+      "text": " keeps its own recorders: each copy's armed list is in its own data folder, and a copy never arms, updates, removes or imports the recording of a recorder another copy placed.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The recorder's log no longer holds your user name or full folder paths, so it's safer to share in a bug report.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Valve Anti-Cheat (VAC) games",
+      "kind": "bold"
+     },
+     {
+      "text": " never get the recorder.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "NetEase games whose anti-cheat leaves no file in the game folder",
+      "kind": "bold"
+     },
+     {
+      "text": " count as anti-cheat games, so the recorder stays out of them: the Steam installs of Once Human, Marvel Rivals, FragPunk, Sword of Justice and NARAKA: BLADEPOINT, and Once Human from any store by its exe.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "ELDEN RING added by hand",
+      "kind": "bold"
+     },
+     {
+      "text": " gets the offline session too, when the EasyAntiCheat settings beside its exe are ELDEN RING's.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Euro Truck Simulator 2 and American Truck Simulator",
+      "kind": "bold"
+     },
+     {
+      "text": " count as anti-cheat games on a PC with TruckersMP.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Xbox app Unreal games that start through a small launcher",
+      "kind": "bold"
+     },
+     {
+      "text": " (Senua's Saga: Hellblade II, Avowed) record.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A Steam game you uninstalled loses the recorder too.",
+      "kind": "bold"
+     },
+     {
+      "text": " Steam leaves the folder behind when it holds files it didn't install.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Initial experimental Linux support.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Command line",
+      "kind": "bold"
+     },
+     {
+      "text": ": ",
+      "kind": "text"
+     },
+     {
+      "text": "add",
+      "kind": "code"
+     },
+     {
+      "text": " adds a game no store lists.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Leave out of Add all ready",
+      "kind": "bold"
+     },
+     {
+      "text": " on the game page: the game stays out of Add all ready, and its own Add button still works.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Remove from library",
+      "kind": "bold"
+     },
+     {
+      "text": " on every game's page.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Set AES key",
+      "kind": "bold"
+     },
+     {
+      "text": " on the game page of an encrypted Unreal game: paste your own key there, without opening Why? first.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "DirectX choice",
+      "kind": "bold"
+     },
+     {
+      "text": " on the game page of every DirectX game, also where SCSKiller is sure which one it runs on.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Before and after recording",
+      "kind": "bold"
+     },
+     {
+      "text": " on the game page of a recorded DirectX 12 or DirectX 11 game: SCSKiller deletes the game's shader caches and starts it, you play 5 minutes, it deletes the caches again and compiles, and you play the same 5 minutes again.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Intel GPUs (experimental, contributed by nyannoying1337)",
+      "kind": "bold"
+     },
+     {
+      "text": ": Settings shows \"Experimental: compile on Intel GPUs\" on a PC with an Intel GPU, off by default.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Send report",
+      "kind": "bold"
+     },
+     {
+      "text": " lists what a report carries until you've sent one.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Compile ray tracing shaders",
+      "kind": "bold"
+     },
+     {
+      "text": " in Settings, on by default, with a choice per game on its page.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Also delete the game's own shader cache",
+      "kind": "bold"
+     },
+     {
+      "text": " also clears the pipeline libraries of GTA V Enhanced and HELLDIVERS 2.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Also delete the game's own shader cache",
+      "kind": "bold"
+     },
+     {
+      "text": " no longer deletes an Unreal game's user pipeline cache.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The game scan keeps going past a file it can't read",
+      "kind": "bold"
+     },
+     {
+      "text": ", on a failing drive or in a cloud folder.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On NVIDIA, a compile where several shaders hang the driver at once skips them for that compile and keeps going.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A compile that created nothing ends as Failed and says why, such as the driver rejecting every pipeline, instead of Done with a count.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On Windows 10, a game whose exe is protected or packed, such as AION 2 and Fortnite, compiles with the game's own D3D12 runtime from its D3D12 folder.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On NVIDIA, a game whose compiled shader cache files are gone, or smaller than after its compile, asks to compile again.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On AMD, a game whose files the driver removed because its shader cache is full no longer asks to compile again, which only removed another game's files in turn.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Keep compiled caches aside",
+      "kind": "bold"
+     },
+     {
+      "text": " (AMD, Settings): a compiled game's shader cache is put back after the driver's 16 GB limit removes it, so it doesn't stutter again.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On NVIDIA, a plan built again after a new recording no longer offers to compile the shaders the last compile already compiled.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The coverage ring",
+      "kind": "bold"
+     },
+     {
+      "text": " on the game page is one measure in every state, so it no longer drops after each play, jumps when the game needs compiling again, or rises when the driver refuses more than a tenth of the pipelines.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A compile run by another SCSKiller, such as a portable copy, no longer counts as playing the game.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A portable copy made from your installed SCSKiller's data folder starts with Start with Windows, Record all games and automatic updates off.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A community recording that doesn't match the game's files",
+      "kind": "bold"
+     },
+     {
+      "text": " is no longer compiled, which skipped all its pipelines every time, and games whose shaders SCSKiller can't read no longer share or download recordings under one hash.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A game compiles one texture filtering setting unless Maximum mode is on, so a community recording with several settings no longer makes its compile several times bigger.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On Unreal games, the texture filtering setting compiled is the player's own when the game's settings files name it.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "After an app update, a compiled game stays compiled until its plan is checked, and says it can compile more only when the check finds more.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Unreal games",
+      "kind": "bold"
+     },
+     {
+      "text": " also compile what the game saved in its own pipeline cache in your user folder while you played, without the recorder, also when the game contains anti-cheat.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Reading shaders",
+      "kind": "bold"
+     },
+     {
+      "text": " on Unreal games runs at below-normal priority and shows how many packages it has read, so games like Days Gone or Styx no longer look stuck there and the window stays responsive.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A ray tracing shader that crashes or hangs the driver is skipped for that compile, along with the ones built on it, and the compile keeps all its threads.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A compile stopped after the driver reset too many times continues from where it stopped.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "DirectX 11 games",
+      "kind": "bold"
+     },
+     {
+      "text": ": shaders SCSKiller can't compile yet count as skipped, no longer as refused by the driver, and Unity games such as Megabonk compile more of their shaders.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "When a compile pauses for a game, the shaders it was building are finished on resume instead of being skipped and blamed on the driver.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Updates never install a version older than the one running",
+      "kind": "bold"
+     },
+     {
+      "text": ", unless you pick Go back to stable.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On AMD, a game that gives the driver its own name through AMD's AGS library gets its compile where it reads its shaders, once the recorder saw it play.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The game page says Careful compile is only for games whose compile fails.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On NVIDIA, the game page also says a compile didn't help when that shows after a Before and after run or after Clear cache.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "While a game runs, its page shows the last finished play under Last time you played, not part of the current one.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A game that compiled shaders for its whole launch no longer shows \"no stutters\" and a 1% low of 0 fps on its page.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On AMD, Before and after and Clear cache no longer delete the DirectX 11 shader cache of another game with the same exe name.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "RE Engine games",
+      "kind": "bold"
+     },
+     {
+      "text": " with an empty patch file in their folder (Resident Evil 2, often a mod manager's leftover) no longer show \"Not supported yet\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Games whose ray tracing is all inline, such as RE Engine games, count their shaders that trace rays inline in the game page details.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Hidden game folders are scanned",
+      "kind": "bold"
+     },
+     {
+      "text": ", such as a Unity game's Data folder hidden in Explorer.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "DCS World",
+      "kind": "bold"
+     },
+     {
+      "text": " and other games with two builds of one program (bin\\DCS.exe and bin-mt\\DCS.exe) can be added with their own folder, which was refused as \"a folder of several games\" (found by JLAF5150).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Xbox app Unreal games",
+      "kind": "bold"
+     },
+     {
+      "text": " built for WinGDK (Evil West) read their own DirectX setting, not the Windows one.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "FINAL FANTASY XV WINDOWS EDITION",
+      "kind": "bold"
+     },
+     {
+      "text": " precompiles every DirectX 11 shader without a recording (on AMD, all but the vertex shaders).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Mass Effect Legendary Edition",
+      "kind": "bold"
+     },
+     {
+      "text": ", ",
+      "kind": "text"
+     },
+     {
+      "text": "FINAL FANTASY TACTICS - The Ivalice Chronicles",
+      "kind": "bold"
+     },
+     {
+      "text": " and ",
+      "kind": "text"
+     },
+     {
+      "text": "KINGDOM HEARTS HD 1.5+2.5 ReMIX",
+      "kind": "bold"
+     },
+     {
+      "text": " on Steam list each of their games on its own.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Forza Horizon 6",
+      "kind": "bold"
+     },
+     {
+      "text": " (Steam and Xbox app) compiles from its game files without a recording.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Unreal games stay detected",
+      "kind": "bold"
+     },
+     {
+      "text": " when SCSKiller can't download a decompression codec, such as behind a proxy, firewall or antivirus.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A game that needs a recording and is in the community database says \"in the community database for Patreon supporters\" when you aren't signed in as one, since only they can compile from it.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "PRAGMATA",
+      "kind": "bold"
+     },
+     {
+      "text": " gets no recorder for now, since it crashes the game while it loads.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "WARDOGS",
+      "kind": "bold"
+     },
+     {
+      "text": " counts as a game with anti-cheat (Elytra), so the recorder goes in only through \"Record a session (at your own risk)\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "THE FINALS",
+      "kind": "bold"
+     },
+     {
+      "text": " counts as a game with anti-cheat by its Steam id, since Elytra installs outside its folder.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A Steam game whose launch options start an anti-cheat launcher",
+      "kind": "bold"
+     },
+     {
+      "text": " counts as a game with anti-cheat even when no anti-cheat file is in its folder yet.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A mod the recorder ran alongside",
+      "kind": "bold"
+     },
+     {
+      "text": " no longer comes back after its own uninstall removed it.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A portable copy upgraded from 1.2.5 takes back the recorders it placed, so they record and update again.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A portable copy made from your installed SCSKiller's data folder",
+      "kind": "bold"
+     },
+     {
+      "text": " no longer takes over the recorders the installed copy placed.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Frame times are recorded again in games where a mod such as ReShade replaces DirectX's dxgi.dll",
+      "kind": "bold"
+     },
+     {
+      "text": ", so the game page's frame-time graph and the Before and after panel show there.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The recorder records while the game's exe is the one SCSKiller last checked for anti-cheat, and no anti-cheat is next to it or in the game's folders above it.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Forza Horizon 6",
+      "kind": "bold"
+     },
+     {
+      "text": " contains anti-cheat.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A VAC game in a folder whose path is longer than 260 characters",
+      "kind": "bold"
+     },
+     {
+      "text": " counts as VAC, so the recorder stays out.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A portable copy made from another 1.2.5 portable copy's data folder takes over that copy's recorders.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "HDD mode",
+      "kind": "bold"
+     },
+     {
+      "text": " in Settings: SCSKiller reads a game's files only when you open or compile it, so scans finish on big or slow libraries.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Maximum memory for compiling",
+      "kind": "bold"
+     },
+     {
+      "text": " goes up to 2 GB below your PC's RAM.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Compile queue",
+      "kind": "bold"
+     },
+     {
+      "text": " and Start no longer add games you didn't pick.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Games show in the library as soon as a scan finds them, and a game you add shows at once.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Compiles no longer stay slow after hitting the memory limit",
+      "kind": "bold"
+     },
+     {
+      "text": " on ray tracing games.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Games with many driver-crashing pipelines can start their compile again.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A compile no longer stops when the GPU driver crashes the compile process outright.",
+      "kind": "bold"
+     },
+     {
+      "text": " It goes on and skips only the pipeline that crashed.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A compile downloads the community upscaler packs for that game first, so it no longer shows \"Needs rebuilding\" right after compiling.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Games with too many shaders to plan compile their recorded pipelines instead of failing, and their status says \"recorded pipelines only\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A compiled game only shows \"Needs rebuilding\" once at least 500 new pipelines are recorded",
+      "kind": "bold"
+     },
+     {
+      "text": ", or 1% of its plan if that is more.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Unreal games keep their game exe",
+      "kind": "bold"
+     },
+     {
+      "text": " when another program from the game's folder runs during play, so a compile no longer goes to the wrong exe and the game no longer asks for a full rebuild after playing.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "One unreadable Steam game folder no longer hides every Steam game.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A game no longer counts as running when another program with the same exe name runs, such as Office's ai.exe for Alien: Isolation.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "When NVIDIA Auto Shader Compilation can't be applied, the error says why NVIDIA's tool failed, and the app log keeps its full output.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Before and after",
+      "kind": "bold"
+     },
+     {
+      "text": " warns up front that the game's own shader cache is deleted, isn't backed up and can take minutes to rebuild.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The Before and after report says that 1% low and average count from the game's first frame, menus and loading screens included.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "ELDEN RING",
+      "kind": "bold"
+     },
+     {
+      "text": " with its DLC installed compiles even when the DLC's key can't be found, and the DLC's shaders are added once the key downloads.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "EA SPORTS WRC",
+      "kind": "bold"
+     },
+     {
+      "text": " from the EA app is compiled for WRC.exe instead of the leftover trial exe.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Godot games",
+      "kind": "bold"
+     },
+     {
+      "text": " show Vulkan or OpenGL instead of DirectX 11 and 12, and are marked as not supported.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Unity games now show the DirectX of their latest run, so \"Record while I play\" comes back after a game switches to DirectX 12.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Games whose shared recording includes players without mesh shader support, like ",
+      "kind": "text"
+     },
+     {
+      "text": "SILENT HILL: Townfall",
+      "kind": "bold"
+     },
+     {
+      "text": ", now get their full compile again instead of about a third of it.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Assassin's Creed Shadows, Mirage and Black Flag Resynced",
+      "kind": "bold"
+     },
+     {
+      "text": " get no recorder for now, since they failed to start with it.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Frame times and Before and after work in games where ReShade is installed as d3d12.dll or d3d11.dll",
+      "kind": "bold"
+     },
+     {
+      "text": " (ReShade 6.8 or later).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Turning recording off keeps the last session's graph on the game page.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Turning recording off also removes the recorder copy Onimusha keeps in its _storage_ folder.",
+      "kind": "text"
+     }
+    ]
+   ]
+  },
+  {
+   "version": "1.3.0-alpha.2",
+   "bullets": [
+    [
+     {
+      "text": "After this update",
+      "kind": "bold"
+     },
+     {
+      "text": ", SCSKiller checks every compiled game again, which can take several minutes with many games.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Initial experimental Linux support.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Command line",
+      "kind": "bold"
+     },
+     {
+      "text": ": ",
+      "kind": "text"
+     },
+     {
+      "text": "add",
+      "kind": "code"
+     },
+     {
+      "text": " adds a game no store lists.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Leave out of Add all ready",
+      "kind": "bold"
+     },
+     {
+      "text": " on the game page: the game stays out of Add all ready, and its own Add button still works.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Remove from library",
+      "kind": "bold"
+     },
+     {
+      "text": " on every game's page.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Set AES key",
+      "kind": "bold"
+     },
+     {
+      "text": " on the game page of an encrypted Unreal game: paste your own key there, without opening Why? first.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "DirectX choice",
+      "kind": "bold"
+     },
+     {
+      "text": " on the game page of every DirectX game, also where SCSKiller is sure which one it runs on.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Before and after recording",
+      "kind": "bold"
+     },
+     {
+      "text": " on the game page of a recorded DirectX 12 or DirectX 11 game: SCSKiller deletes the game's shader caches and starts it, you play 5 minutes, it deletes the caches again and compiles, and you play the same 5 minutes again.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Intel GPUs (experimental, contributed by nyannoying1337)",
+      "kind": "bold"
+     },
+     {
+      "text": ": Settings shows \"Experimental: compile on Intel GPUs\" on a PC with an Intel GPU, off by default.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Send report",
+      "kind": "bold"
+     },
+     {
+      "text": " lists what a report carries until you've sent one.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Compile ray tracing shaders",
+      "kind": "bold"
+     },
+     {
+      "text": " in Settings, on by default, with a choice per game on its page.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Also delete the game's own shader cache",
+      "kind": "bold"
+     },
+     {
+      "text": " also clears the pipeline libraries of GTA V Enhanced and HELLDIVERS 2.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Also delete the game's own shader cache",
+      "kind": "bold"
+     },
+     {
+      "text": " no longer deletes an Unreal game's user pipeline cache.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The game scan keeps going past a file it can't read",
+      "kind": "bold"
+     },
+     {
+      "text": ", on a failing drive or in a cloud folder.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On NVIDIA, a compile where several shaders hang the driver at once skips them for that compile and keeps going.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A compile that created nothing ends as Failed and says why, such as the driver rejecting every pipeline, instead of Done with a count.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On Windows 10, a game whose exe is protected or packed, such as AION 2 and Fortnite, compiles with the game's own D3D12 runtime from its D3D12 folder.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On NVIDIA, a game whose compiled shader cache files are gone, or smaller than after its compile, asks to compile again.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On AMD, a game whose files the driver removed because its shader cache is full no longer asks to compile again, which only removed another game's files in turn.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Keep compiled caches aside",
+      "kind": "bold"
+     },
+     {
+      "text": " (AMD, Settings): a compiled game's shader cache is put back after the driver's 16 GB limit removes it, so it doesn't stutter again.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On NVIDIA, a plan built again after a new recording no longer offers to compile the shaders the last compile already compiled.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The coverage ring",
+      "kind": "bold"
+     },
+     {
+      "text": " on the game page is one measure in every state, so it no longer drops after each play, jumps when the game needs compiling again, or rises when the driver refuses more than a tenth of the pipelines.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A compile run by another SCSKiller, such as a portable copy, no longer counts as playing the game.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A portable copy made from your installed SCSKiller's data folder starts with Start with Windows, Record all games and automatic updates off.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A community recording that doesn't match the game's files",
+      "kind": "bold"
+     },
+     {
+      "text": " is no longer compiled, which skipped all its pipelines every time, and games whose shaders SCSKiller can't read no longer share or download recordings under one hash.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A game compiles one texture filtering setting unless Maximum mode is on, so a community recording with several settings no longer makes its compile several times bigger.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On Unreal games, the texture filtering setting compiled is the player's own when the game's settings files name it.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "After an app update, a compiled game stays compiled until its plan is checked, and says it can compile more only when the check finds more.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Unreal games",
+      "kind": "bold"
+     },
+     {
+      "text": " also compile what the game saved in its own pipeline cache in your user folder while you played, without the recorder, also when the game contains anti-cheat.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Reading shaders",
+      "kind": "bold"
+     },
+     {
+      "text": " on Unreal games runs at below-normal priority and shows how many packages it has read, so games like Days Gone or Styx no longer look stuck there and the window stays responsive.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A ray tracing shader that crashes or hangs the driver is skipped for that compile, along with the ones built on it, and the compile keeps all its threads.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A compile stopped after the driver reset too many times continues from where it stopped.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "DirectX 11 games",
+      "kind": "bold"
+     },
+     {
+      "text": ": shaders SCSKiller can't compile yet count as skipped, no longer as refused by the driver, and Unity games such as Megabonk compile more of their shaders.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "When a compile pauses for a game, the shaders it was building are finished on resume instead of being skipped and blamed on the driver.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Updates never install a version older than the one running",
+      "kind": "bold"
+     },
+     {
+      "text": ", unless you pick Go back to stable.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On AMD, a game that gives the driver its own name through AMD's AGS library gets its compile where it reads its shaders, once the recorder saw it play.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The game page says Careful compile is only for games whose compile fails.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On NVIDIA, the game page also says a compile didn't help when that shows after a Before and after run or after Clear cache.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "While a game runs, its page shows the last finished play under Last time you played, not part of the current one.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A game that compiled shaders for its whole launch no longer shows \"no stutters\" and a 1% low of 0 fps on its page.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On AMD, Before and after and Clear cache no longer delete the DirectX 11 shader cache of another game with the same exe name.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "RE Engine games",
+      "kind": "bold"
+     },
+     {
+      "text": " with an empty patch file in their folder (Resident Evil 2, often a mod manager's leftover) no longer show \"Not supported yet\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Games whose ray tracing is all inline, such as RE Engine games, count their shaders that trace rays inline in the game page details.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Hidden game folders are scanned",
+      "kind": "bold"
+     },
+     {
+      "text": ", such as a Unity game's Data folder hidden in Explorer.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "DCS World",
+      "kind": "bold"
+     },
+     {
+      "text": " and other games with two builds of one program (bin\\DCS.exe and bin-mt\\DCS.exe) can be added with their own folder, which was refused as \"a folder of several games\" (found by JLAF5150).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Xbox app Unreal games",
+      "kind": "bold"
+     },
+     {
+      "text": " built for WinGDK (Evil West) read their own DirectX setting, not the Windows one.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "FINAL FANTASY XV WINDOWS EDITION",
+      "kind": "bold"
+     },
+     {
+      "text": " precompiles every DirectX 11 shader without a recording (on AMD, all but the vertex shaders).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Mass Effect Legendary Edition",
+      "kind": "bold"
+     },
+     {
+      "text": ", ",
+      "kind": "text"
+     },
+     {
+      "text": "FINAL FANTASY TACTICS - The Ivalice Chronicles",
+      "kind": "bold"
+     },
+     {
+      "text": " and ",
+      "kind": "text"
+     },
+     {
+      "text": "KINGDOM HEARTS HD 1.5+2.5 ReMIX",
+      "kind": "bold"
+     },
+     {
+      "text": " on Steam list each of their games on its own.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Forza Horizon 6",
+      "kind": "bold"
+     },
+     {
+      "text": " (Steam and Xbox app) compiles from its game files without a recording.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Unreal games stay detected",
+      "kind": "bold"
+     },
+     {
+      "text": " when SCSKiller can't download a decompression codec, such as behind a proxy, firewall or antivirus.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A game that needs a recording and is in the community database says \"in the community database for Patreon supporters\" when you aren't signed in as one, since only they can compile from it.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "PRAGMATA",
+      "kind": "bold"
+     },
+     {
+      "text": " gets no recorder for now, since it crashes the game while it loads.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "WARDOGS",
+      "kind": "bold"
+     },
+     {
+      "text": " counts as a game with anti-cheat (Elytra), so the recorder goes in only through \"Record a session (at your own risk)\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "THE FINALS",
+      "kind": "bold"
+     },
+     {
+      "text": " counts as a game with anti-cheat by its Steam id, since Elytra installs outside its folder.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A Steam game whose launch options start an anti-cheat launcher",
+      "kind": "bold"
+     },
+     {
+      "text": " counts as a game with anti-cheat even when no anti-cheat file is in its folder yet.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A mod the recorder ran alongside",
+      "kind": "bold"
+     },
+     {
+      "text": " no longer comes back after its own uninstall removed it.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A portable copy upgraded from 1.2.5 takes back the recorders it placed, so they record and update again.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A portable copy made from your installed SCSKiller's data folder",
+      "kind": "bold"
+     },
+     {
+      "text": " no longer takes over the recorders the installed copy placed.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Frame times are recorded again in games where a mod such as ReShade replaces DirectX's dxgi.dll",
+      "kind": "bold"
+     },
+     {
+      "text": ", so the game page's frame-time graph and the Before and after panel show there.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The recorder records while the game's exe is the one SCSKiller last checked for anti-cheat, and no anti-cheat is next to it or in the game's folders above it.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Forza Horizon 6",
+      "kind": "bold"
+     },
+     {
+      "text": " contains anti-cheat.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A VAC game in a folder whose path is longer than 260 characters",
+      "kind": "bold"
+     },
+     {
+      "text": " counts as VAC, so the recorder stays out.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A portable copy made from another 1.2.5 portable copy's data folder takes over that copy's recorders.",
+      "kind": "text"
+     }
+    ]
+   ]
+  },
+  {
+   "version": "1.3.0",
+   "bullets": [
+    [
+     {
+      "text": "Official recordings",
+      "kind": "bold"
+     },
+     {
+      "text": ": SCSKiller's own recordings of a game version, marked \"Official recording\" on the game page.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "DirectX 11 games compile on AMD",
+      "kind": "bold"
+     },
+     {
+      "text": ".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Engine support updates from the server",
+      "kind": "bold"
+     },
+     {
+      "text": ": the rules that decide what a game compiles can be fixed or extended between releases.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Riot Client",
+      "kind": "bold"
+     },
+     {
+      "text": ": its games are found (VALORANT, League of Legends, Legends of Runeterra, 2XKO).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Naughty Dog games",
+      "kind": "bold"
+     },
+     {
+      "text": " (The Last of Us Part I, UNCHARTED 4: A Thief's End, UNCHARTED: The Lost Legacy): SCSKiller reads their shaders.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "God of War Ragnarök",
+      "kind": "bold"
+     },
+     {
+      "text": " compiles without a recording on NVIDIA.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Ghost of Tsushima DIRECTOR'S CUT",
+      "kind": "bold"
+     },
+     {
+      "text": " and ",
+      "kind": "text"
+     },
+     {
+      "text": "Ratchet & Clank: Rift Apart",
+      "kind": "bold"
+     },
+     {
+      "text": " compile without a recording on NVIDIA, and after a recording on AMD.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Horizon Zero Dawn Complete Edition",
+      "kind": "bold"
+     },
+     {
+      "text": " and ",
+      "kind": "text"
+     },
+     {
+      "text": "DEATH STRANDING DIRECTOR'S CUT",
+      "kind": "bold"
+     },
+     {
+      "text": ": SCSKiller reads their shaders.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Overwatch (Steam)",
+      "kind": "bold"
+     },
+     {
+      "text": " compiles its DirectX 11 shaders without a recording (on AMD, the pixel and compute shaders).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Source 2 games",
+      "kind": "bold"
+     },
+     {
+      "text": " like Counter-Strike 2 compile their DirectX 11 shaders without a recording (on AMD, all but the vertex shaders).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Notifications",
+      "kind": "bold"
+     },
+     {
+      "text": " under a bell at the top: news, notes on new rules and links, only ones SCSKiller signed.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "\"What's new\"",
+      "kind": "bold"
+     },
+     {
+      "text": " lists a version's changes once after an update.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Max compile",
+      "kind": "bold"
+     },
+     {
+      "text": " on a game's page compiles every combination of that game's shaders, once.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Maximum mode suggested per game",
+      "kind": "bold"
+     },
+     {
+      "text": ": a game whose Maximum mode is known to help on your GPU says so on its page, with \"Turn on for this game\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "AMD cache use",
+      "kind": "bold"
+     },
+     {
+      "text": ": Settings and the Cache page show the DirectX 12 cache against the driver's fixed 16 GB, and say when it's nearly full.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Cache page",
+      "kind": "bold"
+     },
+     {
+      "text": ": every shader cache on the PC with its size, by installed game, uninstalled game, old driver, earlier SCSKiller compiles and other GPU vendor, and the folder the driver reads and writes it in.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A game marked not supported after it was compiled offers to clear the cache compiled for it.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A driver cache folder moved to another drive with a junction is followed: Settings shows that drive's free space, and a link whose drive is missing holds compiles instead of marking games as cleared by the driver.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Library sorting and filters",
+      "kind": "bold"
+     },
+     {
+      "text": ": the Game, Pipelines and Cache headers sort each section, and a status filter shows only games that aren't supported, are ready to compile, are compiled, or were compiled by SCSKiller.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Game folders",
+      "kind": "bold"
+     },
+     {
+      "text": ": add a folder of games no store lists, and SCSKiller finds each game in it at every scan.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Scan progress",
+      "kind": "bold"
+     },
+     {
+      "text": " shows per store and per game, and a big library shows its last list at once while the scan runs.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "New shaders compile on their own",
+      "kind": "bold"
+     },
+     {
+      "text": " if you choose: when a compiled game gains pipelines from its recording, the community database or an update, SCSKiller compiles them while the PC is idle, never while you play.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Theme",
+      "kind": "bold"
+     },
+     {
+      "text": ": Light, Dark or the Windows setting, in Settings.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A click on the tray icon",
+      "kind": "bold"
+     },
+     {
+      "text": " opens a small window with SCSKiller's status and the compile's progress, and Pause, Open and Quit.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "\"Share diagnostics to help fix problems\"",
+      "kind": "bold"
+     },
+     {
+      "text": " in Settings (off by default): when a compile fails or the driver rejects pipelines, SCSKiller sends error codes and pipeline hashes, nothing else.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Shader hash sharing",
+      "kind": "bold"
+     },
+     {
+      "text": " also sends one report after a compile: which pipelines still compiled at the next launch, with your GPU model and driver.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Compile progress on the game page",
+      "kind": "bold"
+     },
+     {
+      "text": ": while a game compiles, its page shows the queue's progress and the time left.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Edit the compile queue in bulk",
+      "kind": "bold"
+     },
+     {
+      "text": ": select several games with Ctrl+click or Shift+click, then Remove selected.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Pick the DirectX",
+      "kind": "bold"
+     },
+     {
+      "text": " of a game when SCSKiller only guessed it: Auto, DirectX 11 or DirectX 12 next to its engine on the game page.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "GPU picker",
+      "kind": "bold"
+     },
+     {
+      "text": " in Settings, on a PC with more than one NVIDIA or AMD GPU: SCSKiller compiles for the one you pick instead of the one with the most video memory.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Earlier sessions",
+      "kind": "bold"
+     },
+     {
+      "text": " on a game's page: the last 20 launches with frame times, each with its date, play length, 1% low and stutters.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Send report",
+      "kind": "bold"
+     },
+     {
+      "text": ": once a game was compiled and played, or couldn't be compiled, its page can send an anonymous report of how it ran.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A new community recording",
+      "kind": "bold"
+     },
+     {
+      "text": " for a game you compiled rebuilds its plan while the PC is idle, and the game shows how many more pipelines it can compile.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A game whose engine SCSKiller reads better says \"SCSKiller can compile more\" instead of \"Game shaders changed\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "When new rules more than double a game's plan, the compile after a driver update leaves it for you to start.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A recompile compiles only what isn't compiled yet",
+      "kind": "bold"
+     },
+     {
+      "text": ", so adding a recording or turning on Maximum mode is quicker.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On NVIDIA, a game no longer asks to compile again after each session for pipelines whose shaders its last compile already compiled.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On NVIDIA, compiled ray tracing pipelines that a game creates on other threads (The Witcher 3) are found in the cache at launch instead of compiling again.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The Library holds still: a game that changes is updated in its row, the list keeps its place when a game moves to another section, and the scan's status line no longer pushes the list down.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Less memory with big community recordings",
+      "kind": "bold"
+     },
+     {
+      "text": ": a download is checked as it decodes and kept compressed, and a compile no longer holds every recorded shader in memory.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Bigger community recordings on NVIDIA",
+      "kind": "bold"
+     },
+     {
+      "text": ": up to 500,000 pipelines per game, once the community database serves them.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Building a plan can no longer run forever or take all the memory.",
+      "kind": "bold"
+     },
+     {
+      "text": " A plan that outgrows half the PC's RAM or 30 minutes stops with a clear error, and the next compile plans again.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "With \"Closes to System Tray\" on, closing the window no longer sometimes quits SCSKiller.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Updates",
+      "kind": "bold"
+     },
+     {
+      "text": ": after a failed download, SCSKiller waits longer before the next try (1 hour, then up to 12).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A ",
+      "kind": "text"
+     },
+     {
+      "text": "partly compiled",
+      "kind": "bold"
+     },
+     {
+      "text": " game's \"Last compile\" card says what the refused pipelines mean and what helps, and the coverage ring of a compiled game no longer counts the pipelines the driver refused.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "While a compile runs, the queue and the game page say \"memory limit: 4 of 32 threads\" when the compile's memory limit runs fewer threads than set.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Pipelines that crash the GPU driver",
+      "kind": "bold"
+     },
+     {
+      "text": " are all found and skipped in one compile (The Witcher 3 on AMD).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Pipelines that make the GPU driver fault",
+      "kind": "bold"
+     },
+     {
+      "text": " (PRAGMATA on AMD) are found and skipped the same way.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The \"Last compile\" card says \"Nothing failed.\" also when it skipped pipelines whose shaders aren't in this version of the game.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Start with Windows",
+      "kind": "bold"
+     },
+     {
+      "text": ": a portable or test copy of SCSKiller no longer removes the installed copy's autostart, or moves it to itself, when it starts.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "NVIDIA Auto Shader Compilation",
+      "kind": "bold"
+     },
+     {
+      "text": " in Settings: Apply changes only what differs.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "app.log",
+      "kind": "bold"
+     },
+     {
+      "text": " in SCSKiller's data folder keeps what the app did (scans, community sync, compiles and the recorder) for a bug report.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "GTA V Enhanced",
+      "kind": "bold"
+     },
+     {
+      "text": " compiles on NVIDIA without a recording.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Resident Evil Village",
+      "kind": "bold"
+     },
+     {
+      "text": " and ",
+      "kind": "text"
+     },
+     {
+      "text": "PRAGMATA",
+      "kind": "bold"
+     },
+     {
+      "text": " compile on NVIDIA without a recording.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Dragon's Dogma 2",
+      "kind": "bold"
+     },
+     {
+      "text": ": SCSKiller reads its game files, which it refused before.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Games that build all their shaders at the main menu",
+      "kind": "bold"
+     },
+     {
+      "text": " (Horizon Forbidden West, Detroit: Become Human) show as not supported, with that reason.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Encrypted Unreal games with anti-cheat",
+      "kind": "bold"
+     },
+     {
+      "text": " (VALORANT and others) get their key from the exe file on disk, so SCSKiller can read their files.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Encrypted Unreal games",
+      "kind": "bold"
+     },
+     {
+      "text": " take their correct AES key where it was refused or opened only some files: games with their own decryption (Dead by Daylight and other forks), files under a named key, and readable file lists whose files are encrypted.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Cyberpunk 2077",
+      "kind": "bold"
+     },
+     {
+      "text": " shows its engine as REDengine 4, and Alan Wake 2 and CONTROL Resonant as Northlight 2.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Cyberpunk 2077 on Steam",
+      "kind": "bold"
+     },
+     {
+      "text": " is found with its own exe, the one its launcher configuration names, not REDprelauncher.exe.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Returnal",
+      "kind": "bold"
+     },
+     {
+      "text": " no longer compiles tessellated pipelines the driver rejects.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Games whose shaders carry their own root signatures (Naughty Dog, RAGE, FromSoftware and others SCSKiller reads directly) no longer compile pipelines the driver rejects, where a shader uses resources the root signature lacks.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The Last of Us Part I",
+      "kind": "bold"
+     },
+     {
+      "text": ": a compute shader the game ships with several root signatures compiles once for each of them, instead of only the first.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "War Thunder",
+      "kind": "bold"
+     },
+     {
+      "text": " is on the known shader-stutter list, and no longer stays on \"Needs rebuilding\" when nothing new comes of it.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "ELDEN RING NIGHTREIGN",
+      "kind": "bold"
+     },
+     {
+      "text": " with its Digital Artbook & Mini Soundtrack installed no longer shows as a DirectX 11 Unity game.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Unreal Engine 4.25 games no longer show \"not tested on this engine version yet\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Unreal versions",
+      "kind": "bold"
+     },
+     {
+      "text": ": 5.7 and 5.8 games no longer show as 5.6, and a game on a newer Unreal than SCSKiller knows says \"Unreal 5.9 isn't supported yet\" instead of compiling as 5.8.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "DirectX 11 shaders that read a multisampled texture with more samples than the GPU supports compile.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Games started through EasyAntiCheat's bootstrap",
+      "kind": "bold"
+     },
+     {
+      "text": " (Gears of War: E-Day and Sea of Thieves from the Xbox app) compile for the game's own exe, the one the anti-cheat's settings name, instead of the bootstrap.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A game's page says the game may still run its own shader step when it starts.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A not supported game no longer shows its shader coverage after Clear cache.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "ReShade and HDR mods",
+      "kind": "bold"
+     },
+     {
+      "text": " like RenoDX show as a tag in the Library and on the game page, and \"Compiles through RenoDX\" under the game's status.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Luma mods no longer make the game page say some pipelines aren't precompiled (they change no DirectX 12 pipeline).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "When a mod loads a copy of the recorder from another folder, where it can't record, the game page says so.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "ReShade chaining another mod",
+      "kind": "bold"
+     },
+     {
+      "text": " through ReShade.ini's ",
+      "kind": "text"
+     },
+     {
+      "text": "[PROXY] ProxyLibrary",
+      "kind": "code"
+     },
+     {
+      "text": " (OptiScaler or a DLSS mod under another name) no longer compiles through a copy of ReShade that lacks that mod's DLL.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Recording in games with anti-cheat, at your own risk.",
+      "kind": "bold"
+     },
+     {
+      "text": " Until now the recorder always stayed out of these games, so they never got a recording of their own.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Frame times with frame generation on",
+      "kind": "bold"
+     },
+     {
+      "text": " (FSR 3): the graph shows the frames the game rendered.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Frame times in games with NVIDIA Streamline",
+      "kind": "bold"
+     },
+     {
+      "text": " (Ghost of Tsushima, Ratchet & Clank) on every GPU.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On NVIDIA, the recorder no longer makes a game crash as it closes.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The recorder no longer crashes a game now and then as it sets up its hooks.",
+      "kind": "bold"
+     },
+     {
+      "text": " It moved a few of a function's first instructions to make room for its jump, so a game thread paused among them could resume mid-jump and crash.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A game that makes its own crash dump or log folder",
+      "kind": "bold"
+     },
+     {
+      "text": " (Horizon Zero Dawn's coredumps) no longer turns the recorder off.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A portable or test copy",
+      "kind": "bold"
+     },
+     {
+      "text": " keeps its own recorders: each copy's armed list is in its own data folder, and a copy never arms, updates, removes or imports the recording of a recorder another copy placed.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The recorder's log no longer holds your user name or full folder paths, so it's safer to share in a bug report.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Valve Anti-Cheat (VAC) games",
+      "kind": "bold"
+     },
+     {
+      "text": " never get the recorder.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "NetEase games whose anti-cheat leaves no file in the game folder",
+      "kind": "bold"
+     },
+     {
+      "text": " count as anti-cheat games, so the recorder stays out of them: the Steam installs of Once Human, Marvel Rivals, FragPunk, Sword of Justice and NARAKA: BLADEPOINT, and Once Human from any store by its exe.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "ELDEN RING added by hand",
+      "kind": "bold"
+     },
+     {
+      "text": " gets the offline session too, when the EasyAntiCheat settings beside its exe are ELDEN RING's.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Euro Truck Simulator 2 and American Truck Simulator",
+      "kind": "bold"
+     },
+     {
+      "text": " count as anti-cheat games on a PC with TruckersMP.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Xbox app Unreal games that start through a small launcher",
+      "kind": "bold"
+     },
+     {
+      "text": " (Senua's Saga: Hellblade II, Avowed) record.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A Steam game you uninstalled loses the recorder too.",
+      "kind": "bold"
+     },
+     {
+      "text": " Steam leaves the folder behind when it holds files it didn't install.",
+      "kind": "text"
+     }
+    ]
+   ]
+  },
+  {
+   "version": "1.2.5",
+   "bullets": [
+    [
+     {
+      "text": "Compiles with long chains of ray tracing pipelines keep going",
+      "kind": "bold"
+     },
+     {
+      "text": ", as in The Callisto Protocol and Black Myth: Wukong with a community recording.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A compile no longer stays at about 100% without finishing.",
+      "kind": "bold"
+     },
+     {
+      "text": " At its end, the driver could hang while letting go of a ray tracing pipeline, and the compile waited for it forever.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Compile clicked while SCSKiller checks a game's plan in the background",
+      "kind": "bold"
+     },
+     {
+      "text": " runs with your compile settings.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Reading a game's shaders in the background no longer slows a compile.",
+      "kind": "bold"
+     },
+     {
+      "text": " 1.2.4 does that work when a game's recorder is set up, at a higher priority than the compile, and it slowed a running compile by up to a fifth.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The cache size shown is the size on disk again",
+      "kind": "bold"
+     },
+     {
+      "text": ", as in 1.2.3 (NVIDIA).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "\"Not compatible\"",
+      "kind": "bold"
+     },
+     {
+      "text": " for a game whose shaders the driver keeps under a different cache than the one SCSKiller's compile fills, as seen on AMD with Black Myth: Wukong.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The recorder no longer crashes games with a dxgi.dll mod in their folder",
+      "kind": "bold"
+     },
+     {
+      "text": ", like OptiScaler in Onimusha: Way of the Sword.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "More anti-cheat is recognised",
+      "kind": "bold"
+     },
+     {
+      "text": ": NetEase Protect (Aniimo) and Halo Infinite's Arbiter.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Cleaning up after an offline session deletes only SCSKiller's own files.",
+      "kind": "bold"
+     },
+     {
+      "text": " It deleted every file by the names the session could create.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Special K",
+      "kind": "bold"
+     },
+     {
+      "text": " beside a game's exe is no longer taken for ReShade.",
+      "kind": "text"
+     }
+    ]
+   ]
+  },
+  {
+   "version": "1.2.4",
+   "bullets": [
+    [
+     {
+      "text": "Marvel's Guardians of the Galaxy",
+      "kind": "bold"
+     },
+     {
+      "text": " compiles without a recording on NVIDIA.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The window",
+      "kind": "bold"
+     },
+     {
+      "text": " opens at the size and place you closed it, maximized if it was (thanks @kaeldrin-gh).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The queue warns",
+      "kind": "bold"
+     },
+     {
+      "text": " when one game's compile adds more than 16 GB: \"This compile adds about 32 GB.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Bigger community recordings",
+      "kind": "bold"
+     },
+     {
+      "text": " are read, up to 250,000 pipelines per game, for games like S.T.A.L.K.E.R.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Games without shader stutter",
+      "kind": "bold"
+     },
+     {
+      "text": " show \"No shader stutter\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Less memory",
+      "kind": "bold"
+     },
+     {
+      "text": ": SCSKiller gives memory back after a scan or compile and when it's in the tray.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A crash leaves a report",
+      "kind": "bold"
+     },
+     {
+      "text": ": when SCSKiller closes on its own or can't start, it writes what went wrong to crash.log in its data folder, and a failed start shows where that file is.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A compile no longer leaves about 0.5 MB behind in Windows' shader cache folder each time.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A failed compile",
+      "kind": "bold"
+     },
+     {
+      "text": " says which step failed and keeps the whole error in compile-error.log in the game's SCSKiller folder, for a bug report (found by dkflint723).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The compile helper reports its error instead of crashing when it can't start an Xbox app game's compile, no longer retries a compile process that died before it finished, and passes on a folder ending in a backslash correctly (found by dkflint723).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Reading a large Unity bundle keeps only the blocks it read last in memory, not the whole bundle (found by dkflint723).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A recording test no longer fails at random when a file is rewritten within one clock tick (thanks @kaeldrin-gh).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Sharing notices a recording rewritten at the same size within one clock tick, instead of using what it read before (thanks @Dmi-3).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Loading hitches",
+      "kind": "bold"
+     },
+     {
+      "text": " no longer count as shader stutters on the game page: a load compiling on many threads, or a precompile after a splash screen, is loading.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A game's own precompile and its loading screens",
+      "kind": "bold"
+     },
+     {
+      "text": " no longer count as compiles while you played, also when the recorder can't time frames (frame generation on): they show as compiled while the game started or loaded.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "\"The compile didn't help\"",
+      "kind": "bold"
+     },
+     {
+      "text": " shows on NVIDIA when a game's first launch after a compile still compiles what SCSKiller compiled: the game needs a custom loader.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A nearly full 4 GB NVIDIA cache file",
+      "kind": "bold"
+     },
+     {
+      "text": " is flagged on the game page.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Games compiled for DirectX 11 and DirectX 12",
+      "kind": "bold"
+     },
+     {
+      "text": ", like War Thunder, say so: \"Compiled for DirectX 11 and DirectX 12\" on the page, \"DirectX 11 and 12\" in the Library, and where each API's shaders come from.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "\"Partly compiled\"",
+      "kind": "bold"
+     },
+     {
+      "text": " shows when the driver rejected or crashed on more than a tenth of a compile's pipelines, with how many, instead of \"Warmed\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A game on the ",
+      "kind": "text"
+     },
+     {
+      "text": "\"Not supported yet\"",
+      "kind": "bold"
+     },
+     {
+      "text": " or ",
+      "kind": "text"
+     },
+     {
+      "text": "\"Not supported\"",
+      "kind": "bold"
+     },
+     {
+      "text": " list shows that status on NVIDIA too, instead of \"The compile didn't help\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Fewer compile notifications",
+      "kind": "bold"
+     },
+     {
+      "text": ": only for games you've compiled, only when there's enough new to compile (1% of the game's pipelines, at least 100, counted since the last notification), and at most once a day per game.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "After an update that plans more",
+      "kind": "bold"
+     },
+     {
+      "text": ", compiled games are checked for what it adds right away, one at a time and paused while you play, instead of once the PC is idle, so their pages show the new plan within minutes.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The \"still running\" notice shows only the first time you close the window, not after every start.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Coverage and pipeline counts",
+      "kind": "bold"
+     },
+     {
+      "text": " leave out what can't be compiled on your PC: pipelines whose shaders aren't in your install, AMD-only pipelines on NVIDIA, pipelines that crash your driver, and shader combinations DirectX refuses to create.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Your texture filtering setting",
+      "kind": "bold"
+     },
+     {
+      "text": ": a community recording can hold the same pipelines from players with other texture filtering settings.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The Library's games no longer vanish and come back for a moment while SCSKiller starts or a game's status changes.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "\"Stopped while … is running\"",
+      "kind": "bold"
+     },
+     {
+      "text": " names the process and its path, so a leftover one can be ended in Task Manager.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The Library's buttons sit on their own row, aligned right, and wrap in a narrow window instead of being cut off (thanks @JohnsonRan).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The Library's Time column and the careful compile's \"instead of\" show how long the last compile took, as the game page does.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "FINAL FANTASY VII REBIRTH",
+      "kind": "bold"
+     },
+     {
+      "text": " is fully covered again.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Cyberpunk 2077",
+      "kind": "bold"
+     },
+     {
+      "text": " and other games where DLSS loads DirectX 12 before the recorder no longer ask for a recording that never comes (NVIDIA).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Ready or Not",
+      "kind": "bold"
+     },
+     {
+      "text": " compiles again: shader libraries over 2 GB are read (found by dkflint723), and it's recognised as Unreal Engine 5.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "3on3 FreeStyle: Rebound",
+      "kind": "bold"
+     },
+     {
+      "text": " is recognised as Unreal Engine 5.1, not 4.27.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Wuthering Waves",
+      "kind": "bold"
+     },
+     {
+      "text": " is recognised as Kuro's fork of Unreal Engine 4.26, not 4.27, and shows as not supported instead of asking for an AES key that wouldn't help: SCSKiller can only learn how this engine builds its pipelines from a recording, which its anti-cheat blocks.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Anti-cheat games that need a recording",
+      "kind": "bold"
+     },
+     {
+      "text": " show \"Not supported\" instead of \"Not supported yet\", with the same reason: their anti-cheat blocks the recording they need.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Xbox app Unreal games",
+      "kind": "bold"
+     },
+     {
+      "text": " are never compiled for a developer tool or console build in their package.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Xbox app Unreal games on AMD",
+      "kind": "bold"
+     },
+     {
+      "text": " compile into the cache the game actually uses, after you play them once.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Resident Evil Village",
+      "kind": "bold"
+     },
+     {
+      "text": " is read as a DirectX 12 game.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Scarlet Nexus",
+      "kind": "bold"
+     },
+     {
+      "text": " compiles again: a line in the game's own settings that the Unreal file reader can't parse no longer stops it (found by dkflint723).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "An Unreal game with ",
+      "kind": "text"
+     },
+     {
+      "text": "one shader library SCSKiller can't read",
+      "kind": "bold"
+     },
+     {
+      "text": " compiles from its other libraries, and the compile log names the one it skipped (found by dkflint723).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Encrypted Unreal games",
+      "kind": "bold"
+     },
+     {
+      "text": ": an AES key, found in the exe or typed in, is taken when it opens any of the game's encrypted files, not only the first (found by dkflint723).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Newer Unreal games' shipped pipeline caches",
+      "kind": "bold"
+     },
+     {
+      "text": " are read, so the pipelines they list are compiled as the game pairs them.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A first recording no longer fills up in minutes.",
+      "kind": "bold"
+     },
+     {
+      "text": " A game recorded before its first compile, which is every game that needs a recording and most DirectX 12 games on AMD, kept the bytes of every shader it built: SILENT HILL f reached the 256 MB limit after about two minutes.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The recording limit is 1 GB by default",
+      "kind": "bold"
+     },
+     {
+      "text": ", up from 256 MB.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "\"Played, nothing recorded\"",
+      "kind": "bold"
+     },
+     {
+      "text": " shows in the Library when a game was played with the recorder on and nothing was recorded, instead of \"Needs a 5-min recording\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Games with two exes in one folder",
+      "kind": "bold"
+     },
+     {
+      "text": " record and compile for the exe that actually runs: after one launch of the other exe, the recorder is set up for it.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Ubisoft Connect games",
+      "kind": "bold"
+     },
+     {
+      "text": " show their name: an install folder ending in \"/\" left it empty.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On AMD, ",
+      "kind": "text"
+     },
+     {
+      "text": "DirectX 11 games",
+      "kind": "bold"
+     },
+     {
+      "text": " no longer stay on \"Needs a 5-min recording\": the page says a recording helps only on DirectX 12.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Removing the recorder always takes out its d3d12.dll and puts back the mod it was chained to.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The recorder switches off right away when a game's folder changes, also while the command line runs.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Blizzard games",
+      "kind": "bold"
+     },
+     {
+      "text": " installed by Battle.net but listed by another store, or added by hand, keep the recorder out: Battle.net's files in their folder count as anti-cheat, in the app and in the recorder (found by dkflint723).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The recorder goes into a game's folder under a temporary name and is then renamed into place: a copy cut short by a full disk or a closed app can't leave a broken d3d12.dll that stops the game from starting (found by dkflint723).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A recording whose end a power loss left zero-filled is cut back to its last whole record and recording goes on, and a ray tracing addition is no longer recorded against a released object (found by dkflint723).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "How much of a game's cache is in use",
+      "kind": "bold"
+     },
+     {
+      "text": " shows under its disk space on NVIDIA, and in the Library's tooltip: \"4 GB on disk · 2.6 GB in use\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "About and the README",
+      "kind": "bold"
+     },
+     {
+      "text": " say SCSKiller is used at your own risk.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "SCSKiller starts on older Windows 10 builds",
+      "kind": "bold"
+     },
+     {
+      "text": " that lack an update newer .NET apps need for a CPU security feature.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The portable build",
+      "kind": "bold"
+     },
+     {
+      "text": " keeps its settings and data in a ",
+      "kind": "text"
+     },
+     {
+      "text": "data",
+      "kind": "code"
+     },
+     {
+      "text": " folder beside SCSKiller.exe.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Requests to SCSKiller's servers now name the app version, its update channel and the Windows build, and nothing that identifies you or your PC.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A failed update leaves a log: updates.log in SCSKiller's data folder.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "An install, update or uninstall step that fails no longer skips the others, such as taking the recorder out of your games.",
+      "kind": "text"
+     }
+    ]
+   ]
+  },
+  {
+   "version": "1.2.3",
+   "bullets": [
+    [
+     {
+      "text": "\"Closing the window quits SCSKiller\"",
+      "kind": "bold"
+     },
+     {
+      "text": " in Settings (off by default).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "\"Scan games when SCSKiller starts\"",
+      "kind": "bold"
+     },
+     {
+      "text": " in Settings (on by default).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Updates install by themselves",
+      "kind": "bold"
+     },
+     {
+      "text": ", the next time SCSKiller starts or when you quit it, never during a compile, a game or Windows shutdown.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Ray tracing without a recording",
+      "kind": "bold"
+     },
+     {
+      "text": " for Unreal Engine 4.25 games like Returnal on NVIDIA.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Much faster start",
+      "kind": "bold"
+     },
+     {
+      "text": ": only the games that changed are read again, at low disk priority.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Pausing a compile no longer makes it fail when you resume.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A compile no longer stops itself saying the game is running when it isn't.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Large Unreal games no longer run out of memory while their shaders are read.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "One game with a broken file no longer stops every game from being listed.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "One broken Unreal shader no longer stops a compile at \"Reading shaders\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Game pages open without stutter, and Clear cache responds right away.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Skipped pipelines after a compile show as a short line instead of a warning, that's normal.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Xbox app games",
+      "kind": "bold"
+     },
+     {
+      "text": " finally record, and their Unreal games are compiled for the real game exe instead of a launcher.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Dead Island 2",
+      "kind": "bold"
+     },
+     {
+      "text": " compiles and matches the game (it runs on its own Unreal Engine 4.25 build, on DirectX 12).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Unreal games with a launcher next to the exe",
+      "kind": "bold"
+     },
+     {
+      "text": ", like Returnal, are found as the real game, also when added by hand.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Monster Hunter Wilds",
+      "kind": "bold"
+     },
+     {
+      "text": " and other RE Engine games no longer get stuck on \"Building plan\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The Witcher 3",
+      "kind": "bold"
+     },
+     {
+      "text": " no longer crashes at start with frame generation on (the recorder then skips frame times for that launch, it still records), and no longer asks for a rebuild after every session.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "DRAGON BALL: Sparking! ZERO",
+      "kind": "bold"
+     },
+     {
+      "text": " and other encrypted Unreal games open without entering a key.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "FINAL FANTASY VII REMAKE INTERGRADE",
+      "kind": "bold"
+     },
+     {
+      "text": " is recognised as DirectX 12 (or DirectX 11 if you launch it with -dx11 on Steam).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Neverness to Everness",
+      "kind": "bold"
+     },
+     {
+      "text": " is recognised as Unreal Engine 5.6.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Unreal Engine 4.25 games",
+      "kind": "bold"
+     },
+     {
+      "text": " also compile the pipeline list they ship with.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Games with ray tracing turned off no longer ask for a ray tracing recording, and show as compiled.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "After updating",
+      "kind": "bold"
+     },
+     {
+      "text": ": if you play Dead Island 2, Returnal or other Unreal games from the Xbox app, ",
+      "kind": "text"
+     },
+     {
+      "text": "compile them again",
+      "kind": "bold"
+     },
+     {
+      "text": ".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "RenoDX with ReShade loaded by OptiScaler",
+      "kind": "bold"
+     },
+     {
+      "text": " compiles through the whole chain, and records.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Xbox app games with ReShade",
+      "kind": "bold"
+     },
+     {
+      "text": " in their package folder compile through ReShade and RenoDX.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "RE Engine games record with ",
+      "kind": "text"
+     },
+     {
+      "text": "REFramework",
+      "kind": "bold"
+     },
+     {
+      "text": " installed.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Logs, crash dumps and shader caches next to the exe no longer turn the recorder off.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "When a mod setup can't be compiled, the game page tells you why and how to fix it.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "More anti-cheat is recognised",
+      "kind": "bold"
+     },
+     {
+      "text": ", so the recorder stays out: every Riot Games title (VALORANT, League of Legends, 2XKO and more), Anti-Cheat Expert games like Delta Force, every HoYoverse game and EA Javelin games.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Turning the recorder on no longer fails with \"scskiller.ini is being used by another process\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Older CPUs without AVX2",
+      "kind": "bold"
+     },
+     {
+      "text": " no longer close SCSKiller at \"Reading shaders\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On Windows 10",
+      "kind": "bold"
+     },
+     {
+      "text": ", games that ship their own DirectX 12 version compile with it.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Maximum mode",
+      "kind": "bold"
+     },
+     {
+      "text": " explains itself: it seems to help most on AMD, and it takes longer and uses more disk space.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A downloaded update installs at the next start even when the PC has no network yet.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "One update server asking to wait no longer holds back every update check.",
+      "kind": "text"
+     }
+    ]
+   ]
+  },
+  {
+   "version": "1.2.2",
+   "bullets": [
+    [
+     {
+      "text": "Games you added by hand and recorded",
+      "kind": "bold"
+     },
+     {
+      "text": " that a store now lists (Zenless Zone Zero through HoYoPlay) compile from that recording again.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "ELDEN RING's offline session",
+      "kind": "bold"
+     },
+     {
+      "text": " starts on a PC where the recorder was never used.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "An anti-cheat game says when the community database has a recording for it, and where to get it.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The recorder stays on",
+      "kind": "bold"
+     },
+     {
+      "text": " when a mod writes a log, an ini, a screenshot or a save as the game starts (OptiScaler, DLSS frame generation enablers), so those launches are recorded.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A mod's d3d12.dll that can't be renamed for \"Record alongside\" is named on the game page.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A RenoDX game compiled before 1.2.1 no longer says an HDR mod was installed since.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The game page says why",
+      "kind": "bold"
+     },
+     {
+      "text": " a launch wasn't recorded.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A recorder moved next to the exe a game really runs (Stellar Blade) records from the very next launch.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "When a store takes over a game you added by hand, the recorder comes out of your copy and its recording joins the store's entry.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Going from a pre-release to the release of the same version checks every game again.",
+      "kind": "text"
+     }
+    ]
+   ]
+  },
+  {
+   "version": "1.2.1",
+   "bullets": [
+    [
+     {
+      "text": "NCSOFT's PURPLE launcher",
+      "kind": "bold"
+     },
+     {
+      "text": ": its games are found.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "HoYoPlay",
+      "kind": "bold"
+     },
+     {
+      "text": ": Genshin Impact, Honkai: Star Rail, Zenless Zone Zero and Honkai Impact 3rd are found.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "War Thunder",
+      "kind": "bold"
+     },
+     {
+      "text": " from Gaijin's launcher is found, and compiles without a recording on NVIDIA, on DirectX 11 and 12.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Control",
+      "kind": "bold"
+     },
+     {
+      "text": " compiles without a recording, ray tracing included.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Less memory",
+      "kind": "bold"
+     },
+     {
+      "text": " while SCSKiller sits in the notification area, often hundreds of MB less.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Stellar Blade",
+      "kind": "bold"
+     },
+     {
+      "text": ": the recorder goes next to the real exe, not a patcher's copy, and SCSKiller follows the exe a game really runs.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Unreal Engine 5.8 games",
+      "kind": "bold"
+     },
+     {
+      "text": " (Fortnite, The Sinking City 2) compile instead of failing with \"Arithmetic operation resulted in an overflow\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "ELDEN RING and Nightreign",
+      "kind": "bold"
+     },
+     {
+      "text": " compile a few more pixel shaders without a recording, and on NVIDIA their ray tracing is built the way the game builds it.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The Witcher 3",
+      "kind": "bold"
+     },
+     {
+      "text": " on NVIDIA no longer counts pipelines it makes again every launch as new.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Dead Island 2",
+      "kind": "bold"
+     },
+     {
+      "text": ": shaders that don't decompress are skipped instead of failing the whole compile.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "War Thunder",
+      "kind": "bold"
+     },
+     {
+      "text": " and other games with BattlEye's launcher at the top of their folder are found as the real game, and no longer show \"Playing now\" all the time.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "ELDEN RING's",
+      "kind": "bold"
+     },
+     {
+      "text": " stutter note is \"moderate\": most of its big hitches aren't shader compiles.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "RenoDX games compile through ReShade and the mod",
+      "kind": "bold"
+     },
+     {
+      "text": ", so the compile matches the modded game, and they're recorded again.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Recording works again",
+      "kind": "bold"
+     },
+     {
+      "text": ": since 1.2.0 the recorder was installed but never switched on, so games stayed on \"Needs a recording\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Warframe",
+      "kind": "bold"
+     },
+     {
+      "text": " counts as an anti-cheat game, so it's never recorded.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Check for updates",
+      "kind": "bold"
+     },
+     {
+      "text": " button in About.",
+      "kind": "text"
+     }
+    ]
+   ]
+  },
+  {
+   "version": "1.2.0",
+   "bullets": [
+    [
+     {
+      "text": "Add a game by hand",
+      "kind": "bold"
+     },
+     {
+      "text": ": \"Add a game…\" in the Library takes any .exe, and a launcher is followed to the game it starts.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Record an offline session without EasyAntiCheat",
+      "kind": "bold"
+     },
+     {
+      "text": " in ELDEN RING and ARMORED CORE VI, at your own risk.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Intel and other GPUs",
+      "kind": "bold"
+     },
+     {
+      "text": ": the Library says SCSKiller can't compile there yet, and why.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "\"Compile\"",
+      "kind": "bold"
+     },
+     {
+      "text": " on the game page compiles right away, instead of only adding the game to the queue.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A compile can no longer pause or close an unrelated program.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "ELDEN RING and Nightreign",
+      "kind": "bold"
+     },
+     {
+      "text": " compile their pipelines exactly as the game makes them, so a compile without a recording now saves real work.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Unreal Engine 5 games with hardware Lumen",
+      "kind": "bold"
+     },
+     {
+      "text": " compile their ray tracing from the game files, no recording needed.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Unreal Engine 5.0 to 5.4",
+      "kind": "bold"
+     },
+     {
+      "text": " ray tracing compiles without a recording on NVIDIA when laid out like 5.1 (Darwin's Paradox).",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A recording is checked as soon as the game closes, so games like SILENT HILL: Townfall stop asking for a 5-min recording after one was made.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Deep Rock Galactic",
+      "kind": "bold"
+     },
+     {
+      "text": " and other Unreal games that pick DirectX 12 in Steam's launch menu are recognised as DirectX 12.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Ghostrunner",
+      "kind": "bold"
+     },
+     {
+      "text": " and other Unreal Engine 4 games that ship ray tracing compile for DirectX 11 and 12, and can be recorded.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The Witcher 3",
+      "kind": "bold"
+     },
+     {
+      "text": " compiles no longer try the pipelines NVIDIA's driver rejects.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Xbox app games installed outside ",
+      "kind": "text"
+     },
+     {
+      "text": "<drive>:\\XboxGames",
+      "kind": "code"
+     },
+     {
+      "text": " are found.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Games whose HDR mod changes every pipeline",
+      "kind": "bold"
+     },
+     {
+      "text": " (most RenoDX mods) aren't compiled or recorded, and the game page says so.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The recorder records only in games fully checked for anti-cheat",
+      "kind": "bold"
+     },
+     {
+      "text": ", and any change in a game's folder switches it off until the next check.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "More anti-cheat is recognised",
+      "kind": "bold"
+     },
+     {
+      "text": ": NCGuard (AION 2), Anti-Cheat Expert, HoYoverse's, NetEase's, Nexon's BlackCipher, AhnLab HackShield, PunkBuster, EQU8, Denuvo Anti-Cheat, and more of XIGNCODE3 and nProtect GameGuard.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "For a game added by hand, the anti-cheat check also looks in the folders above it (BattlEye above War Thunder's ",
+      "kind": "text"
+     },
+     {
+      "text": "win64",
+      "kind": "code"
+     },
+     {
+      "text": ").",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "In the frame-time graph, ray tracing that takes 25 ms or more counts as a shader stutter.",
+      "kind": "text"
+     }
+    ]
+   ]
+  },
+  {
+   "version": "1.1.2",
+   "bullets": [
+    [
+     {
+      "text": "The Witcher 3 ray tracing",
+      "kind": "bold"
+     },
+     {
+      "text": " on NVIDIA: once a recording has a session with ray tracing on, the materials the game adds while you play stutter far less.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The Witcher 3",
+      "kind": "bold"
+     },
+     {
+      "text": " and other games that use NVIDIA's shader extensions now find SCSKiller's compiled pipelines on NVIDIA.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A game's last session no longer loses its frame-time graph when two pipelines finish at the same moment.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A downloaded update also installs when SCSKiller starts.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "About links to the website, the source code and the Patreon page.",
+      "kind": "text"
+     }
+    ]
+   ]
+  },
+  {
+   "version": "1.1.1",
+   "bullets": [
+    [
+     {
+      "text": "The Witcher 3",
+      "kind": "bold"
+     },
+     {
+      "text": " on DirectX 12 compiles without a recording on NVIDIA.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Refresh in the Library",
+      "kind": "bold"
+     },
+     {
+      "text": " fetches everything from the server: stutter lists, community recordings, shared packs, your supporter status and updates.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Better plans",
+      "kind": "bold"
+     },
+     {
+      "text": ": every game's plan is rebuilt once while the PC is idle, and games with tessellation, geometry shaders or ray tracing get more pipelines.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A GPU driver update",
+      "kind": "bold"
+     },
+     {
+      "text": " is noticed within minutes, without a restart.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The app, the command line and the scheduled task no longer compile the same game at once.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A stopped and continued compile reports what failed before the stop, and starts over after a driver update.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A damaged recording fails only its own game, not the whole library scan.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A recording imported just before SCSKiller closed or crashed always goes into the next compile.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A failed compile's message points to a log that's still there, and a compile that fails while watched no longer keeps running.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "SCSKiller waits before asking again when the community database is down, and ignores a broken list from the server.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Signing out and in again no longer signs the new sign-in out.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Games started through a launcher",
+      "kind": "bold"
+     },
+     {
+      "text": ", like The Witcher 3's REDprelauncher, are found by the exe the launcher starts, and the recorder moves there.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Games are found more reliably",
+      "kind": "bold"
+     },
+     {
+      "text": ": Epic games, Xbox games on any drive, and games installed under a folder named like Setup or Redist.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A game updated since the last scan, or whose shipped pipeline list changed, gets a fresh plan.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On NVIDIA, a game whose shader cache was reset shows as needing a compile again.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A RE Engine game with a patch file that can't be read shows as not supported instead of compiling outdated shaders.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Clear cache works with an accented user name, and deletes read-only cache files too.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A recorder chained to a mod whose install was cut off gets its settings back, so the mod loads.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Frame times",
+      "kind": "bold"
+     },
+     {
+      "text": ": failed presents no longer count as frames, and more games are recorded.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A launch played while a recompile ran no longer judges that compile.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Turning \"Share anonymous shader hashes\" off stops an upload already under way.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Stable updates are found while the SCSKiller server is down.",
+      "kind": "text"
+     }
+    ]
+   ]
+  },
+  {
+   "version": "1.1.0",
+   "bullets": [
+    [
+     {
+      "text": "Shared packs for FidelityFX and XeSS",
+      "kind": "bold"
+     },
+     {
+      "text": ": a game that ships an upscaler version someone recorded on the same GPU vendor gets those shaders compiled, free, without an account or a recording.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Unreal games",
+      "kind": "bold"
+     },
+     {
+      "text": " also use the pipeline list they ship, and Unreal Engine 5.4 is a tested engine version.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The installer is SCSKiller-Setup.exe",
+      "kind": "bold"
+     },
+     {
+      "text": ", so its download link always gets the latest release.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Every game's plan is rebuilt once while the PC is idle.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A compile stopped after a GPU driver fault no longer skips the unfinished pipelines next time, and a compile that hangs at exit is always ended.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Quit waits for a compile you just removed from the queue to save its cache.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "\"Compile queue\" also starts games queued for when the PC is idle.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "DirectX 11 hull shaders that use all 32 inputs compile.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A broken entry in a recording or a community download leaves out only its pipelines, not the whole plan.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A recording stays whole when the app and the command line use it at once.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "scskiller compile",
+      "kind": "code"
+     },
+     {
+      "text": " refuses an option it doesn't know, and Ctrl+C before a compile starts isn't a success.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The driver-update notification's buttons work after SCSKiller was closed.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "The recorder no longer crashes games",
+      "kind": "bold"
+     },
+     {
+      "text": " with overlays, mods that unload DirectX 12, or NVAPI calls, and no longer holds up a game's exit.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Anti-cheat is found anywhere in a game's install",
+      "kind": "bold"
+     },
+     {
+      "text": ", hidden folders included.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "SCSKiller never writes into a game's folder while it runs",
+      "kind": "bold"
+     },
+     {
+      "text": ", also when a launcher started it.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A damaged recording no longer makes a game use gigabytes of memory at start, and a full disk no longer breaks a recording.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Turning the recorder off removes all its files from the game folder.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Frame times: a slow load is no longer a shader stutter, and freezes of 5 s or more count in the 1% low.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "\"Last time you played\" no longer counts the shaders a game compiles while it starts.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On AMD, the Library's cache bar compares the DirectX 12 cache with its limit.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Clear cache deletes only the Windows shader cache's own files.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Choosing another update channel no longer installs an update from the one before.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "An update download gives up when no data arrives for two minutes, and stops at the size the signed feed gives.",
+      "kind": "text"
+     }
+    ]
+   ]
+  },
+  {
+   "version": "1.0.0",
+   "bullets": [
+    [
+     {
+      "text": "Compile a game's shaders",
+      "kind": "bold"
+     },
+     {
+      "text": " into the NVIDIA or AMD driver cache before you play, so the game doesn't stutter compiling them.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "DirectX 12 games",
+      "kind": "bold"
+     },
+     {
+      "text": " on NVIDIA and AMD, and ",
+      "kind": "text"
+     },
+     {
+      "text": "DirectX 11 games",
+      "kind": "bold"
+     },
+     {
+      "text": " on NVIDIA.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Finds your games",
+      "kind": "bold"
+     },
+     {
+      "text": " from Steam, Epic Games, EA app, GOG, Ubisoft Connect, Xbox and Battle.net.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Reads shaders from the game files",
+      "kind": "bold"
+     },
+     {
+      "text": " for Unreal Engine, Unity, FromSoftware and RE Engine games, and scans other games for shader containers.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Community database",
+      "kind": "bold"
+     },
+     {
+      "text": " for Patreon supporters: games compile from other players' recordings.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Recompiles after a GPU driver update",
+      "kind": "bold"
+     },
+     {
+      "text": ", on a schedule or by hand, and notices game updates.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Play button",
+      "kind": "bold"
+     },
+     {
+      "text": " for Steam, Epic Games, Xbox, GOG (with GOG Galaxy) and Ubisoft Connect games.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Clear cache",
+      "kind": "bold"
+     },
+     {
+      "text": " removes a game's driver cache, Windows shader cache and Unreal's own pipeline cache.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "An installer and a portable version, both update themselves.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Status texts in plain words, like \"no recording needed\".",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "An optional recorder",
+      "kind": "bold"
+     },
+     {
+      "text": " captures the pipelines a game builds while you play, so the next compile covers them.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Frame-time graph",
+      "kind": "bold"
+     },
+     {
+      "text": " of the last session, with shader stutters told apart from other hitches, the 1% low and the slowest frames.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A recording keeps only hashes of the shaders a game ships.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "\"Share my shader hashes\"",
+      "kind": "bold"
+     },
+     {
+      "text": " (opt-in) uploads the hash-only form of your recordings under an anonymous device, never linked to your account.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "A notification tells you when compiled games have new pipelines to compile.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "Uninstalling SCSKiller removes the recorder from every game folder, and puts back a mod it recorded alongside.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On NVIDIA",
+      "kind": "bold"
+     },
+     {
+      "text": ", compiles run about three times faster.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "On AMD",
+      "kind": "bold"
+     },
+     {
+      "text": ", the queue warns when games won't fit in the driver's 16 GB cache, and a game whose first launch still compiled a lot offers a careful compile.",
+      "kind": "text"
+     }
+    ],
+    [
+     {
+      "text": "An anonymous daily check counts active installs, with the app version and GPU vendor only.",
+      "kind": "text"
+     }
+    ]
+   ]
+  }
+ ]
+}

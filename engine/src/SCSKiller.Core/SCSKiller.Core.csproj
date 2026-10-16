@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Recovered from the SCSKiller 1.3.0-beta.1 binaries (ilspycmd), rebased on 1.3.0-beta.2, modeled on the 1.2.5 src/SCSKiller.Core csproj.
+       Assembly attributes (version 1.3.0-beta.2, SourceRevisionId the scan cache is keyed on) come from
+       Properties/AssemblyInfo.cs, so generated assembly info is off. -->
+  <PropertyGroup>
+    <AssemblyName>SCSKiller.Core</AssemblyName>
+    <RootNamespace>SCSKiller.Core</RootNamespace>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>14.0</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- versions match 1.3.0-beta.2 SCSKiller.deps.json (unchanged from beta.1) -->
+    <PackageReference Include="CUE4Parse" Version="1.2.2.202609" />
+    <!-- CUE4Parse pulls 9.0.0, which has GHSA-73j8-2gch-69rq -->
+    <PackageReference Include="Microsoft.Bcl.Memory" Version="10.0.12" />
+    <PackageReference Include="NSec.Cryptography" Version="26.4.0" />
+    <PackageReference Include="ValvePak" Version="6.0.0.182" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="SCSKiller.Core.Games.known-stutter.json" LogicalName="SCSKiller.Core.Games.known-stutter.json" />
+    <EmbeddedResource Include="SCSKiller.Core.Games.precompiles-at-boot.json" LogicalName="SCSKiller.Core.Games.precompiles-at-boot.json" />
+    <EmbeddedResource Include="SCSKiller.Core.Games.game-verdicts.json" LogicalName="SCSKiller.Core.Games.game-verdicts.json" />
+    <EmbeddedResource Include="SCSKiller.Core.Games.maximum-mode.json" LogicalName="SCSKiller.Core.Games.maximum-mode.json" />
+    <EmbeddedResource Include="SCSKiller.Core.Games.shader-mods.json" LogicalName="SCSKiller.Core.Games.shader-mods.json" />
+    <EmbeddedResource Include="SCSKiller.Core.Games.offline-eac.json" LogicalName="SCSKiller.Core.Games.offline-eac.json" />
+    <EmbeddedResource Include="SCSKiller.Core.Games.collections.json" LogicalName="SCSKiller.Core.Games.collections.json" />
+    <EmbeddedResource Include="SCSKiller.Core.Planning.confirmed-engines.json" LogicalName="SCSKiller.Core.Planning.confirmed-engines.json" />
+    <EmbeddedResource Include="SCSKiller.Core.Planning.plan-rules.json" LogicalName="SCSKiller.Core.Planning.plan-rules.json" />
+    <EmbeddedResource Include="SCSKiller.Core.App.welcome.json" LogicalName="SCSKiller.Core.App.welcome.json" />
+    <EmbeddedResource Include="SCSKiller.Core.CHANGELOG.md" LogicalName="SCSKiller.Core.CHANGELOG.md" />
+  </ItemGroup>
+
+</Project>

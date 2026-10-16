@@ -1,0 +1,6545 @@
+{
+ "steam:2001760": {
+  "id": "steam:2001760",
+  "name": "Beast of Reincarnation",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\BeastOfReincarnation\\BeastOfReincarnation\\Binaries\\Win64\\BeastOfReincarnation-Win64-Shipping.exe",
+  "exeName": "BeastOfReincarnation-Win64-Shipping.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\BeastOfReincarnation",
+  "sub": "UE 5.4 · Steam",
+  "engine": "UE 5.4",
+  "engineChip": "Unreal Engine 5.4",
+  "engineFamily": "Unreal",
+  "status": "ready",
+  "statusText": "Ready to compile",
+  "tone": "primary",
+  "statusTitle": "Ready to compile",
+  "statusReason": "Not compiled yet",
+  "tip": "no recording needed",
+  "reason": "no recording needed",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "shaders": 214863,
+  "pipelines": 499695,
+  "cacheBytes": 0,
+  "cacheText": "0 MB",
+  "cacheEstimated": false,
+  "compileTime": "1 h 25 min",
+  "recommended": false,
+  "inAddAllReady": true,
+  "tags": [],
+  "antiCheat": {
+   "kind": "none",
+   "chip": "No anti-cheat",
+   "tip": "No anti-cheat found: this game can be recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "on",
+   "foreign": true,
+   "recordNote": "Adds a small d3d12.dll next to the game to catch anything the plan missed and time each frame, so this page shows what stuttered. Remove any time. If a game has anti-cheat SCSKiller didn't detect, don't turn this on.",
+   "canToggle": true,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": true,
+   "compileText": "Compile",
+   "add": true,
+   "addEnabled": true,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": false,
+   "play": true,
+   "playEnabled": true,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": true,
+   "clearCacheEnabled": true,
+   "clearCacheText": "Clear cache (0 MB)",
+   "clearCacheTip": "Deletes this game's shader caches (the driver's and Windows', and the game's own if you choose) so its next run starts cold",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove Beast of Reincarnation from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "api": {
+    "index": 0,
+    "items": [
+     "Auto (DirectX 12)",
+     "DirectX 11",
+     "DirectX 12"
+    ],
+    "canPick": true
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "100%",
+   "label": "covered",
+   "headline": "Will cover all the shader combinations found in this game",
+   "low": false,
+   "good": true,
+   "percent": 100
+  },
+  "sources": [
+   {
+    "label": "Found in the game files",
+    "value": "457,336"
+   },
+   {
+    "label": "The community database",
+    "value": "42,359",
+    "note": "Community recording downloaded 10/15/2026"
+   }
+  ],
+  "details": [
+   {
+    "label": "Pipelines in the plan",
+    "value": "499,695"
+   },
+   {
+    "label": "Shaders in the game files",
+    "value": "214,863"
+   },
+   {
+    "label": "Shader combinations found",
+    "value": "477,705"
+   },
+   {
+    "label": "Recorded pipelines",
+    "value": "42,359"
+   },
+   {
+    "label": "Built from the game files",
+    "value": "457,336"
+   },
+   {
+    "label": "Community data for your version",
+    "value": "42,873 pipelines"
+   },
+   {
+    "label": "Downloaded community recording",
+    "value": "42,873 pipelines"
+   },
+   {
+    "label": "Synthesized pipeline templates",
+    "value": "457,336"
+   },
+   {
+    "label": "Shader layouts",
+    "value": "641 · tested on this engine version"
+   },
+   {
+    "label": "Stage units exact / inferred / guessed",
+    "value": "84,567 / 183,311 / 224"
+   },
+   {
+    "label": "Vertex layouts from a recording",
+    "value": "98.5%"
+   },
+   {
+    "label": "Driver cache",
+    "value": "0 MB measured"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It takes about 1 h 25 min and runs in the background, so you can keep using the PC. It adds about 24.8 GB to the driver's shader cache."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "apiChip": "DirectX 12"
+ },
+ "steam:1173220": {
+  "id": "steam:1173220",
+  "name": "Bleak Faith: Forsaken",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\Bleak Faith Forsaken\\Forsaken\\Binaries\\Win64\\Forsaken-Win64-Shipping.exe",
+  "exeName": "Forsaken-Win64-Shipping.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\Bleak Faith Forsaken",
+  "sub": "UE 4.27 · Steam",
+  "engine": "UE 4.27",
+  "engineChip": "Unreal Engine 4.27",
+  "engineFamily": "Unreal",
+  "status": "ready",
+  "statusText": "Ready to compile",
+  "tone": "primary",
+  "statusTitle": "Ready to compile",
+  "statusReason": "Not compiled yet. Compiles every DirectX 11 shader",
+  "rowNote": "DirectX 11",
+  "tip": "compiles every DirectX 11 shader",
+  "reason": "compiles every DirectX 11 shader",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "shaders": 20642,
+  "pipelines": 0,
+  "cacheBytes": 0,
+  "cacheText": "0 MB",
+  "cacheEstimated": false,
+  "compileTime": "57 s",
+  "recommended": false,
+  "inAddAllReady": true,
+  "tags": [],
+  "antiCheat": {
+   "kind": "none",
+   "chip": "No anti-cheat",
+   "tip": "No anti-cheat found: this game can be recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "default",
+   "foreign": false,
+   "skip": "not DirectX 12",
+   "recordNote": "Not available: not DirectX 12.",
+   "canToggle": false,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": true,
+   "compileText": "Compile",
+   "add": true,
+   "addEnabled": true,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": false,
+   "play": true,
+   "playEnabled": true,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": true,
+   "clearCacheEnabled": true,
+   "clearCacheText": "Clear cache (0 MB)",
+   "clearCacheTip": "Deletes this game's shader caches (the driver's and Windows', and the game's own if you choose) so its next run starts cold",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove Bleak Faith: Forsaken from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "api": {
+    "index": 0,
+    "items": [
+     "Auto (DirectX 11)",
+     "DirectX 11",
+     "DirectX 12"
+    ],
+    "canPick": true
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "guessNote": "DirectX guessed, so the compile could be wrong.",
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "100%",
+   "label": "covered",
+   "headline": "Will cover every DirectX 11 shader in the game files",
+   "low": false,
+   "good": true,
+   "percent": 100
+  },
+  "sources": [
+   {
+    "label": "The community database",
+    "value": "not in it yet"
+   },
+   {
+    "label": "DirectX 11 shaders",
+    "value": "20,595"
+   }
+  ],
+  "details": [
+   {
+    "label": "Pipelines in the plan",
+    "value": "0"
+   },
+   {
+    "label": "Shaders in the game files",
+    "value": "20,642"
+   },
+   {
+    "label": "Recorded pipelines",
+    "value": "0"
+   },
+   {
+    "label": "Built from the game files",
+    "value": "0"
+   },
+   {
+    "label": "DirectX 11 shaders",
+    "value": "20,595"
+   },
+   {
+    "label": "Community data for your version",
+    "value": "none yet"
+   },
+   {
+    "label": "Synthesized pipeline templates",
+    "value": "0"
+   },
+   {
+    "label": "Shader layouts",
+    "value": "0 · not needed (DirectX 11)"
+   },
+   {
+    "label": "Driver cache",
+    "value": "0 MB measured"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It takes about 57 s and runs in the background, so you can keep using the PC. It adds about 256 MB to the driver's shader cache."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "apiChip": "DirectX 11"
+ },
+ "steam:2406770": {
+  "id": "steam:2406770",
+  "name": "Bodycam",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\Bodycam\\Bodycam\\Binaries\\Win64\\Bodycam-Win64-Shipping.exe",
+  "exeName": "Bodycam-Win64-Shipping.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\Bodycam",
+  "sub": "UE 5.5 (guessed) · Steam",
+  "engine": "UE 5.5 (guessed)",
+  "engineChip": "Unreal Engine 5.5 (guessed)",
+  "engineFamily": "Unreal",
+  "status": "ready",
+  "statusText": "Ready to compile",
+  "tone": "primary",
+  "statusTitle": "Ready to compile",
+  "statusReason": "Not compiled yet. Planned from a recording; also compiles every DirectX 11 shader (the game may run on either)",
+  "rowNote": "DirectX 11 and 12",
+  "tip": "planned from a recording; also compiles every DirectX 11 shader (the game may run on either)",
+  "reason": "planned from a recording; also compiles every DirectX 11 shader (the game may run on either)",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "shaders": 64238,
+  "pipelines": 95350,
+  "cacheBytes": 0,
+  "cacheText": "0 MB",
+  "cacheEstimated": false,
+  "compileTime": "19 min",
+  "recommended": false,
+  "inAddAllReady": true,
+  "tags": [],
+  "antiCheat": {
+   "kind": "none",
+   "chip": "No anti-cheat",
+   "tip": "No anti-cheat found: this game can be recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "on",
+   "foreign": true,
+   "recordNote": "Adds a small d3d12.dll next to the game to catch anything the plan missed and time each frame, so this page shows what stuttered. Remove any time. If a game has anti-cheat SCSKiller didn't detect, don't turn this on.",
+   "canToggle": true,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": true,
+   "compileText": "Compile",
+   "add": true,
+   "addEnabled": true,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": false,
+   "play": true,
+   "playEnabled": true,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": true,
+   "clearCacheEnabled": true,
+   "clearCacheText": "Clear cache (0 MB)",
+   "clearCacheTip": "Deletes this game's shader caches (the driver's and Windows', and the game's own if you choose) so its next run starts cold",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove Bodycam from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "api": {
+    "index": 0,
+    "items": [
+     "Auto (DirectX 11 and 12)",
+     "DirectX 11",
+     "DirectX 12"
+    ],
+    "canPick": true
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "guessNote": "Unreal version guessed, so the compile could be wrong.",
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "100%",
+   "label": "covered",
+   "headline": "Will cover all the shader combinations found in this game",
+   "low": false,
+   "good": true,
+   "percent": 100
+  },
+  "sources": [
+   {
+    "label": "DirectX 12, from the game files",
+    "value": "63,960"
+   },
+   {
+    "label": "The community database",
+    "value": "31,390",
+    "note": "Community recording downloaded 10/15/2026"
+   },
+   {
+    "label": "DirectX 11, from the game files",
+    "value": "18,196"
+   },
+   {
+    "label": "Ray-traced effects",
+    "value": "mostly covered"
+   }
+  ],
+  "details": [
+   {
+    "label": "Pipelines in the plan",
+    "value": "95,350"
+   },
+   {
+    "label": "Shaders in the game files",
+    "value": "64,238"
+   },
+   {
+    "label": "Shader combinations found",
+    "value": "155,787"
+   },
+   {
+    "label": "Recorded pipelines",
+    "value": "31,390"
+   },
+   {
+    "label": "Built from the game files",
+    "value": "63,960"
+   },
+   {
+    "label": "DirectX 11 shaders",
+    "value": "18,196"
+   },
+   {
+    "label": "Ray tracing shader libraries",
+    "value": "4,094 (4,073 not compiled)"
+   },
+   {
+    "label": "Community data for your version",
+    "value": "31,920 pipelines"
+   },
+   {
+    "label": "Downloaded community recording",
+    "value": "31,920 pipelines"
+   },
+   {
+    "label": "Synthesized pipeline templates",
+    "value": "63,960"
+   },
+   {
+    "label": "Shader layouts",
+    "value": "742 · tested on this engine version"
+   },
+   {
+    "label": "Stage units exact / inferred / guessed",
+    "value": "28,054 / 40,732 / 620"
+   },
+   {
+    "label": "Vertex layouts from a recording",
+    "value": "95.9%"
+   },
+   {
+    "label": "Driver cache",
+    "value": "0 MB measured"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It takes about 19 min and runs in the background, so you can keep using the PC. It adds about 4.7 GB to the driver's shader cache."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "apiChip": "DirectX 11 or DirectX 12"
+ },
+ "steam:730": {
+  "id": "steam:730",
+  "name": "Counter-Strike 2",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\Counter-Strike Global Offensive\\game\\bin\\win64\\cs2.exe",
+  "exeName": "cs2.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\Counter-Strike Global Offensive",
+  "sub": "Source 2 72 · Steam",
+  "engine": "Source 2 72",
+  "engineChip": "Source 2 72",
+  "engineFamily": "Source 2",
+  "status": "ready",
+  "statusText": "Ready to compile",
+  "tone": "primary",
+  "statusTitle": "Ready to compile",
+  "statusReason": "Not compiled yet. Compiles every DirectX 11 shader",
+  "rowNote": "DirectX 11",
+  "tip": "compiles every DirectX 11 shader",
+  "reason": "compiles every DirectX 11 shader",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "shaders": 147194,
+  "pipelines": 0,
+  "cacheBytes": 0,
+  "cacheText": "0 MB",
+  "cacheEstimated": false,
+  "compileTime": "1 h 22 min",
+  "recommended": false,
+  "inAddAllReady": true,
+  "tags": [],
+  "antiCheat": {
+   "kind": "none",
+   "chip": "No anti-cheat",
+   "tip": "No anti-cheat found: this game can be recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "default",
+   "foreign": false,
+   "skip": "anti-cheat",
+   "recordNote": "Not available: anti-cheat.",
+   "canToggle": false,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": true,
+   "compileText": "Compile",
+   "add": true,
+   "addEnabled": true,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": false,
+   "play": true,
+   "playEnabled": true,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": true,
+   "clearCacheEnabled": true,
+   "clearCacheText": "Clear cache (0 MB)",
+   "clearCacheTip": "Deletes this game's shader caches (the driver's and Windows', and the game's own if you choose) so its next run starts cold",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove Counter-Strike 2 from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "api": {
+    "index": 0,
+    "items": [
+     "Auto (DirectX 11)",
+     "DirectX 11",
+     "DirectX 12"
+    ],
+    "canPick": true
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "100%",
+   "label": "covered",
+   "headline": "Will cover every DirectX 11 shader in the game files",
+   "low": false,
+   "good": true,
+   "percent": 100
+  },
+  "sources": [
+   {
+    "label": "The community database",
+    "value": "not in it yet"
+   },
+   {
+    "label": "DirectX 11 shaders",
+    "value": "147,194"
+   }
+  ],
+  "details": [
+   {
+    "label": "Pipelines in the plan",
+    "value": "0"
+   },
+   {
+    "label": "Shaders in the game files",
+    "value": "147,194"
+   },
+   {
+    "label": "Recorded pipelines",
+    "value": "0"
+   },
+   {
+    "label": "Built from the game files",
+    "value": "0"
+   },
+   {
+    "label": "DirectX 11 shaders",
+    "value": "147,194"
+   },
+   {
+    "label": "Community data for your version",
+    "value": "none yet"
+   },
+   {
+    "label": "Synthesized pipeline templates",
+    "value": "0"
+   },
+   {
+    "label": "Shader layouts",
+    "value": "0 · not needed (DirectX 11)"
+   },
+   {
+    "label": "Driver cache",
+    "value": "0 MB measured"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It takes about 1 h 22 min and runs in the background, so you can keep using the PC. It adds about 4 GB to the driver's shader cache."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "apiChip": "DirectX 11"
+ },
+ "steam:2101960": {
+  "id": "steam:2101960",
+  "name": "Cronos: The New Dawn",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\Cronos. The New Dawn\\Cronos\\Binaries\\Win64\\Cronos-Win64-Shipping.exe",
+  "exeName": "Cronos-Win64-Shipping.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\Cronos. The New Dawn",
+  "sub": "UE 5.5 · Steam",
+  "engine": "UE 5.5",
+  "engineChip": "Unreal Engine 5.5",
+  "engineFamily": "Unreal",
+  "status": "ready",
+  "statusText": "Ready to compile",
+  "tone": "primary",
+  "statusTitle": "Ready to compile",
+  "statusReason": "Not compiled yet",
+  "tip": "planned from a recording",
+  "reason": "planned from a recording",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "shaders": 102523,
+  "pipelines": 124690,
+  "cacheBytes": 0,
+  "cacheText": "0 MB",
+  "cacheEstimated": false,
+  "compileTime": "18 min",
+  "recommended": false,
+  "inAddAllReady": true,
+  "tags": [
+   {
+    "text": "FidelityFX",
+    "tip": "FidelityFX: 1,060 known pipelines, compiled with the game\n    amd_fidelityfx_framegeneration_dx12.dll, amd_fidelityfx_upscaler_dx12.dll"
+   }
+  ],
+  "antiCheat": {
+   "kind": "none",
+   "chip": "No anti-cheat",
+   "tip": "No anti-cheat found: this game can be recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "on",
+   "foreign": true,
+   "recordNote": "Adds a small d3d12.dll next to the game to catch anything the plan missed and time each frame, so this page shows what stuttered. Remove any time. If a game has anti-cheat SCSKiller didn't detect, don't turn this on.",
+   "canToggle": true,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": true,
+   "compileText": "Compile",
+   "add": true,
+   "addEnabled": true,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": false,
+   "play": true,
+   "playEnabled": true,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": true,
+   "clearCacheEnabled": true,
+   "clearCacheText": "Clear cache (0 MB)",
+   "clearCacheTip": "Deletes this game's shader caches (the driver's and Windows', and the game's own if you choose) so its next run starts cold",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove Cronos: The New Dawn from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "api": {
+    "index": 0,
+    "items": [
+     "Auto (DirectX 12)",
+     "DirectX 11",
+     "DirectX 12"
+    ],
+    "canPick": true
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "100%",
+   "label": "covered",
+   "headline": "Will cover all the shader combinations found in this game",
+   "low": false,
+   "good": true,
+   "percent": 100
+  },
+  "sources": [
+   {
+    "label": "Found in the game files",
+    "value": "74,877"
+   },
+   {
+    "label": "The community database",
+    "value": "48,880",
+    "note": "Community recording downloaded 10/15/2026"
+   },
+   {
+    "label": "Its upscalers, from shared packs",
+    "value": "933"
+   },
+   {
+    "label": "Ray-traced effects",
+    "value": "mostly covered"
+   }
+  ],
+  "details": [
+   {
+    "label": "Pipelines in the plan",
+    "value": "124,690"
+   },
+   {
+    "label": "Shaders in the game files",
+    "value": "102,523"
+   },
+   {
+    "label": "Shader combinations found",
+    "value": "179,949"
+   },
+   {
+    "label": "Recorded pipelines",
+    "value": "48,880"
+   },
+   {
+    "label": "Built from the game files",
+    "value": "74,877"
+   },
+   {
+    "label": "Upscaler pipelines",
+    "value": "933"
+   },
+   {
+    "label": "Ray tracing shader libraries",
+    "value": "17,639 (16,580 not compiled)"
+   },
+   {
+    "label": "Community data for your version",
+    "value": "42,264 pipelines"
+   },
+   {
+    "label": "Downloaded community recording",
+    "value": "42,264 pipelines"
+   },
+   {
+    "label": "Synthesized pipeline templates",
+    "value": "74,877"
+   },
+   {
+    "label": "Shader layouts",
+    "value": "665 · tested on this engine version"
+   },
+   {
+    "label": "Stage units exact / inferred / guessed",
+    "value": "22,385 / 58,960 / 662"
+   },
+   {
+    "label": "Vertex layouts from a recording",
+    "value": "92.1%"
+   },
+   {
+    "label": "Driver cache",
+    "value": "0 MB measured"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It takes about 18 min and runs in the background, so you can keep using the PC. It adds about 5.2 GB to the driver's shader cache."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "middleware": {
+   "chip": "Also compiles: FidelityFX",
+   "tip": "Upscaler DLLs next to the game. Their pipelines are compiled with it once a recording of any game has seen that DLL version: on this PC, or for FSR and XeSS on any PC that shares them (this plan: 933 of theirs).\n\nFidelityFX: 1,060 known pipelines, compiled with the game\n    amd_fidelityfx_framegeneration_dx12.dll, amd_fidelityfx_upscaler_dx12.dll"
+  },
+  "apiChip": "DirectX 12"
+ },
+ "steam:1790600": {
+  "id": "steam:1790600",
+  "name": "DRAGON BALL: Sparking! ZERO",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\DRAGON BALL Sparking! ZERO\\SparkingZERO\\Binaries\\Win64\\SparkingZERO-Win64-Shipping.exe",
+  "exeName": "SparkingZERO-Win64-Shipping.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\DRAGON BALL Sparking! ZERO",
+  "sub": "UE 5.1 · Steam",
+  "engine": "UE 5.1",
+  "engineChip": "Unreal Engine 5.1",
+  "engineFamily": "Unreal",
+  "status": "ready",
+  "statusText": "Ready to compile",
+  "tone": "primary",
+  "statusTitle": "Ready to compile",
+  "statusReason": "Not compiled yet",
+  "tip": "no recording needed",
+  "reason": "no recording needed",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "shaders": 38365,
+  "pipelines": 52253,
+  "cacheBytes": 0,
+  "cacheText": "0 MB",
+  "cacheEstimated": false,
+  "compileTime": "5 min",
+  "recommended": false,
+  "inAddAllReady": true,
+  "tags": [],
+  "antiCheat": {
+   "kind": "none",
+   "chip": "No anti-cheat",
+   "tip": "No anti-cheat found: this game can be recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "on",
+   "foreign": true,
+   "recordNote": "Adds a small d3d12.dll next to the game to catch anything the plan missed and time each frame, so this page shows what stuttered. Remove any time. If a game has anti-cheat SCSKiller didn't detect, don't turn this on.",
+   "canToggle": true,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": true,
+   "compileText": "Compile",
+   "add": true,
+   "addEnabled": true,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": false,
+   "play": true,
+   "playEnabled": true,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": true,
+   "clearCacheEnabled": true,
+   "clearCacheText": "Clear cache (0 MB)",
+   "clearCacheTip": "Deletes this game's shader caches (the driver's and Windows', and the game's own if you choose) so its next run starts cold",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove DRAGON BALL: Sparking! ZERO from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "api": {
+    "index": 0,
+    "items": [
+     "Auto (DirectX 12)",
+     "DirectX 11",
+     "DirectX 12"
+    ],
+    "canPick": true
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "100%",
+   "label": "covered",
+   "headline": "Will cover all the shader combinations found in this game",
+   "low": false,
+   "good": true,
+   "percent": 100
+  },
+  "sources": [
+   {
+    "label": "Found in the game files",
+    "value": "45,254"
+   },
+   {
+    "label": "The community database",
+    "value": "6,999",
+    "note": "Community recording downloaded 10/15/2026"
+   },
+   {
+    "label": "Ray-traced effects",
+    "value": "off in this game"
+   }
+  ],
+  "details": [
+   {
+    "label": "Pipelines in the plan",
+    "value": "52,253"
+   },
+   {
+    "label": "Shaders in the game files",
+    "value": "38,365"
+   },
+   {
+    "label": "Shader combinations found",
+    "value": "77,081"
+   },
+   {
+    "label": "Recorded pipelines",
+    "value": "6,999"
+   },
+   {
+    "label": "Built from the game files",
+    "value": "45,254"
+   },
+   {
+    "label": "Ray tracing shader libraries",
+    "value": "7 (not used by the game)"
+   },
+   {
+    "label": "Community data for your version",
+    "value": "7,125 pipelines"
+   },
+   {
+    "label": "Downloaded community recording",
+    "value": "7,125 pipelines"
+   },
+   {
+    "label": "Synthesized pipeline templates",
+    "value": "45,254"
+   },
+   {
+    "label": "Shader layouts",
+    "value": "309 · tested on this engine version"
+   },
+   {
+    "label": "Stage units exact / inferred / guessed",
+    "value": "6,961 / 44,970 / 1,710"
+   },
+   {
+    "label": "Vertex layouts from a recording",
+    "value": "98.2%"
+   },
+   {
+    "label": "Driver cache",
+    "value": "0 MB measured"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It takes about 5 min and runs in the background, so you can keep using the PC. It adds about 2 GB to the driver's shader cache."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "apiChip": "DirectX 12"
+ },
+ "steam:2102450": {
+  "id": "steam:2102450",
+  "name": "Enotria: The Last Song",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\Enotria\\Enotria\\Binaries\\Win64\\Enotria-Win64-Shipping.exe",
+  "exeName": "Enotria-Win64-Shipping.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\Enotria",
+  "sub": "UE 5.7 · Steam",
+  "engine": "UE 5.7",
+  "engineChip": "Unreal Engine 5.7",
+  "engineFamily": "Unreal",
+  "status": "ready",
+  "statusText": "Ready to compile",
+  "tone": "primary",
+  "statusTitle": "Ready to compile",
+  "statusReason": "Not compiled yet. Not tested on this engine version yet: playing with recording on improves it",
+  "rowNote": "Not tested on this engine version",
+  "tip": "not tested on this engine version yet: playing with recording on improves it",
+  "reason": "not tested on this engine version yet: playing with recording on improves it",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "shaders": 29489,
+  "pipelines": 105650,
+  "cacheBytes": 0,
+  "cacheText": "0 MB",
+  "cacheEstimated": false,
+  "compileTime": "26 min",
+  "recommended": false,
+  "inAddAllReady": true,
+  "tags": [],
+  "antiCheat": {
+   "kind": "none",
+   "chip": "No anti-cheat",
+   "tip": "No anti-cheat found: this game can be recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "on",
+   "foreign": true,
+   "recordNote": "Adds a small d3d12.dll next to the game to catch anything the plan missed and time each frame, so this page shows what stuttered. Remove any time. If a game has anti-cheat SCSKiller didn't detect, don't turn this on.",
+   "canToggle": true,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": true,
+   "compileText": "Compile",
+   "add": true,
+   "addEnabled": true,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": false,
+   "play": true,
+   "playEnabled": true,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": true,
+   "clearCacheEnabled": true,
+   "clearCacheText": "Clear cache (0 MB)",
+   "clearCacheTip": "Deletes this game's shader caches (the driver's and Windows', and the game's own if you choose) so its next run starts cold",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove Enotria: The Last Song from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "api": {
+    "index": 0,
+    "items": [
+     "Auto (DirectX 12)",
+     "DirectX 11",
+     "DirectX 12"
+    ],
+    "canPick": true
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "100%",
+   "label": "covered",
+   "headline": "Will cover all the shader combinations found in this game",
+   "low": false,
+   "good": true,
+   "percent": 100
+  },
+  "sources": [
+   {
+    "label": "Found in the game files",
+    "value": "105,650"
+   },
+   {
+    "label": "The community database",
+    "value": "not in it yet"
+   }
+  ],
+  "details": [
+   {
+    "label": "Pipelines in the plan",
+    "value": "105,650"
+   },
+   {
+    "label": "Shaders in the game files",
+    "value": "29,489"
+   },
+   {
+    "label": "Shader combinations found",
+    "value": "105,650"
+   },
+   {
+    "label": "Recorded pipelines",
+    "value": "0"
+   },
+   {
+    "label": "Built from the game files",
+    "value": "105,650"
+   },
+   {
+    "label": "Community data for your version",
+    "value": "none yet"
+   },
+   {
+    "label": "Synthesized pipeline templates",
+    "value": "105,650"
+   },
+   {
+    "label": "Shader layouts",
+    "value": "645 · not tested on this engine version yet"
+   },
+   {
+    "label": "Stage units exact / inferred / guessed",
+    "value": "19,671 / 0 / 35,974"
+   },
+   {
+    "label": "Vertex layouts from a recording",
+    "value": "17.8%"
+   },
+   {
+    "label": "Driver cache",
+    "value": "0 MB measured"
+   }
+  ],
+  "left": {
+   "title": "Some shaders still compile while you play",
+   "text": "A few effects are only put together while you play. A short recording picks them up. Some shader states are guesses. A longer recording makes them exact."
+  },
+  "compile": {
+   "title": "First compile",
+   "text": "It takes about 26 min and runs in the background, so you can keep using the PC. It adds about 6.3 GB to the driver's shader cache."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "apiChip": "DirectX 12"
+ },
+ "steam:2515020": {
+  "id": "steam:2515020",
+  "name": "FINAL FANTASY XVI",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\FINAL FANTASY XVI\\ffxvi.exe",
+  "exeName": "ffxvi.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\FINAL FANTASY XVI",
+  "sub": "Carved DXIL+DXBC · Steam",
+  "engine": "Carved DXIL+DXBC",
+  "engineChip": "Carved DXIL+DXBC",
+  "engineFamily": "Carved",
+  "status": "ready",
+  "statusText": "Ready to compile",
+  "tone": "primary",
+  "statusTitle": "Ready to compile",
+  "statusReason": "Not compiled yet",
+  "tip": "planned from a recording",
+  "reason": "planned from a recording",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "shaders": 83916,
+  "cacheText": "—",
+  "cacheEstimated": false,
+  "recommended": false,
+  "inAddAllReady": true,
+  "tags": [
+   {
+    "text": "FidelityFX",
+    "tip": "FidelityFX: 91 known pipelines, compiled with the game\n    amd_fidelityfx_dx12.dll"
+   },
+   {
+    "text": "XeSS",
+    "tip": "XeSS: detected, added after a recording sees them\n    libxess.dll"
+   },
+   {
+    "text": "DLSS",
+    "tip": "DLSS: compiled by the NVIDIA driver itself\n    nvngx_dlss.dll, nvngx_dlssg.dll"
+   }
+  ],
+  "antiCheat": {
+   "kind": "none",
+   "chip": "No anti-cheat",
+   "tip": "No anti-cheat found: this game can be recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "on",
+   "foreign": true,
+   "recordNote": "Adds a small d3d12.dll next to the game to catch anything the plan missed and time each frame, so this page shows what stuttered. Remove any time. If a game has anti-cheat SCSKiller didn't detect, don't turn this on.",
+   "canToggle": true,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": true,
+   "compileText": "Compile",
+   "add": true,
+   "addEnabled": true,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": false,
+   "play": true,
+   "playEnabled": true,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": true,
+   "clearCacheEnabled": false,
+   "clearCacheText": "Clear cache",
+   "clearCacheTip": "SCSKiller learns this game's driver cache files the first time it compiles it or sees it running",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove FINAL FANTASY XVI from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "api": {
+    "index": 0,
+    "items": [
+     "Auto (DirectX 12)",
+     "DirectX 11",
+     "DirectX 12"
+    ],
+    "canPick": true
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "—",
+   "label": "not yet",
+   "headline": "Known once its first compile starts",
+   "low": false,
+   "good": false
+  },
+  "sources": [],
+  "details": [
+   {
+    "label": "Shaders in the game files",
+    "value": "83,916"
+   },
+   {
+    "label": "Community data for your version",
+    "value": "28,837 pipelines"
+   },
+   {
+    "label": "Downloaded community recording",
+    "value": "28,837 pipelines"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It runs in the background, so you can keep using the PC."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "middleware": {
+   "chip": "Also compiles: FidelityFX · DLSS (by the driver)",
+   "tip": "Upscaler DLLs next to the game. Their pipelines are compiled with it once a recording of any game has seen that DLL version: on this PC, or for FSR and XeSS on any PC that shares them.\n\nFidelityFX: 91 known pipelines, compiled with the game\n    amd_fidelityfx_dx12.dll\nXeSS: detected, added after a recording sees them\n    libxess.dll\nDLSS: compiled by the NVIDIA driver itself\n    nvngx_dlss.dll, nvngx_dlssg.dll"
+  },
+  "apiChip": "DirectX 12"
+ },
+ "steam:2215430": {
+  "id": "steam:2215430",
+  "name": "Ghost of Tsushima DIRECTOR'S CUT",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\Ghost of Tsushima DIRECTOR'S CUT\\GhostOfTsushima.exe",
+  "exeName": "GhostOfTsushima.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\Ghost of Tsushima DIRECTOR'S CUT",
+  "sub": "Nixxes DSAR · Steam",
+  "engine": "Nixxes DSAR",
+  "engineChip": "Nixxes DSAR · custom fork",
+  "engineFamily": "Nixxes",
+  "status": "ready",
+  "statusText": "Ready to compile",
+  "tone": "primary",
+  "statusTitle": "Ready to compile",
+  "statusReason": "Not compiled yet",
+  "tip": "no recording needed",
+  "reason": "no recording needed",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "shaders": 20784,
+  "pipelines": 304422,
+  "cacheBytes": 0,
+  "cacheText": "0 MB",
+  "cacheEstimated": false,
+  "compileTime": "39 min",
+  "recommended": false,
+  "inAddAllReady": true,
+  "tags": [
+   {
+    "text": "FidelityFX",
+    "tip": "FidelityFX: 91 known pipelines, compiled with the game\n    amd_fidelityfx_dx12.dll"
+   },
+   {
+    "text": "XeSS",
+    "tip": "XeSS: detected, added after a recording sees them\n    libxess.dll"
+   },
+   {
+    "text": "DLSS",
+    "tip": "DLSS: compiled by the NVIDIA driver itself\n    nvngx_dlss.dll, nvngx_dlssg.dll"
+   }
+  ],
+  "antiCheat": {
+   "kind": "none",
+   "chip": "No anti-cheat",
+   "tip": "No anti-cheat found: this game can be recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "default",
+   "foreign": true,
+   "recordNote": "Adds a small d3d12.dll next to the game to catch anything the plan missed and time each frame, so this page shows what stuttered. Remove any time. If a game has anti-cheat SCSKiller didn't detect, don't turn this on.",
+   "canToggle": true,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": true,
+   "compileText": "Compile",
+   "add": true,
+   "addEnabled": true,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": false,
+   "play": true,
+   "playEnabled": true,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": true,
+   "clearCacheEnabled": true,
+   "clearCacheText": "Clear cache (0 MB)",
+   "clearCacheTip": "Deletes this game's shader caches (the driver's and Windows', and the game's own if you choose) so its next run starts cold",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove Ghost of Tsushima DIRECTOR'S CUT from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "api": {
+    "index": 0,
+    "items": [
+     "Auto (DirectX 12)",
+     "DirectX 11",
+     "DirectX 12"
+    ],
+    "canPick": true
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "99%",
+   "label": "covered",
+   "headline": "Will cover about 99% of the shader combinations found in this game",
+   "low": false,
+   "good": true,
+   "percent": 99
+  },
+  "sources": [
+   {
+    "label": "Found in the game files",
+    "value": "287,133"
+   },
+   {
+    "label": "The community database",
+    "value": "17,202",
+    "note": "Community recording downloaded 10/15/2026"
+   },
+   {
+    "label": "Its upscalers, from recordings and shared packs",
+    "value": "87"
+   }
+  ],
+  "details": [
+   {
+    "label": "Pipelines in the plan",
+    "value": "304,422"
+   },
+   {
+    "label": "Shaders in the game files",
+    "value": "20,784"
+   },
+   {
+    "label": "Shader combinations found",
+    "value": "303,148"
+   },
+   {
+    "label": "Left out",
+    "value": "2,948 (12 for shader slots SCSKiller can't rebuild)"
+   },
+   {
+    "label": "Recorded pipelines",
+    "value": "17,202"
+   },
+   {
+    "label": "Built from the game files",
+    "value": "287,133"
+   },
+   {
+    "label": "Upscaler pipelines",
+    "value": "87"
+   },
+   {
+    "label": "Community data for your version",
+    "value": "17,217 pipelines"
+   },
+   {
+    "label": "Downloaded community recording",
+    "value": "17,217 pipelines"
+   },
+   {
+    "label": "Synthesized pipeline templates",
+    "value": "287,133"
+   },
+   {
+    "label": "Shader layouts",
+    "value": "2 · tested on this engine version"
+   },
+   {
+    "label": "Stage units exact / inferred / guessed",
+    "value": "2,009 / 5,640 / 2"
+   },
+   {
+    "label": "Vertex layouts from a recording",
+    "value": "99.3%"
+   },
+   {
+    "label": "Driver cache",
+    "value": "0 MB measured"
+   }
+  ],
+  "left": {
+   "title": "Some shaders still compile while you play",
+   "text": "SCSKiller hasn't seen how the game sets the rest up yet. Playing longer with recording on teaches it."
+  },
+  "compile": {
+   "title": "First compile",
+   "text": "It takes about 39 min and runs in the background, so you can keep using the PC. It adds about 15.9 GB to the driver's shader cache."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "middleware": {
+   "chip": "Also compiles: FidelityFX · DLSS (by the driver)",
+   "tip": "Upscaler DLLs next to the game. Their pipelines are compiled with it once a recording of any game has seen that DLL version: on this PC, or for FSR and XeSS on any PC that shares them (this plan: 87 of theirs).\n\nFidelityFX: 91 known pipelines, compiled with the game\n    amd_fidelityfx_dx12.dll\nXeSS: detected, added after a recording sees them\n    libxess.dll\nDLSS: compiled by the NVIDIA driver itself\n    nvngx_dlss.dll, nvngx_dlssg.dll"
+  },
+  "apiChip": "DirectX 12"
+ },
+ "steam:1593500": {
+  "id": "steam:1593500",
+  "name": "God of War",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\GodOfWar\\GoW.exe",
+  "exeName": "GoW.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\GodOfWar",
+  "sub": "Santa Monica SHDRPACK 1 · Steam",
+  "engine": "Santa Monica SHDRPACK 1",
+  "engineChip": "Santa Monica SHDRPACK 1",
+  "engineFamily": "Santa Monica",
+  "status": "ready",
+  "statusText": "Ready to compile",
+  "tone": "primary",
+  "statusTitle": "Ready to compile",
+  "statusReason": "Not compiled yet. Compiles every DirectX 11 shader",
+  "rowNote": "DirectX 11",
+  "tip": "compiles every DirectX 11 shader",
+  "reason": "compiles every DirectX 11 shader",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "shaders": 25351,
+  "pipelines": 0,
+  "cacheBytes": 0,
+  "cacheText": "0 MB",
+  "cacheEstimated": false,
+  "compileTime": "3 min",
+  "recommended": false,
+  "inAddAllReady": true,
+  "tags": [
+   {
+    "text": "DLSS",
+    "tip": "DLSS: compiled by the NVIDIA driver itself\n    nvngx_dlss.dll"
+   }
+  ],
+  "antiCheat": {
+   "kind": "none",
+   "chip": "No anti-cheat",
+   "tip": "No anti-cheat found: this game can be recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "default",
+   "foreign": false,
+   "skip": "not DirectX 12",
+   "recordNote": "Not available: not DirectX 12.",
+   "canToggle": false,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": true,
+   "compileText": "Compile",
+   "add": true,
+   "addEnabled": true,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": false,
+   "play": true,
+   "playEnabled": true,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": true,
+   "clearCacheEnabled": true,
+   "clearCacheText": "Clear cache (0 MB)",
+   "clearCacheTip": "Deletes this game's shader caches (the driver's and Windows', and the game's own if you choose) so its next run starts cold",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove God of War from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "api": {
+    "index": 0,
+    "items": [
+     "Auto (DirectX 11)",
+     "DirectX 11",
+     "DirectX 12"
+    ],
+    "canPick": true
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "100%",
+   "label": "covered",
+   "headline": "Will cover every DirectX 11 shader in the game files",
+   "low": false,
+   "good": true,
+   "percent": 100
+  },
+  "sources": [
+   {
+    "label": "The community database",
+    "value": "not in it yet"
+   },
+   {
+    "label": "DirectX 11 shaders",
+    "value": "25,351"
+   }
+  ],
+  "details": [
+   {
+    "label": "Pipelines in the plan",
+    "value": "0"
+   },
+   {
+    "label": "Shaders in the game files",
+    "value": "25,351"
+   },
+   {
+    "label": "Recorded pipelines",
+    "value": "0"
+   },
+   {
+    "label": "Built from the game files",
+    "value": "0"
+   },
+   {
+    "label": "DirectX 11 shaders",
+    "value": "25,351"
+   },
+   {
+    "label": "Community data for your version",
+    "value": "none yet"
+   },
+   {
+    "label": "Synthesized pipeline templates",
+    "value": "0"
+   },
+   {
+    "label": "Shader layouts",
+    "value": "0 · not needed (DirectX 11)"
+   },
+   {
+    "label": "Driver cache",
+    "value": "0 MB measured"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It takes about 3 min and runs in the background, so you can keep using the PC. It adds about 256 MB to the driver's shader cache."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "middleware": {
+   "chip": "Also compiles: DLSS (by the driver)",
+   "tip": "Upscaler DLLs next to the game. Their pipelines are compiled with it once a recording of any game has seen that DLL version: on this PC, or for FSR and XeSS on any PC that shares them.\n\nDLSS: compiled by the NVIDIA driver itself\n    nvngx_dlss.dll"
+  },
+  "apiChip": "DirectX 11"
+ },
+ "steam:1620730": {
+  "id": "steam:1620730",
+  "name": "Hell is Us",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\Hell Is Us\\HellIsUs\\Binaries\\Win64\\HellIsUs-Win64-Shipping.exe",
+  "exeName": "HellIsUs-Win64-Shipping.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\Hell Is Us",
+  "sub": "UE 5.5 · Steam",
+  "engine": "UE 5.5",
+  "engineChip": "Unreal Engine 5.5",
+  "engineFamily": "Unreal",
+  "status": "ready",
+  "statusText": "Ready to compile",
+  "tone": "primary",
+  "statusTitle": "Ready to compile",
+  "statusReason": "Not compiled yet",
+  "tip": "planned from a recording",
+  "reason": "planned from a recording",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "shaders": 56276,
+  "pipelines": 151097,
+  "cacheBytes": 0,
+  "cacheText": "0 MB",
+  "cacheEstimated": false,
+  "compileTime": "24 min",
+  "recommended": false,
+  "inAddAllReady": true,
+  "tags": [],
+  "antiCheat": {
+   "kind": "none",
+   "chip": "No anti-cheat",
+   "tip": "No anti-cheat found: this game can be recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "on",
+   "foreign": true,
+   "recordNote": "Adds a small d3d12.dll next to the game to catch anything the plan missed and time each frame, so this page shows what stuttered. Remove any time. If a game has anti-cheat SCSKiller didn't detect, don't turn this on.",
+   "canToggle": true,
+   "recordingBytes": 1092490,
+   "recordingText": "The recording uses 1 MB (in the game folder and SCSKiller's copy)",
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": true,
+   "compileText": "Compile",
+   "add": true,
+   "addEnabled": true,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": false,
+   "play": true,
+   "playEnabled": true,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": true,
+   "clearCacheEnabled": true,
+   "clearCacheText": "Clear cache (0 MB)",
+   "clearCacheTip": "Deletes this game's shader caches (the driver's and Windows', and the game's own if you choose) so its next run starts cold",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove Hell is Us from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "api": {
+    "index": 0,
+    "items": [
+     "Auto (DirectX 12)",
+     "DirectX 11",
+     "DirectX 12"
+    ],
+    "canPick": true
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "frames": {
+   "durationMs": 437637.148,
+   "startupMs": 171000,
+   "peaks": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    6005.518,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    21.259,
+    22.545,
+    576.567,
+    62.506,
+    102.68,
+    27.087,
+    2357.057,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    739.682,
+    0,
+    162.753,
+    878.846,
+    0,
+    10.775,
+    12.324,
+    18.784,
+    11.869,
+    15.824,
+    12.598,
+    13.06,
+    13.627,
+    218.678,
+    291.675,
+    12.394,
+    24.768,
+    22.688,
+    13.752,
+    14.288,
+    12.93,
+    12.291,
+    11.876,
+    11.605,
+    13.424,
+    12.703,
+    12.599,
+    19.487,
+    18.932,
+    16.631,
+    15.33,
+    16.174,
+    7.561,
+    8.74,
+    7.989,
+    9.899,
+    7.414,
+    7.06,
+    7.871,
+    7.653,
+    13.564,
+    8.399,
+    12.452,
+    7.195,
+    7.929,
+    7.703,
+    7.806,
+    7.519,
+    8.257,
+    8.641,
+    14.488,
+    7.456,
+    8.143,
+    7.602,
+    7.741,
+    7.231,
+    13.207,
+    8.1,
+    7.805,
+    7.145,
+    7.152,
+    7.125,
+    7.179,
+    12.489,
+    7.131,
+    12.581,
+    6.693,
+    6.756,
+    7.364,
+    7.567,
+    7.019,
+    7.742,
+    10.098,
+    6.998,
+    7.896,
+    8.066,
+    7.36,
+    31.475,
+    7.283,
+    15.581,
+    7.719,
+    16.525,
+    15.591,
+    7.031,
+    16.262,
+    8.849,
+    15.649,
+    16.129,
+    15.816,
+    7.762,
+    8.703,
+    16.157,
+    9.362,
+    11.089,
+    9.162,
+    7.734,
+    14.511,
+    9.962,
+    17.573,
+    14.926,
+    14.489,
+    14.567,
+    5.385,
+    5.7,
+    14.717,
+    5.933,
+    5.833,
+    6.247,
+    7.269,
+    14.48,
+    15.188,
+    6.433,
+    7.487,
+    5.695,
+    6.535,
+    6.03,
+    6.217,
+    6.283,
+    7.295,
+    40.466,
+    7.311,
+    14.735,
+    5.604,
+    14.111,
+    8.08,
+    7.45,
+    16.411,
+    7.434,
+    14.217,
+    14.367,
+    13.928,
+    14.466,
+    10.702,
+    8.584,
+    6.656,
+    5.193,
+    6.296,
+    14.784,
+    5.48,
+    7.529,
+    5.523,
+    6.157,
+    5.17,
+    6.347,
+    6.056,
+    5.694,
+    7.549,
+    5.918,
+    6.417,
+    14.393,
+    14.097,
+    4.972,
+    5.014,
+    14.664,
+    13.758,
+    14.168,
+    13.832,
+    5.201,
+    8.68,
+    13.772,
+    6.072,
+    11.762,
+    14.282,
+    7.273,
+    6.225,
+    6.411,
+    5.332,
+    6.021,
+    5.628,
+    6.14,
+    5.856,
+    15.654,
+    13.982,
+    195.591,
+    14.059,
+    14.227,
+    5.37,
+    7.146,
+    5.844,
+    7.42,
+    5.996,
+    5.911,
+    5.825,
+    6.43,
+    6.955,
+    7.113,
+    5.902,
+    6.446,
+    7.432,
+    5.904,
+    6.868,
+    6.027,
+    5.807,
+    14.538,
+    17.253,
+    6.972,
+    6.217,
+    10.279,
+    5.715,
+    5.887,
+    14.019,
+    6.044,
+    5.827,
+    7.003,
+    5.847,
+    26.632,
+    4.939,
+    5.695,
+    14.145,
+    5.431,
+    6.317,
+    6.643,
+    16.19,
+    6.786,
+    5.874,
+    5.575,
+    18.877,
+    14.025,
+    12.552,
+    5.817,
+    16.605,
+    4.849,
+    6.533,
+    6.202,
+    5.497,
+    6.559,
+    12.154,
+    13.214,
+    6.614,
+    6.183,
+    14.201,
+    18.062,
+    6.711,
+    5.912,
+    6.198,
+    6.161,
+    12.631,
+    5.894,
+    5.511,
+    38.215,
+    4.899,
+    14.245,
+    5.851,
+    6.682,
+    27.027,
+    5.776,
+    7.653,
+    6.258,
+    5.739,
+    5.77,
+    5.556,
+    6.239,
+    6.217,
+    6.203,
+    7.511,
+    6.097,
+    6.61,
+    6.352,
+    6.362,
+    6.253,
+    15.94,
+    14.111,
+    7.42,
+    9.099,
+    5.967,
+    7.016,
+    6.034,
+    6.368,
+    6.203,
+    11.311,
+    6.726,
+    19.956,
+    14.086,
+    25.169,
+    6.63,
+    19.714,
+    5.238,
+    14.128,
+    12.496,
+    5.327,
+    6.008,
+    5.599,
+    33.679,
+    5.273,
+    7.578,
+    6.229,
+    6.378,
+    6.611,
+    6.4,
+    6.145,
+    20.275,
+    14.794,
+    4.912,
+    7.626,
+    6.082,
+    5.746,
+    10.529,
+    5.763,
+    9.076,
+    14.447,
+    4.873,
+    5.24,
+    6.58,
+    7.139,
+    6.371,
+    6.609,
+    14.845,
+    6.526,
+    6.118,
+    13.906,
+    15.5,
+    5.204,
+    7.227,
+    6.239,
+    6.823,
+    6.671,
+    5.606,
+    5.895,
+    5.578,
+    5.561,
+    14.322,
+    4.977,
+    6.924,
+    14.112,
+    6.765,
+    13.957,
+    5.078,
+    9.85,
+    28.207,
+    11.055,
+    6.415,
+    5.629,
+    5.982,
+    5.958,
+    5.622,
+    5.81,
+    6.488,
+    6.004,
+    5.888,
+    10.355,
+    6.486,
+    14.444,
+    12.587,
+    5.642,
+    14.601,
+    7.56,
+    6.627,
+    14.44,
+    14.578,
+    5.413,
+    323.91,
+    8.755,
+    5.242,
+    5.256,
+    6.786,
+    20.655,
+    5.807,
+    11.897,
+    6.417,
+    39.472,
+    5.047,
+    4.984,
+    7.368,
+    29.884,
+    5.099,
+    19.254,
+    5.766,
+    5.872,
+    6.471,
+    6.193,
+    6.499,
+    6.46,
+    5.694,
+    12.792,
+    5.277,
+    12.396,
+    10.647,
+    5.092,
+    10.829,
+    14.755,
+    5.565,
+    6.532,
+    14.61,
+    4.926,
+    6.29,
+    5.82,
+    5.834,
+    6.541,
+    10.052,
+    5.886,
+    7.386,
+    5.657,
+    5.477,
+    5.913,
+    5.235,
+    5.554,
+    5.534,
+    61.872,
+    5.098,
+    4.34,
+    4.531,
+    62.633,
+    640.375,
+    0,
+    481.541,
+    0,
+    460.998,
+    18.241,
+    18.003,
+    71.092,
+    103.373,
+    160.684,
+    162.416,
+    85.595,
+    120.621,
+    393.924,
+    13.383,
+    12.72,
+    34.055,
+    9.601,
+    4.649,
+    4.412,
+    4.28,
+    4.356,
+    4.128,
+    4.147,
+    4.51,
+    4.136,
+    4.072,
+    4.352,
+    4.24,
+    4.443,
+    3.972,
+    4.795,
+    5.92,
+    5.224,
+    4.352,
+    4.555,
+    9.195,
+    5.891,
+    5.128,
+    4.408,
+    4.72,
+    4.308,
+    4.408,
+    4.215,
+    4.315,
+    13.388,
+    5.267,
+    7.623,
+    11.062,
+    5.389,
+    4.639,
+    8.604,
+    5.458,
+    5.166,
+    4.683,
+    6.238,
+    4.679,
+    4.797,
+    3.892,
+    7.264,
+    4.467,
+    6.954,
+    5.471,
+    6.384,
+    5.102,
+    7.899,
+    6.043,
+    6.518,
+    12.252,
+    6.168,
+    8.584,
+    5.14,
+    10.681,
+    5.735,
+    4.813,
+    5.716,
+    4.693,
+    4.63,
+    5.897,
+    7.021,
+    5.129,
+    4.808,
+    4.763,
+    5.017,
+    5.096,
+    8.633,
+    12.476,
+    11.645,
+    10.287,
+    18.948,
+    12.531,
+    28.321,
+    14.835,
+    11.339,
+    12.012,
+    21.397,
+    12.981,
+    12.558,
+    13.182,
+    16.511,
+    12.234,
+    18.057,
+    13.136,
+    14.837,
+    11.325,
+    10.614,
+    10.769,
+    11.204,
+    10.41,
+    10.263,
+    10.483,
+    11.693,
+    11.667,
+    10.559,
+    9.745,
+    10.127,
+    10.014,
+    9.768,
+    10.662,
+    10.132,
+    11.009,
+    20.963,
+    12.982,
+    10.461,
+    10.269,
+    10.234,
+    10.279,
+    10.587,
+    10.733,
+    9.673,
+    10.144,
+    10.167,
+    10.039,
+    10.087,
+    9.352,
+    10.063,
+    9.244,
+    11.127,
+    12.604,
+    17.764,
+    15.461,
+    12.574,
+    11.057,
+    10.297,
+    10.582,
+    9.939,
+    10.351,
+    10.021,
+    11.104,
+    9.798,
+    10.804,
+    11.586,
+    9.526,
+    9.547,
+    10.16,
+    10.587,
+    10.628,
+    10.809,
+    10.275,
+    9.85,
+    10.106,
+    10.963,
+    11.277,
+    9.709,
+    10.825,
+    11.444,
+    10.061,
+    10.048,
+    11.004,
+    13.444,
+    10.102,
+    10.167,
+    9.305,
+    10.836,
+    9.807,
+    10.524,
+    10.02,
+    11.12,
+    10.488,
+    9.908,
+    9.932,
+    11.096,
+    11.257,
+    10.814,
+    10.406,
+    11.18,
+    10.337,
+    10.393,
+    10.198,
+    10.374,
+    11,
+    10.201,
+    10.437,
+    10.54,
+    11.004,
+    10.713,
+    9.605,
+    13.538,
+    8.926,
+    7.458,
+    7.68,
+    7.583,
+    7.916,
+    7.794,
+    7.669,
+    7.85,
+    7.626,
+    7.442,
+    7.487,
+    7.531,
+    7.456,
+    9.416,
+    8.013,
+    7.625,
+    9.784,
+    10.71,
+    10.285,
+    9.606,
+    10.229,
+    9.728,
+    10.231,
+    11.245,
+    10.263,
+    9.847,
+    10.168,
+    10.231,
+    9.741,
+    9.769,
+    9.868,
+    10.562,
+    9.453,
+    9.722,
+    10.366,
+    9.651,
+    13.414,
+    9.992,
+    9.942,
+    10.051,
+    11.251,
+    9.462,
+    11.179,
+    9.744,
+    9.658,
+    9.816,
+    12.438,
+    10.028,
+    15.138,
+    9.742,
+    8.715,
+    7.645,
+    8.22,
+    8.447,
+    7.73,
+    7.543,
+    7.333,
+    7.411,
+    8.142,
+    8.092,
+    8.219,
+    18.657,
+    9.169,
+    9.48,
+    9.671,
+    15.397,
+    10.553,
+    10.847,
+    11.972,
+    16.536,
+    10.057,
+    14.491,
+    9.179,
+    7.561,
+    8.66,
+    9.309,
+    8.174,
+    7.78,
+    14.501,
+    12.155,
+    8.777,
+    8.238,
+    9.247,
+    7.618,
+    9.754,
+    12.358,
+    8.333,
+    14.925,
+    10.266,
+    8.241,
+    7.4,
+    7.489,
+    7.189,
+    9.099,
+    7.573,
+    7.842,
+    9.286,
+    16.209,
+    8.689,
+    8.048,
+    7.683,
+    8.026,
+    8.093,
+    8.053,
+    7.768,
+    7.703,
+    7.534,
+    7.945,
+    10.463,
+    7.393,
+    4.845,
+    4.652,
+    4.735,
+    4.939,
+    5,
+    5.211,
+    5.209,
+    5.03,
+    5.165,
+    5.313,
+    14.185,
+    6.215,
+    10.101,
+    4.921,
+    5.318,
+    12.644,
+    5.328,
+    5.454,
+    5.006,
+    10.697,
+    6.999,
+    7.391,
+    12.244,
+    5.716,
+    6.49,
+    9.234,
+    6.554,
+    10.908,
+    7.177,
+    5.654,
+    5.205,
+    5.389,
+    5.494,
+    5.513,
+    5.326,
+    9.947,
+    9.925,
+    9.716,
+    19.719,
+    10.933,
+    9.507,
+    11.41,
+    9.856,
+    12.421,
+    11.052,
+    14.489,
+    10.646,
+    9.37,
+    11.008,
+    20.581,
+    11.032,
+    11.207,
+    10.806,
+    9.555,
+    15.53,
+    12.257,
+    16.628,
+    11.455,
+    9.179,
+    13.042,
+    19.391,
+    10.564,
+    9.601,
+    9.605,
+    10.99,
+    10.058,
+    10.356,
+    11.689,
+    10.204,
+    11.431,
+    10.277,
+    9.503,
+    9.311,
+    9.143,
+    10.782,
+    10.568,
+    10.703,
+    10.542,
+    9.013,
+    9.197,
+    9.068,
+    9.852,
+    11.479,
+    10.217,
+    13.428,
+    12.156,
+    8.638,
+    10.929,
+    11.061,
+    10.513,
+    10.518,
+    9.975,
+    9.479,
+    8.687,
+    10.291,
+    10.625,
+    9.89,
+    9.366,
+    8.461,
+    8.96,
+    12.455,
+    10.384,
+    9.11,
+    10.893,
+    8.938,
+    9.745,
+    9.668,
+    8.649,
+    11.075,
+    10.485,
+    9.062,
+    9.658,
+    10.149,
+    9.219,
+    8.287,
+    8.652,
+    8.463,
+    9.638,
+    10.496,
+    9.497,
+    10.931,
+    8.528,
+    8.979,
+    9.175,
+    9.414,
+    8.716,
+    16.116,
+    8.562,
+    9.088,
+    8.298,
+    8.209,
+    8.688,
+    7.972,
+    8.723,
+    11.96,
+    11.068,
+    13.261,
+    11.212,
+    12.81,
+    21.413,
+    26.043,
+    12.905,
+    12.591,
+    11.516,
+    11.217,
+    13.608,
+    11.416,
+    10.95,
+    10.6,
+    10.97,
+    12.551,
+    10.552,
+    11.394,
+    482.021,
+    0,
+    20.433,
+    12.463,
+    10.27,
+    10.379,
+    11.731,
+    10.457,
+    9.76,
+    882.697,
+    0,
+    0,
+    20.605,
+    17.473,
+    32.303,
+    9.732,
+    12.089,
+    11.358,
+    9.794,
+    14.084,
+    14.631,
+    10.087,
+    10.865,
+    20.009,
+    10.319,
+    10.928,
+    9.64,
+    9.435,
+    9.496,
+    9.395,
+    9.396,
+    9.379,
+    9.607,
+    10.659,
+    9.426,
+    9.532,
+    11.543,
+    9.575,
+    9.948,
+    9.641,
+    9.407,
+    10.584,
+    9.165,
+    9.44,
+    9.065,
+    9.858,
+    9.331,
+    9.887,
+    10.986,
+    10.424,
+    9.58,
+    9.097,
+    43.278,
+    19.119,
+    16.88,
+    18.237,
+    18.02,
+    17.266,
+    17.889,
+    18.329,
+    16.636,
+    22.211,
+    20.51,
+    20.309,
+    16.885,
+    18.427,
+    30.187,
+    23.398,
+    17.672,
+    17.899,
+    17.412,
+    15.003,
+    14.839,
+    15.107,
+    14.508,
+    14.376,
+    14.572,
+    14.624,
+    855.748,
+    0,
+    0,
+    129.096,
+    17.365,
+    14.361,
+    14.722,
+    14.878,
+    23.167,
+    14.374,
+    33.263,
+    17.431,
+    19.261,
+    16.776,
+    14.121,
+    13.545,
+    13.987,
+    13.952,
+    13.908,
+    14.039,
+    744.751,
+    0,
+    20.953,
+    21.373,
+    22.396,
+    31.474,
+    19.244,
+    18.149,
+    21.775,
+    17.744,
+    19.822,
+    18.877,
+    14.339,
+    13.539,
+    13.778,
+    13.805,
+    13.343,
+    13.454,
+    13.602,
+    13.728,
+    14.236,
+    13.902,
+    13.54,
+    13.63,
+    14.227,
+    13.04,
+    62.297,
+    11.001,
+    10.231,
+    10.73,
+    10.699,
+    11.126,
+    12.718,
+    10.586,
+    10.443,
+    10.595,
+    11.829,
+    710.918,
+    0,
+    742.415,
+    0,
+    20.026,
+    731.614,
+    0,
+    20.349,
+    406.888,
+    29.635,
+    19.57,
+    14.032,
+    35.844,
+    28.279,
+    15.346,
+    15.336,
+    16.95,
+    15.591,
+    14.075,
+    14.968,
+    14.636,
+    14.474,
+    15.401,
+    14.039,
+    14.779,
+    14.113,
+    15.263,
+    13.716,
+    14.09,
+    457.583,
+    0,
+    22.593,
+    14.669,
+    784.103,
+    0,
+    23.753,
+    20.688,
+    31.549,
+    13.918,
+    14.165,
+    14.842,
+    14.607,
+    14.102,
+    14.69,
+    14.258,
+    14.912,
+    14.473,
+    220.567,
+    15.683,
+    11.006,
+    13.271,
+    9.313,
+    9.792,
+    10.305,
+    11.655,
+    11.156,
+    11.746,
+    11.053,
+    12.403,
+    11.011,
+    10.413,
+    9.996,
+    10.195,
+    10.471,
+    10.893,
+    10.565,
+    9.788,
+    11.019,
+    11.123,
+    10.214,
+    10.525,
+    9.613,
+    10.954,
+    11.201,
+    11.107,
+    10.134,
+    9.767,
+    9.974,
+    12.717,
+    18.184,
+    31.702,
+    11.664,
+    13.507,
+    11.945,
+    11.402,
+    10.503,
+    11.895,
+    11.938,
+    12.457,
+    11.399,
+    10.748,
+    10.792,
+    12.129,
+    11.761,
+    10.447,
+    11.42,
+    11.253,
+    10.501,
+    12.946,
+    16.859,
+    13.765,
+    12.652,
+    12.734,
+    11.481,
+    14.395,
+    10.061,
+    21.944,
+    11.325,
+    10.074,
+    10.722,
+    10.204,
+    10.63,
+    11.631,
+    10.531,
+    11.842,
+    10.159,
+    12.688,
+    10.643,
+    11.282,
+    9.635,
+    11.158,
+    11.927,
+    10.201,
+    10.168,
+    10.513,
+    9.793,
+    9.602,
+    9.392,
+    9.975,
+    8.892,
+    9.668,
+    10.158,
+    9.455,
+    10.959,
+    10.331,
+    8.815,
+    9.158,
+    8.3,
+    9.257,
+    7.844,
+    8.204,
+    7.644,
+    7.653,
+    8.71,
+    8.461,
+    18.915,
+    42.986,
+    11.45,
+    12.679,
+    10.846
+   ],
+   "hitches": [
+    {
+     "atMs": 8379.301,
+     "ms": 6005.518000000002,
+     "cause": "loadingShaders"
+    },
+    {
+     "atMs": 15011.16,
+     "ms": 576.5670000000009,
+     "cause": "loadingShaders"
+    },
+    {
+     "atMs": 15587.727,
+     "ms": 62.5059999999994,
+     "cause": "loadingShaders"
+    },
+    {
+     "atMs": 16036.808,
+     "ms": 102.68000000000029,
+     "cause": "loadingShaders"
+    },
+    {
+     "atMs": 16644.445,
+     "ms": 77.87800000000061,
+     "cause": "loadingShaders"
+    },
+    {
+     "atMs": 16722.323,
+     "ms": 2357.0570000000007,
+     "cause": "loadingShaders"
+    },
+    {
+     "atMs": 19079.38,
+     "ms": 739.6820000000007,
+     "cause": "loadingShaders"
+    },
+    {
+     "atMs": 19872.206,
+     "ms": 162.75299999999697,
+     "cause": "loadingShaders"
+    },
+    {
+     "atMs": 20265.721,
+     "ms": 878.8459999999977,
+     "cause": "loadingShaders"
+    },
+    {
+     "atMs": 23760.992,
+     "ms": 218.67799999999988,
+     "cause": "loadingShaders"
+    },
+    {
+     "atMs": 24080.913,
+     "ms": 291.6749999999993,
+     "cause": "loadingShaders"
+    },
+    {
+     "atMs": 82110.07,
+     "ms": 195.59100000000035,
+     "cause": "loadingShaders"
+    },
+    {
+     "atMs": 146723.623,
+     "ms": 323.9100000000035,
+     "cause": "loadingShaders"
+    },
+    {
+     "atMs": 163926.127,
+     "ms": 61.87200000000303,
+     "cause": "loading"
+    },
+    {
+     "atMs": 165324.944,
+     "ms": 62.63300000000163,
+     "cause": "loading"
+    },
+    {
+     "atMs": 165678.824,
+     "ms": 640.375,
+     "cause": "loadingShaders"
+    },
+    {
+     "atMs": 166586.222,
+     "ms": 481.54099999999744,
+     "cause": "loadingShaders"
+    },
+    {
+     "atMs": 167168.892,
+     "ms": 460.9980000000214,
+     "cause": "loadingShaders"
+    },
+    {
+     "atMs": 168370.425,
+     "ms": 71.09200000000419,
+     "cause": "loading"
+    },
+    {
+     "atMs": 168682.9,
+     "ms": 103.37299999999232,
+     "cause": "loading"
+    },
+    {
+     "atMs": 168795.827,
+     "ms": 62.803000000014435,
+     "cause": "loading"
+    },
+    {
+     "atMs": 168872.639,
+     "ms": 160.68400000000838,
+     "cause": "loadingShaders"
+    },
+    {
+     "atMs": 169280.89,
+     "ms": 59.60699999998906,
+     "cause": "loading"
+    },
+    {
+     "atMs": 169396.255,
+     "ms": 132.0799999999872,
+     "cause": "loading"
+    },
+    {
+     "atMs": 169561.1,
+     "ms": 162.41599999999744,
+     "cause": "loading"
+    },
+    {
+     "atMs": 169772.014,
+     "ms": 85.59500000000116,
+     "cause": "loading"
+    },
+    {
+     "atMs": 170263.8869,
+     "ms": 120.62100000001374,
+     "cause": "loading"
+    },
+    {
+     "atMs": 170492.246,
+     "ms": 393.92399999999907,
+     "cause": "loading"
+    },
+    {
+     "atMs": 333972.509,
+     "ms": 482.0210000000079,
+     "cause": "other"
+    },
+    {
+     "atMs": 337238.515,
+     "ms": 882.6969999999856,
+     "cause": "loading"
+    },
+    {
+     "atMs": 362447.242,
+     "ms": 855.7479999999632,
+     "cause": "shader"
+    },
+    {
+     "atMs": 363365.907,
+     "ms": 129.09600000001956,
+     "cause": "other"
+    },
+    {
+     "atMs": 369760.625,
+     "ms": 744.7509999999893,
+     "cause": "other"
+    },
+    {
+     "atMs": 378958.3229,
+     "ms": 62.29700000002049,
+     "cause": "other"
+    },
+    {
+     "atMs": 383114.362,
+     "ms": 710.9180000000051,
+     "cause": "other"
+    },
+    {
+     "atMs": 384012.408,
+     "ms": 742.414999999979,
+     "cause": "other"
+    },
+    {
+     "atMs": 384837.9319,
+     "ms": 115.49100000003818,
+     "cause": "other"
+    },
+    {
+     "atMs": 385010.657,
+     "ms": 731.6140000000014,
+     "cause": "other"
+    },
+    {
+     "atMs": 386022.9319,
+     "ms": 406.8880000000354,
+     "cause": "other"
+    },
+    {
+     "atMs": 393863.1329,
+     "ms": 457.5830000000424,
+     "cause": "other"
+    },
+    {
+     "atMs": 395021.129,
+     "ms": 784.1030000000028,
+     "cause": "other"
+    },
+    {
+     "atMs": 400416.358,
+     "ms": 220.5669999999809,
+     "cause": "other"
+    }
+   ],
+   "verdict": "7 min: 1 stutter from shader compiles (worst 856 ms), 12 other hitches, 1% low 26 fps. Loading: 17 slow frames compiling shaders (worst 6.0 s), 12 others.",
+   "summary": "Startup (the game's own shader precompile and first load): 3 min. In play: 14 frames of 50 ms or more, 13 of 100 ms or more. Frame times stay on this PC.",
+   "low1PctFps": 26.491181581436486,
+   "avgFps": 139.5869421169336
+  },
+  "coverage": {
+   "value": "100%",
+   "label": "covered",
+   "headline": "Will cover all the shader combinations found in this game",
+   "low": false,
+   "good": true,
+   "percent": 100
+  },
+  "sources": [
+   {
+    "label": "Found in the game files",
+    "value": "130,037"
+   },
+   {
+    "label": "Your recording and the community database",
+    "value": "21,060",
+    "note": "Community recording downloaded 10/15/2026"
+   }
+  ],
+  "details": [
+   {
+    "label": "Pipelines in the plan",
+    "value": "151,097"
+   },
+   {
+    "label": "Shaders in the game files",
+    "value": "56,276"
+   },
+   {
+    "label": "Shader combinations found",
+    "value": "143,443"
+   },
+   {
+    "label": "Recorded pipelines",
+    "value": "21,060"
+   },
+   {
+    "label": "Built from the game files",
+    "value": "130,037"
+   },
+   {
+    "label": "Community data for your version",
+    "value": "20,669 pipelines"
+   },
+   {
+    "label": "Downloaded community recording",
+    "value": "20,669 pipelines"
+   },
+   {
+    "label": "Synthesized pipeline templates",
+    "value": "130,037"
+   },
+   {
+    "label": "Shader layouts",
+    "value": "705 · tested on this engine version"
+   },
+   {
+    "label": "Stage units exact / inferred / guessed",
+    "value": "25,593 / 49,456 / 539"
+   },
+   {
+    "label": "Vertex layouts from a recording",
+    "value": "96.4%"
+   },
+   {
+    "label": "Driver cache",
+    "value": "0 MB measured"
+   }
+  ],
+  "left": {
+   "title": "Some shaders still compile while you play",
+   "text": "Last time you played, 3 still had to compile. Recording picks them up."
+  },
+  "compile": {
+   "title": "First compile",
+   "text": "It takes about 24 min and runs in the background, so you can keep using the PC. It adds about 6.8 GB to the driver's shader cache."
+  },
+  "session": {
+   "header": "Last time you played · 7 min",
+   "verdict": "3 had to compile while you played (the longest took 54 ms). 12,450 compiled while the game started or loaded. The other 4,376 were ready.",
+   "label": "16,829 requests: 0 from the game's own library, 4,376 already in the driver cache, 3 compiled during play, 12,450 while the game started or loaded",
+   "fromLibrary": 0,
+   "cacheHits": 4376,
+   "compiles": 3
+  },
+  "framesSummary": {
+   "verdict": "7 min: 1 stutter from shader compiles (worst 856 ms), 12 other hitches, 1% low 26 fps. Loading: 17 slow frames compiling shaders (worst 6.0 s), 12 others.",
+   "summary": "Startup (the game's own shader precompile and first load): 3 min. In play: 14 frames of 50 ms or more, 13 of 100 ms or more. Frame times stay on this PC.",
+   "stuttersLabel": "Stutters last time you played",
+   "stutters": "1"
+  },
+  "hitchRows": [
+   {
+    "label": "0:08  loading, compiling shaders",
+    "value": "6.0 s"
+   },
+   {
+    "label": "0:15  loading, compiling shaders",
+    "value": "577 ms"
+   },
+   {
+    "label": "0:15  loading, compiling shaders",
+    "value": "63 ms"
+   },
+   {
+    "label": "0:16  loading, compiling shaders",
+    "value": "103 ms"
+   },
+   {
+    "label": "0:16  loading, compiling shaders",
+    "value": "78 ms"
+   },
+   {
+    "label": "0:16  loading, compiling shaders",
+    "value": "2.4 s"
+   },
+   {
+    "label": "0:19  loading, compiling shaders",
+    "value": "740 ms"
+   },
+   {
+    "label": "0:19  loading, compiling shaders",
+    "value": "163 ms"
+   },
+   {
+    "label": "0:20  loading, compiling shaders",
+    "value": "879 ms"
+   },
+   {
+    "label": "0:23  loading, compiling shaders",
+    "value": "219 ms"
+   },
+   {
+    "label": "0:24  loading, compiling shaders",
+    "value": "292 ms"
+   },
+   {
+    "label": "1:22  loading, compiling shaders",
+    "value": "196 ms"
+   },
+   {
+    "label": "2:26  loading, compiling shaders",
+    "value": "324 ms"
+   },
+   {
+    "label": "2:43  loading",
+    "value": "62 ms"
+   },
+   {
+    "label": "2:45  loading",
+    "value": "63 ms"
+   },
+   {
+    "label": "2:45  loading, compiling shaders",
+    "value": "640 ms"
+   },
+   {
+    "label": "2:46  loading, compiling shaders",
+    "value": "482 ms"
+   },
+   {
+    "label": "2:47  loading, compiling shaders",
+    "value": "461 ms"
+   },
+   {
+    "label": "2:48  loading",
+    "value": "71 ms"
+   },
+   {
+    "label": "2:48  loading",
+    "value": "103 ms"
+   },
+   {
+    "label": "2:48  loading",
+    "value": "63 ms"
+   },
+   {
+    "label": "2:48  loading, compiling shaders",
+    "value": "161 ms"
+   },
+   {
+    "label": "2:49  loading",
+    "value": "60 ms"
+   },
+   {
+    "label": "2:49  loading",
+    "value": "132 ms"
+   },
+   {
+    "label": "2:49  loading",
+    "value": "162 ms"
+   },
+   {
+    "label": "2:49  loading",
+    "value": "86 ms"
+   },
+   {
+    "label": "2:50  loading",
+    "value": "121 ms"
+   },
+   {
+    "label": "2:50  loading",
+    "value": "394 ms"
+   },
+   {
+    "label": "5:33  other hitch",
+    "value": "482 ms"
+   },
+   {
+    "label": "5:37  loading",
+    "value": "883 ms"
+   },
+   {
+    "label": "6:02  shader compile",
+    "value": "856 ms"
+   },
+   {
+    "label": "6:03  other hitch",
+    "value": "129 ms"
+   },
+   {
+    "label": "6:09  other hitch",
+    "value": "745 ms"
+   },
+   {
+    "label": "6:18  other hitch",
+    "value": "62 ms"
+   },
+   {
+    "label": "6:23  other hitch",
+    "value": "711 ms"
+   },
+   {
+    "label": "6:24  other hitch",
+    "value": "742 ms"
+   },
+   {
+    "label": "6:24  other hitch",
+    "value": "115 ms"
+   },
+   {
+    "label": "6:25  other hitch",
+    "value": "732 ms"
+   },
+   {
+    "label": "6:26  other hitch",
+    "value": "407 ms"
+   },
+   {
+    "label": "6:33  other hitch",
+    "value": "458 ms"
+   },
+   {
+    "label": "6:35  other hitch",
+    "value": "784 ms"
+   },
+   {
+    "label": "6:40  other hitch",
+    "value": "221 ms"
+   }
+  ],
+  "earlierSessions": [
+   {
+    "label": "10/14/2026 3:09 AM · 1 min",
+    "value": "loading or compiling shaders the whole time"
+   },
+   {
+    "label": "10/14/2026 2:59 AM · 4 min",
+    "value": "1% low 40 fps · no stutters"
+   },
+   {
+    "label": "10/13/2026 7:11 PM · 7 h 45 min",
+    "value": "1% low 31 fps · 1 stutter"
+   },
+   {
+    "label": "10/13/2026 6:43 PM · 4 min",
+    "value": "1% low 15 fps · 1 stutter"
+   }
+  ],
+  "apiChip": "DirectX 12"
+ },
+ "steam:2149010": {
+  "id": "steam:2149010",
+  "name": "Little Nightmares Enhanced Edition",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\Little Nightmares Enhanced Edition\\Atlas\\Binaries\\Win64\\Atlas-Win64-Shipping.exe",
+  "exeName": "Atlas-Win64-Shipping.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\Little Nightmares Enhanced Edition",
+  "sub": "UE 4.27 · Steam",
+  "engine": "UE 4.27",
+  "engineChip": "Unreal Engine 4.27",
+  "engineFamily": "Unreal",
+  "status": "ready",
+  "statusText": "Ready to compile",
+  "tone": "primary",
+  "statusTitle": "Ready to compile",
+  "statusReason": "Not compiled yet",
+  "tip": "no recording needed",
+  "reason": "no recording needed",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "shaders": 27424,
+  "pipelines": 48681,
+  "cacheBytes": 0,
+  "cacheText": "0 MB",
+  "cacheEstimated": false,
+  "compileTime": "4 min",
+  "recommended": false,
+  "inAddAllReady": true,
+  "tags": [],
+  "antiCheat": {
+   "kind": "none",
+   "chip": "No anti-cheat",
+   "tip": "No anti-cheat found: this game can be recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "on",
+   "foreign": true,
+   "recordNote": "Adds a small d3d12.dll next to the game to catch anything the plan missed and time each frame, so this page shows what stuttered. Remove any time. If a game has anti-cheat SCSKiller didn't detect, don't turn this on.",
+   "canToggle": true,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": true,
+   "compileText": "Compile",
+   "add": true,
+   "addEnabled": true,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": false,
+   "play": true,
+   "playEnabled": true,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": true,
+   "clearCacheEnabled": true,
+   "clearCacheText": "Clear cache (0 MB)",
+   "clearCacheTip": "Deletes this game's shader caches (the driver's and Windows', and the game's own if you choose) so its next run starts cold",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove Little Nightmares Enhanced Edition from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "api": {
+    "index": 0,
+    "items": [
+     "Auto (DirectX 12)",
+     "DirectX 11",
+     "DirectX 12"
+    ],
+    "canPick": true
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "100%",
+   "label": "covered",
+   "headline": "Will cover all the shader combinations found in this game",
+   "low": false,
+   "good": true,
+   "percent": 100
+  },
+  "sources": [
+   {
+    "label": "Found in the game files",
+    "value": "45,364"
+   },
+   {
+    "label": "The community database",
+    "value": "3,317",
+    "note": "Community recording downloaded 10/14/2026"
+   },
+   {
+    "label": "Ray-traced effects",
+    "value": "covered"
+   }
+  ],
+  "details": [
+   {
+    "label": "Pipelines in the plan",
+    "value": "48,681"
+   },
+   {
+    "label": "Shaders in the game files",
+    "value": "27,424"
+   },
+   {
+    "label": "Shader combinations found",
+    "value": "37,819"
+   },
+   {
+    "label": "Recorded pipelines",
+    "value": "3,317"
+   },
+   {
+    "label": "Built from the game files",
+    "value": "45,364"
+   },
+   {
+    "label": "Ray tracing shader libraries",
+    "value": "10,058"
+   },
+   {
+    "label": "Community data for your version",
+    "value": "2,326 pipelines"
+   },
+   {
+    "label": "Downloaded community recording",
+    "value": "2,326 pipelines"
+   },
+   {
+    "label": "Synthesized pipeline templates",
+    "value": "36,226"
+   },
+   {
+    "label": "Shader layouts",
+    "value": "323 · tested on this engine version"
+   },
+   {
+    "label": "Stage units exact / inferred / guessed",
+    "value": "2,313 / 21,586 / 115"
+   },
+   {
+    "label": "Vertex layouts from a recording",
+    "value": "87.9%"
+   },
+   {
+    "label": "Driver cache",
+    "value": "0 MB measured"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It takes about 4 min and runs in the background, so you can keep using the PC. It adds about 1.7 GB to the driver's shader cache."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "apiChip": "DirectX 12"
+ },
+ "steam:860510": {
+  "id": "steam:860510",
+  "name": "Little Nightmares II",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\Little Nightmares II\\EnhancedEdition\\Helios\\Binaries\\Win64\\Little_Nightmares_II_Enhanced-Win64-Shipping.exe",
+  "exeName": "Little_Nightmares_II_Enhanced-Win64-Shipping.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\Little Nightmares II",
+  "sub": "UE 4.26 · Steam",
+  "engine": "UE 4.26",
+  "engineChip": "Unreal Engine 4.26",
+  "engineFamily": "Unreal",
+  "status": "ready",
+  "statusText": "Ready to compile",
+  "tone": "primary",
+  "statusTitle": "Ready to compile",
+  "statusReason": "Not compiled yet",
+  "tip": "no recording needed",
+  "reason": "no recording needed",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "shaders": 31939,
+  "pipelines": 58680,
+  "cacheBytes": 0,
+  "cacheText": "0 MB",
+  "cacheEstimated": false,
+  "compileTime": "5 min",
+  "recommended": false,
+  "inAddAllReady": true,
+  "tags": [],
+  "antiCheat": {
+   "kind": "none",
+   "chip": "No anti-cheat",
+   "tip": "No anti-cheat found: this game can be recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "on",
+   "foreign": true,
+   "recordNote": "Adds a small d3d12.dll next to the game to catch anything the plan missed and time each frame, so this page shows what stuttered. Remove any time. If a game has anti-cheat SCSKiller didn't detect, don't turn this on.",
+   "canToggle": true,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": true,
+   "compileText": "Compile",
+   "add": true,
+   "addEnabled": true,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": false,
+   "play": true,
+   "playEnabled": true,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": true,
+   "clearCacheEnabled": true,
+   "clearCacheText": "Clear cache (0 MB)",
+   "clearCacheTip": "Deletes this game's shader caches (the driver's and Windows', and the game's own if you choose) so its next run starts cold",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove Little Nightmares II from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "api": {
+    "index": 0,
+    "items": [
+     "Auto (DirectX 12)",
+     "DirectX 11",
+     "DirectX 12"
+    ],
+    "canPick": true
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "100%",
+   "label": "covered",
+   "headline": "Will cover all the shader combinations found in this game",
+   "low": false,
+   "good": true,
+   "percent": 100
+  },
+  "sources": [
+   {
+    "label": "Found in the game files",
+    "value": "58,680"
+   },
+   {
+    "label": "The community database",
+    "value": "not in it yet"
+   },
+   {
+    "label": "Ray-traced effects",
+    "value": "covered"
+   }
+  ],
+  "details": [
+   {
+    "label": "Pipelines in the plan",
+    "value": "58,680"
+   },
+   {
+    "label": "Shaders in the game files",
+    "value": "31,939"
+   },
+   {
+    "label": "Shader combinations found",
+    "value": "53,170"
+   },
+   {
+    "label": "Recorded pipelines",
+    "value": "0"
+   },
+   {
+    "label": "Built from the game files",
+    "value": "58,680"
+   },
+   {
+    "label": "Ray tracing shader libraries",
+    "value": "5,510"
+   },
+   {
+    "label": "Community data for your version",
+    "value": "none yet"
+   },
+   {
+    "label": "Synthesized pipeline templates",
+    "value": "53,170"
+   },
+   {
+    "label": "Shader layouts",
+    "value": "570 · tested on this engine version"
+   },
+   {
+    "label": "Stage units exact / inferred / guessed",
+    "value": "2,128 / 0 / 38,270"
+   },
+   {
+    "label": "Vertex layouts from a recording",
+    "value": "1.6%"
+   },
+   {
+    "label": "Driver cache",
+    "value": "0 MB measured"
+   }
+  ],
+  "left": {
+   "title": "Some shaders still compile while you play",
+   "text": "A few effects are only put together while you play. A short recording picks them up. Some shader states are guesses. A longer recording makes them exact."
+  },
+  "compile": {
+   "title": "First compile",
+   "text": "It takes about 5 min and runs in the background, so you can keep using the PC. It adds about 2.5 GB to the driver's shader cache."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "apiChip": "DirectX 12"
+ },
+ "steam:1501750": {
+  "id": "steam:1501750",
+  "name": "Lords of the Fallen",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\Lords of the Fallen\\LOTF2\\Binaries\\Win64\\LOTF2-Win64-Shipping.exe",
+  "exeName": "LOTF2-Win64-Shipping.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\Lords of the Fallen",
+  "sub": "UE 5.1 · Steam",
+  "engine": "UE 5.1",
+  "engineChip": "Unreal Engine 5.1 · custom fork",
+  "engineFamily": "Unreal",
+  "status": "ready",
+  "statusText": "Ready to compile",
+  "tone": "primary",
+  "statusTitle": "Ready to compile",
+  "statusReason": "Not compiled yet. Not tested on this engine version yet",
+  "rowNote": "Not tested on this engine version",
+  "tip": "not tested on this engine version yet",
+  "reason": "not tested on this engine version yet",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "shaders": 89845,
+  "pipelines": 201414,
+  "cacheBytes": 0,
+  "cacheText": "0 MB",
+  "cacheEstimated": false,
+  "compileTime": "27 min",
+  "recommended": false,
+  "inAddAllReady": true,
+  "tags": [],
+  "antiCheat": {
+   "kind": "easyAntiCheat",
+   "name": "EasyAntiCheat",
+   "chip": "EasyAntiCheat",
+   "tip": "EasyAntiCheat treats an extra d3d12.dll as tampering: this game is never recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "default",
+   "foreign": false,
+   "skip": "anti-cheat",
+   "recordNote": "Not available: EasyAntiCheat treats an extra d3d12.dll as tampering, so this game is compiled from its files only.",
+   "canToggle": false,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": true,
+   "compileText": "Compile",
+   "add": true,
+   "addEnabled": true,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": false,
+   "play": false,
+   "playEnabled": false,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": true,
+   "clearCacheEnabled": true,
+   "clearCacheText": "Clear cache (0 MB)",
+   "clearCacheTip": "Deletes this game's shader caches (the driver's and Windows', and the game's own if you choose) so its next run starts cold",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove Lords of the Fallen from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "api": {
+    "index": 0,
+    "items": [
+     "Auto (DirectX 12)",
+     "DirectX 11",
+     "DirectX 12"
+    ],
+    "canPick": true
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "100%",
+   "label": "covered",
+   "headline": "Will cover all the shader combinations found in this game",
+   "low": false,
+   "good": true,
+   "percent": 100
+  },
+  "sources": [
+   {
+    "label": "Found in the game files",
+    "value": "201,414"
+   },
+   {
+    "label": "The community database",
+    "value": "not in it yet"
+   },
+   {
+    "label": "Ray-traced effects",
+    "value": "off in this game"
+   }
+  ],
+  "details": [
+   {
+    "label": "Pipelines in the plan",
+    "value": "201,414"
+   },
+   {
+    "label": "Shaders in the game files",
+    "value": "89,845"
+   },
+   {
+    "label": "Shader combinations found",
+    "value": "201,414"
+   },
+   {
+    "label": "Recorded pipelines",
+    "value": "0"
+   },
+   {
+    "label": "Built from the game files",
+    "value": "201,414"
+   },
+   {
+    "label": "Ray tracing shader libraries",
+    "value": "7 (not used by the game)"
+   },
+   {
+    "label": "Community data for your version",
+    "value": "none yet"
+   },
+   {
+    "label": "Synthesized pipeline templates",
+    "value": "201,414"
+   },
+   {
+    "label": "Shader layouts",
+    "value": "606 · not tested on this engine version yet"
+   },
+   {
+    "label": "Stage units exact / inferred / guessed",
+    "value": "23,328 / 0 / 117,502"
+   },
+   {
+    "label": "Vertex layouts from a recording",
+    "value": "9.7%"
+   },
+   {
+    "label": "Driver cache",
+    "value": "0 MB measured"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It takes about 27 min and runs in the background, so you can keep using the PC. It adds about 9.7 GB to the driver's shader cache."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "apiChip": "DirectX 12"
+ },
+ "steam:1110910": {
+  "id": "steam:1110910",
+  "name": "Mortal Shell",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\Mortal Shell\\Dungeonhaven\\Binaries\\Win64\\Dungeonhaven-Win64-Shipping.exe",
+  "exeName": "Dungeonhaven-Win64-Shipping.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\Mortal Shell",
+  "sub": "UE 4.25 · Steam",
+  "engine": "UE 4.25",
+  "engineChip": "Unreal Engine 4.25",
+  "engineFamily": "Unreal",
+  "status": "ready",
+  "statusText": "Ready to compile",
+  "tone": "primary",
+  "statusTitle": "Ready to compile",
+  "statusReason": "Not compiled yet. No recording needed; also compiles every DirectX 11 shader (the game may run on either)",
+  "rowNote": "DirectX 11 and 12",
+  "tip": "no recording needed; also compiles every DirectX 11 shader (the game may run on either)",
+  "reason": "no recording needed; also compiles every DirectX 11 shader (the game may run on either)",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "shaders": 20683,
+  "pipelines": 48363,
+  "cacheBytes": 0,
+  "cacheText": "0 MB",
+  "cacheEstimated": false,
+  "compileTime": "4 min",
+  "recommended": false,
+  "inAddAllReady": true,
+  "tags": [],
+  "antiCheat": {
+   "kind": "none",
+   "chip": "No anti-cheat",
+   "tip": "No anti-cheat found: this game can be recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "on",
+   "foreign": true,
+   "recordNote": "Adds a small d3d12.dll next to the game to catch anything the plan missed and time each frame, so this page shows what stuttered. Remove any time. If a game has anti-cheat SCSKiller didn't detect, don't turn this on.",
+   "canToggle": true,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": true,
+   "compileText": "Compile",
+   "add": true,
+   "addEnabled": true,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": false,
+   "play": true,
+   "playEnabled": true,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": true,
+   "clearCacheEnabled": true,
+   "clearCacheText": "Clear cache (0 MB)",
+   "clearCacheTip": "Deletes this game's shader caches (the driver's and Windows', and the game's own if you choose) so its next run starts cold",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove Mortal Shell from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "api": {
+    "index": 0,
+    "items": [
+     "Auto (DirectX 11 and 12)",
+     "DirectX 11",
+     "DirectX 12"
+    ],
+    "canPick": true
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "100%",
+   "label": "covered",
+   "headline": "Will cover all the shader combinations found in this game",
+   "low": false,
+   "good": true,
+   "percent": 100
+  },
+  "sources": [
+   {
+    "label": "DirectX 12, from the game files",
+    "value": "47,407"
+   },
+   {
+    "label": "The community database",
+    "value": "956",
+    "note": "Community recording downloaded 10/14/2026"
+   },
+   {
+    "label": "DirectX 11, from the game files",
+    "value": "18,332"
+   },
+   {
+    "label": "Ray-traced effects",
+    "value": "mostly covered"
+   }
+  ],
+  "details": [
+   {
+    "label": "Pipelines in the plan",
+    "value": "48,363"
+   },
+   {
+    "label": "Shaders in the game files",
+    "value": "20,683"
+   },
+   {
+    "label": "Shader combinations found",
+    "value": "48,098"
+   },
+   {
+    "label": "Recorded pipelines",
+    "value": "956"
+   },
+   {
+    "label": "Built from the game files",
+    "value": "47,407"
+   },
+   {
+    "label": "DirectX 11 shaders",
+    "value": "18,332"
+   },
+   {
+    "label": "Ray tracing shader libraries",
+    "value": "2,103 (2,098 not compiled)"
+   },
+   {
+    "label": "Community data for your version",
+    "value": "952 pipelines"
+   },
+   {
+    "label": "Downloaded community recording",
+    "value": "952 pipelines"
+   },
+   {
+    "label": "Synthesized pipeline templates",
+    "value": "47,407"
+   },
+   {
+    "label": "Shader layouts",
+    "value": "344 · tested on this engine version"
+   },
+   {
+    "label": "Stage units exact / inferred / guessed",
+    "value": "6,322 / 27,138 / 76"
+   },
+   {
+    "label": "Vertex layouts from a recording",
+    "value": "91.7%"
+   },
+   {
+    "label": "Driver cache",
+    "value": "0 MB measured"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It takes about 4 min and runs in the background, so you can keep using the PC. It adds about 1.4 GB to the driver's shader cache."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "apiChip": "DirectX 11 or DirectX 12"
+ },
+ "steam:1172380": {
+  "id": "steam:1172380",
+  "name": "STAR WARS Jedi: Fallen Order™ ",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\Jedi Fallen Order\\SwGame\\Binaries\\Win64\\SwGame-Win64-Shipping.exe",
+  "exeName": "SwGame-Win64-Shipping.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\Jedi Fallen Order",
+  "sub": "UE 4.21 · Steam",
+  "engine": "UE 4.21",
+  "engineChip": "Unreal Engine 4.21",
+  "engineFamily": "Unreal",
+  "status": "ready",
+  "statusText": "Ready to compile",
+  "tone": "primary",
+  "statusTitle": "Ready to compile",
+  "statusReason": "Not compiled yet. Compiles every DirectX 11 shader",
+  "rowNote": "DirectX 11",
+  "tip": "compiles every DirectX 11 shader",
+  "reason": "compiles every DirectX 11 shader",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "shaders": 41869,
+  "pipelines": 0,
+  "cacheBytes": 0,
+  "cacheText": "0 MB",
+  "cacheEstimated": false,
+  "compileTime": "2 min",
+  "recommended": false,
+  "inAddAllReady": true,
+  "tags": [],
+  "antiCheat": {
+   "kind": "none",
+   "chip": "No anti-cheat",
+   "tip": "No anti-cheat found: this game can be recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "default",
+   "foreign": false,
+   "skip": "not DirectX 12",
+   "recordNote": "Not available: not DirectX 12.",
+   "canToggle": false,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": true,
+   "compileText": "Compile",
+   "add": true,
+   "addEnabled": true,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": false,
+   "play": true,
+   "playEnabled": true,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": true,
+   "clearCacheEnabled": true,
+   "clearCacheText": "Clear cache (0 MB)",
+   "clearCacheTip": "Deletes this game's shader caches (the driver's and Windows', and the game's own if you choose) so its next run starts cold",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove STAR WARS Jedi: Fallen Order™  from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "api": {
+    "index": 0,
+    "items": [
+     "Auto (DirectX 11)",
+     "DirectX 11",
+     "DirectX 12"
+    ],
+    "canPick": true
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "guessNote": "DirectX guessed, so the compile could be wrong.",
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "100%",
+   "label": "covered",
+   "headline": "Will cover every DirectX 11 shader in the game files",
+   "low": false,
+   "good": true,
+   "percent": 100
+  },
+  "sources": [
+   {
+    "label": "The community database",
+    "value": "not in it yet"
+   },
+   {
+    "label": "DirectX 11 shaders",
+    "value": "41,869"
+   }
+  ],
+  "details": [
+   {
+    "label": "Pipelines in the plan",
+    "value": "0"
+   },
+   {
+    "label": "Shaders in the game files",
+    "value": "41,869"
+   },
+   {
+    "label": "Recorded pipelines",
+    "value": "0"
+   },
+   {
+    "label": "Built from the game files",
+    "value": "0"
+   },
+   {
+    "label": "DirectX 11 shaders",
+    "value": "41,869"
+   },
+   {
+    "label": "Community data for your version",
+    "value": "none yet"
+   },
+   {
+    "label": "Synthesized pipeline templates",
+    "value": "0"
+   },
+   {
+    "label": "Shader layouts",
+    "value": "0 · not needed (DirectX 11)"
+   },
+   {
+    "label": "Driver cache",
+    "value": "0 MB measured"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It takes about 2 min and runs in the background, so you can keep using the PC. It adds about 263 MB to the driver's shader cache."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "apiChip": "DirectX 11"
+ },
+ "steam:3489700": {
+  "id": "steam:3489700",
+  "name": "Stellar Blade™",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\StellarBlade\\SB\\Binaries\\Win64\\SB-Win64-Shipping.exe",
+  "exeName": "SB-Win64-Shipping.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\StellarBlade",
+  "sub": "UE 4.26 · Steam",
+  "engine": "UE 4.26",
+  "engineChip": "Unreal Engine 4.26 · custom fork",
+  "engineFamily": "Unreal",
+  "status": "ready",
+  "statusText": "Ready to compile",
+  "tone": "primary",
+  "statusTitle": "Ready to compile",
+  "statusReason": "Not compiled yet",
+  "tip": "planned from a recording",
+  "reason": "planned from a recording",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "shaders": 270781,
+  "pipelines": 391525,
+  "cacheBytes": 0,
+  "cacheText": "0 MB",
+  "cacheEstimated": false,
+  "compileTime": "14 min",
+  "recommended": false,
+  "inAddAllReady": true,
+  "tags": [
+   {
+    "text": "FidelityFX",
+    "tip": "FidelityFX: 91 known pipelines, compiled with the game\n    amd_fidelityfx_dx12.dll"
+   }
+  ],
+  "antiCheat": {
+   "kind": "none",
+   "chip": "No anti-cheat",
+   "tip": "No anti-cheat found: this game can be recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "on",
+   "foreign": true,
+   "recordNote": "Adds a small d3d12.dll next to the game to catch anything the plan missed and time each frame, so this page shows what stuttered. Remove any time. If a game has anti-cheat SCSKiller didn't detect, don't turn this on.",
+   "canToggle": true,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": true,
+   "compileText": "Compile",
+   "add": true,
+   "addEnabled": true,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": false,
+   "play": true,
+   "playEnabled": true,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": true,
+   "clearCacheEnabled": true,
+   "clearCacheText": "Clear cache (0 MB)",
+   "clearCacheTip": "Deletes this game's shader caches (the driver's and Windows', and the game's own if you choose) so its next run starts cold",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove Stellar Blade™ from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "api": {
+    "index": 0,
+    "items": [
+     "Auto (DirectX 12)",
+     "DirectX 11",
+     "DirectX 12"
+    ],
+    "canPick": true
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "100%",
+   "label": "covered",
+   "headline": "Will cover all the shader combinations found in this game",
+   "low": false,
+   "good": true,
+   "percent": 100
+  },
+  "sources": [
+   {
+    "label": "Found in the game files",
+    "value": "363,893"
+   },
+   {
+    "label": "The community database",
+    "value": "27,573",
+    "note": "Community recording downloaded 10/15/2026"
+   },
+   {
+    "label": "Its upscalers, from shared packs",
+    "value": "59"
+   },
+   {
+    "label": "Ray-traced effects",
+    "value": "covered"
+   }
+  ],
+  "details": [
+   {
+    "label": "Pipelines in the plan",
+    "value": "391,525"
+   },
+   {
+    "label": "Shaders in the game files",
+    "value": "270,781"
+   },
+   {
+    "label": "Shader combinations found",
+    "value": "1,093,648"
+   },
+   {
+    "label": "Recorded pipelines",
+    "value": "27,573"
+   },
+   {
+    "label": "Built from the game files",
+    "value": "363,893"
+   },
+   {
+    "label": "Upscaler pipelines",
+    "value": "59"
+   },
+   {
+    "label": "Ray tracing shader libraries",
+    "value": "7"
+   },
+   {
+    "label": "Community data for your version",
+    "value": "101,101 pipelines"
+   },
+   {
+    "label": "Downloaded community recording",
+    "value": "101,101 pipelines"
+   },
+   {
+    "label": "Synthesized pipeline templates",
+    "value": "363,891"
+   },
+   {
+    "label": "Shader layouts",
+    "value": "154 · tested on this engine version"
+   },
+   {
+    "label": "Stage units exact / inferred / guessed",
+    "value": "52,235 / 416,212 / 1,119"
+   },
+   {
+    "label": "Vertex layouts from a recording",
+    "value": "98.4%"
+   },
+   {
+    "label": "Driver cache",
+    "value": "0 MB measured"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It takes about 14 min and runs in the background, so you can keep using the PC. It adds about 10 GB to the driver's shader cache."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "middleware": {
+   "chip": "Also compiles: FidelityFX",
+   "tip": "Upscaler DLLs next to the game. Their pipelines are compiled with it once a recording of any game has seen that DLL version: on this PC, or for FSR and XeSS on any PC that shares them (this plan: 59 of theirs).\n\nFidelityFX: 91 known pipelines, compiled with the game\n    amd_fidelityfx_dx12.dll"
+  },
+  "apiChip": "DirectX 12"
+ },
+ "riot:teamfighttactics.live": {
+  "id": "riot:teamfighttactics.live",
+  "name": "Teamfight Tactics",
+  "store": "Riot Client",
+  "manual": false,
+  "exe": "C:\\Riot Games\\Teamfight Tactics\\Live\\TFT\\Binaries\\Win64\\TFTClient-Win64-Shipping.exe",
+  "exeName": "TFTClient-Win64-Shipping.exe",
+  "installDir": "C:\\Riot Games\\Teamfight Tactics\\Live",
+  "sub": "UE 5.7 · Riot Client",
+  "engine": "UE 5.7",
+  "engineChip": "Unreal Engine 5.7",
+  "engineFamily": "Unreal",
+  "status": "ready",
+  "statusText": "Ready to compile",
+  "tone": "primary",
+  "statusTitle": "Ready to compile",
+  "statusReason": "Not compiled yet. Not tested on this engine version yet; also compiles every DirectX 11 shader (the game may run on either)",
+  "rowNote": "Not tested on this engine version",
+  "tip": "not tested on this engine version yet; also compiles every DirectX 11 shader (the game may run on either)",
+  "reason": "not tested on this engine version yet; also compiles every DirectX 11 shader (the game may run on either)",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "shaders": 91812,
+  "pipelines": 188515,
+  "cacheBytes": 0,
+  "cacheText": "0 MB",
+  "cacheEstimated": false,
+  "compileTime": "20 min",
+  "recommended": false,
+  "inAddAllReady": true,
+  "tags": [],
+  "antiCheat": {
+   "kind": "other",
+   "name": "anti-cheat",
+   "chip": "anti-cheat",
+   "tip": "anti-cheat treats an extra d3d12.dll as tampering: this game is never recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "default",
+   "foreign": false,
+   "skip": "anti-cheat",
+   "recordNote": "Not available: anti-cheat treats an extra d3d12.dll as tampering, so this game is compiled from its files only.",
+   "canToggle": false,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": true,
+   "compileText": "Compile",
+   "add": true,
+   "addEnabled": true,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": false,
+   "play": false,
+   "playEnabled": false,
+   "playText": "Play",
+   "playTip": "Play through Riot Client",
+   "clearCache": true,
+   "clearCacheEnabled": true,
+   "clearCacheText": "Clear cache (0 MB)",
+   "clearCacheTip": "Deletes this game's shader caches (the driver's and Windows', and the game's own if you choose) so its next run starts cold",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove Teamfight Tactics from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "api": {
+    "index": 0,
+    "items": [
+     "Auto (DirectX 11 and 12)",
+     "DirectX 11",
+     "DirectX 12"
+    ],
+    "canPick": true
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "100%",
+   "label": "covered",
+   "headline": "Will cover all the shader combinations found in this game",
+   "low": false,
+   "good": true,
+   "percent": 100
+  },
+  "sources": [
+   {
+    "label": "DirectX 12, from the game files",
+    "value": "188,515"
+   },
+   {
+    "label": "The community database",
+    "value": "not in it yet"
+   },
+   {
+    "label": "DirectX 11, from the game files",
+    "value": "91,809"
+   }
+  ],
+  "details": [
+   {
+    "label": "Pipelines in the plan",
+    "value": "188,515"
+   },
+   {
+    "label": "Shaders in the game files",
+    "value": "91,812"
+   },
+   {
+    "label": "Shader combinations found",
+    "value": "188,515"
+   },
+   {
+    "label": "Recorded pipelines",
+    "value": "0"
+   },
+   {
+    "label": "Built from the game files",
+    "value": "188,515"
+   },
+   {
+    "label": "DirectX 11 shaders",
+    "value": "91,809"
+   },
+   {
+    "label": "Community data for your version",
+    "value": "none yet"
+   },
+   {
+    "label": "Synthesized pipeline templates",
+    "value": "188,515"
+   },
+   {
+    "label": "Shader layouts",
+    "value": "356 · not tested on this engine version yet"
+   },
+   {
+    "label": "Stage units exact / inferred / guessed",
+    "value": "6,758 / 0 / 120,375"
+   },
+   {
+    "label": "Vertex layouts from a recording",
+    "value": "9.3%"
+   },
+   {
+    "label": "Driver cache",
+    "value": "0 MB measured"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It takes about 20 min and runs in the background, so you can keep using the PC. It adds about 7.9 GB to the driver's shader cache."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "apiChip": "DirectX 11 or DirectX 12"
+ },
+ "steam:1343240": {
+  "id": "steam:1343240",
+  "name": "Thymesia",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\Thymesia\\PlagueProject\\Binaries\\Win64\\PlagueProject-Win64-Shipping.exe",
+  "exeName": "PlagueProject-Win64-Shipping.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\Thymesia",
+  "sub": "UE 4.27 · Steam",
+  "engine": "UE 4.27",
+  "engineChip": "Unreal Engine 4.27",
+  "engineFamily": "Unreal",
+  "status": "ready",
+  "statusText": "Ready to compile",
+  "tone": "primary",
+  "statusTitle": "Ready to compile",
+  "statusReason": "Not compiled yet",
+  "tip": "no recording needed",
+  "reason": "no recording needed",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "shaders": 28733,
+  "pipelines": 58229,
+  "cacheBytes": 0,
+  "cacheText": "0 MB",
+  "cacheEstimated": false,
+  "compileTime": "5 min",
+  "recommended": false,
+  "inAddAllReady": true,
+  "tags": [],
+  "antiCheat": {
+   "kind": "none",
+   "chip": "No anti-cheat",
+   "tip": "No anti-cheat found: this game can be recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "on",
+   "foreign": true,
+   "recordNote": "Adds a small d3d12.dll next to the game to catch anything the plan missed and time each frame, so this page shows what stuttered. Remove any time. If a game has anti-cheat SCSKiller didn't detect, don't turn this on.",
+   "canToggle": true,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": true,
+   "compileText": "Compile",
+   "add": true,
+   "addEnabled": true,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": false,
+   "play": true,
+   "playEnabled": true,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": true,
+   "clearCacheEnabled": true,
+   "clearCacheText": "Clear cache (0 MB)",
+   "clearCacheTip": "Deletes this game's shader caches (the driver's and Windows', and the game's own if you choose) so its next run starts cold",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove Thymesia from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "api": {
+    "index": 0,
+    "items": [
+     "Auto (DirectX 12)",
+     "DirectX 11",
+     "DirectX 12"
+    ],
+    "canPick": true
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "100%",
+   "label": "covered",
+   "headline": "Will cover all the shader combinations found in this game",
+   "low": false,
+   "good": true,
+   "percent": 100
+  },
+  "sources": [
+   {
+    "label": "Found in the game files",
+    "value": "58,229"
+   },
+   {
+    "label": "The community database",
+    "value": "not in it yet"
+   },
+   {
+    "label": "Ray-traced effects",
+    "value": "off in this game"
+   }
+  ],
+  "details": [
+   {
+    "label": "Pipelines in the plan",
+    "value": "58,229"
+   },
+   {
+    "label": "Shaders in the game files",
+    "value": "28,733"
+   },
+   {
+    "label": "Shader combinations found",
+    "value": "58,229"
+   },
+   {
+    "label": "Recorded pipelines",
+    "value": "0"
+   },
+   {
+    "label": "Built from the game files",
+    "value": "58,229"
+   },
+   {
+    "label": "Ray tracing shader libraries",
+    "value": "7 (not used by the game)"
+   },
+   {
+    "label": "Community data for your version",
+    "value": "none yet"
+   },
+   {
+    "label": "Synthesized pipeline templates",
+    "value": "58,229"
+   },
+   {
+    "label": "Shader layouts",
+    "value": "290 · tested on this engine version"
+   },
+   {
+    "label": "Stage units exact / inferred / guessed",
+    "value": "3,020 / 0 / 43,756"
+   },
+   {
+    "label": "Vertex layouts from a recording",
+    "value": "3.9%"
+   },
+   {
+    "label": "Driver cache",
+    "value": "0 MB measured"
+   }
+  ],
+  "left": {
+   "title": "Some shaders still compile while you play",
+   "text": "A few effects are only put together while you play. A short recording picks them up. Some shader states are guesses. A longer recording makes them exact."
+  },
+  "compile": {
+   "title": "First compile",
+   "text": "It takes about 5 min and runs in the background, so you can keep using the PC. It adds about 2.2 GB to the driver's shader cache."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "apiChip": "DirectX 12"
+ },
+ "riot:valorant.live": {
+  "id": "riot:valorant.live",
+  "name": "VALORANT",
+  "store": "Riot Client",
+  "manual": false,
+  "exe": "C:\\Riot Games\\VALORANT\\live\\ShooterGame\\Binaries\\Win64\\VALORANT-Win64-Shipping.exe",
+  "exeName": "VALORANT-Win64-Shipping.exe",
+  "installDir": "C:\\Riot Games\\VALORANT\\live",
+  "sub": "UE 5.3 · Riot Client",
+  "engine": "UE 5.3",
+  "engineChip": "Unreal Engine 5.3 · custom fork",
+  "engineFamily": "Unreal",
+  "status": "ready",
+  "statusText": "Ready to compile",
+  "tone": "primary",
+  "statusTitle": "Ready to compile",
+  "statusReason": "Not compiled yet. Compiles every DirectX 11 shader (last run)",
+  "rowNote": "DirectX 11",
+  "tip": "compiles every DirectX 11 shader (last run)",
+  "reason": "compiles every DirectX 11 shader (last run)",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "shaders": 308680,
+  "pipelines": 0,
+  "cacheBytes": 0,
+  "cacheText": "0 MB",
+  "cacheEstimated": false,
+  "compileTime": "4 min",
+  "recommended": false,
+  "inAddAllReady": true,
+  "tags": [],
+  "antiCheat": {
+   "kind": "other",
+   "name": "anti-cheat",
+   "chip": "anti-cheat",
+   "tip": "anti-cheat treats an extra d3d12.dll as tampering: this game is never recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "default",
+   "foreign": false,
+   "skip": "anti-cheat",
+   "recordNote": "Not available: anti-cheat treats an extra d3d12.dll as tampering, so this game is compiled from its files only.",
+   "canToggle": false,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": true,
+   "compileText": "Compile",
+   "add": true,
+   "addEnabled": true,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": false,
+   "play": false,
+   "playEnabled": false,
+   "playText": "Play",
+   "playTip": "Play through Riot Client",
+   "clearCache": true,
+   "clearCacheEnabled": true,
+   "clearCacheText": "Clear cache (0 MB)",
+   "clearCacheTip": "Deletes this game's shader caches (the driver's and Windows', and the game's own if you choose) so its next run starts cold",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove VALORANT from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "api": {
+    "index": 0,
+    "items": [
+     "Auto (DirectX 11)",
+     "DirectX 11",
+     "DirectX 12"
+    ],
+    "canPick": true
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "100%",
+   "label": "covered",
+   "headline": "Will cover every DirectX 11 shader in the game files",
+   "low": false,
+   "good": true,
+   "percent": 100
+  },
+  "sources": [
+   {
+    "label": "The community database",
+    "value": "not in it yet"
+   },
+   {
+    "label": "DirectX 11 shaders",
+    "value": "148,040"
+   }
+  ],
+  "details": [
+   {
+    "label": "Pipelines in the plan",
+    "value": "0"
+   },
+   {
+    "label": "Shaders in the game files",
+    "value": "308,680"
+   },
+   {
+    "label": "Recorded pipelines",
+    "value": "0"
+   },
+   {
+    "label": "Built from the game files",
+    "value": "0"
+   },
+   {
+    "label": "DirectX 11 shaders",
+    "value": "148,040"
+   },
+   {
+    "label": "Community data for your version",
+    "value": "none yet"
+   },
+   {
+    "label": "Synthesized pipeline templates",
+    "value": "0"
+   },
+   {
+    "label": "Shader layouts",
+    "value": "0 · not needed (DirectX 11)"
+   },
+   {
+    "label": "Driver cache",
+    "value": "0 MB measured"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It takes about 4 min and runs in the background, so you can keep using the PC. It adds about 519 MB to the driver's shader cache."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "apiChip": "DirectX 11 (last run)"
+ },
+ "steam:4126040": {
+  "id": "steam:4126040",
+  "name": "Aniimo",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\Aniimo\\Aniimo.exe",
+  "exeName": "Aniimo.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\Aniimo",
+  "sub": "Unity 2022.3.62f1 · Steam",
+  "engine": "Unity 2022.3.62f1",
+  "engineChip": "Unity 2022.3.62f1",
+  "engineFamily": "Unity",
+  "api": "DirectX 11 (last run)",
+  "status": "unsupported",
+  "statusText": "Not supported yet",
+  "tone": "muted",
+  "statusTitle": "Not supported yet",
+  "statusReason": "Unity 2022.3.62f1: none of 3 built-in shaders has DirectX (d3d11) code this reader can read",
+  "rowNote": "Engine not supported yet",
+  "tip": "Unity 2022.3.62f1: none of 3 built-in shaders has DirectX (d3d11) code this reader can read",
+  "reason": "Unity 2022.3.62f1: none of 3 built-in shaders has DirectX (d3d11) code this reader can read",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "cacheText": "—",
+  "cacheEstimated": false,
+  "recommended": false,
+  "inAddAllReady": false,
+  "tags": [],
+  "antiCheat": {
+   "kind": "other",
+   "name": "anti-cheat",
+   "chip": "anti-cheat",
+   "tip": "anti-cheat treats an extra d3d12.dll as tampering: this game is never recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "default",
+   "foreign": false,
+   "skip": "anti-cheat",
+   "recordNote": "Not available: anti-cheat treats an extra d3d12.dll as tampering, so this game is compiled from its files only.",
+   "canToggle": false,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": false,
+   "compileText": "Compile",
+   "add": false,
+   "addEnabled": false,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": true,
+   "play": false,
+   "playEnabled": false,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": false,
+   "clearCacheEnabled": false,
+   "clearCacheText": "Clear cache",
+   "clearCacheTip": "SCSKiller learns this game's driver cache files the first time it compiles it or sees it running",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove Aniimo from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "—",
+   "label": "not yet",
+   "headline": "Known once its first compile starts",
+   "low": false,
+   "good": false
+  },
+  "sources": [],
+  "details": [
+   {
+    "label": "Community data for your version",
+    "value": "none yet"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It runs in the background, so you can keep using the PC."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "apiChip": "DirectX 11 (last run)"
+ },
+ "riot:league_of_legends.live": {
+  "id": "riot:league_of_legends.live",
+  "name": "League of Legends",
+  "store": "Riot Client",
+  "manual": false,
+  "exe": "C:\\Riot Games\\League of Legends\\Game\\League of Legends.exe",
+  "exeName": "League of Legends.exe",
+  "installDir": "C:\\Riot Games\\League of Legends",
+  "sub": "Carved · Riot Client",
+  "engine": "Carved",
+  "engineChip": "Carved",
+  "engineFamily": "Carved",
+  "api": "DirectX 11 or DirectX 12",
+  "status": "unsupported",
+  "statusText": "Not supported yet",
+  "tone": "muted",
+  "statusTitle": "Not supported yet",
+  "statusReason": "No raw DXBC/DXIL shaders in its files (0.5 GB sampled): shaders are compressed or packed: needs an engine reader",
+  "rowNote": "Engine not supported yet",
+  "tip": "no raw DXBC/DXIL shaders in its files (0.5 GB sampled): shaders are compressed or packed: needs an engine reader",
+  "reason": "no raw DXBC/DXIL shaders in its files (0.5 GB sampled): shaders are compressed or packed: needs an engine reader",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "cacheText": "—",
+  "cacheEstimated": false,
+  "recommended": false,
+  "inAddAllReady": false,
+  "tags": [],
+  "antiCheat": {
+   "kind": "other",
+   "name": "anti-cheat",
+   "chip": "anti-cheat",
+   "tip": "anti-cheat treats an extra d3d12.dll as tampering: this game is never recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "default",
+   "foreign": false,
+   "skip": "anti-cheat",
+   "recordNote": "Not available: anti-cheat treats an extra d3d12.dll as tampering, so this game is compiled from its files only.",
+   "canToggle": false,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": false,
+   "compileText": "Compile",
+   "add": false,
+   "addEnabled": false,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": true,
+   "play": false,
+   "playEnabled": false,
+   "playText": "Play",
+   "playTip": "Play through Riot Client",
+   "clearCache": false,
+   "clearCacheEnabled": false,
+   "clearCacheText": "Clear cache",
+   "clearCacheTip": "SCSKiller learns this game's driver cache files the first time it compiles it or sees it running",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove League of Legends from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "—",
+   "label": "not yet",
+   "headline": "Known once its first compile starts",
+   "low": false,
+   "good": false
+  },
+  "sources": [],
+  "details": [
+   {
+    "label": "Community data for your version",
+    "value": "none yet"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It runs in the background, so you can keep using the PC."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "apiChip": "DirectX 11 or DirectX 12"
+ },
+ "steam:1817070": {
+  "id": "steam:1817070",
+  "name": "Marvel’s Spider-Man Remastered",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\Marvel's Spider-Man Remastered\\Spider-Man.exe",
+  "exeName": "Spider-Man.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\Marvel's Spider-Man Remastered",
+  "sub": "Carved DXIL · Steam",
+  "engine": "Carved DXIL",
+  "engineChip": "Carved DXIL",
+  "engineFamily": "Carved",
+  "api": "DirectX 12",
+  "status": "unsupported",
+  "statusText": "Not supported yet",
+  "tone": "muted",
+  "statusTitle": "Not supported yet",
+  "statusReason": "Only 5 raw graphics shaders: the rest are compressed or packed: needs an engine reader",
+  "rowNote": "Engine not supported yet",
+  "tip": "only 5 raw graphics shaders: the rest are compressed or packed: needs an engine reader",
+  "reason": "only 5 raw graphics shaders: the rest are compressed or packed: needs an engine reader",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "cacheText": "—",
+  "cacheEstimated": false,
+  "recommended": false,
+  "inAddAllReady": false,
+  "tags": [
+   {
+    "text": "FidelityFX",
+    "tip": "FidelityFX: 91 known pipelines, compiled with the game\n    amd_fidelityfx_dx12.dll"
+   },
+   {
+    "text": "XeSS",
+    "tip": "XeSS: detected, added after a recording sees them\n    libxess.dll"
+   },
+   {
+    "text": "DLSS",
+    "tip": "DLSS: compiled by the NVIDIA driver itself\n    nvngx_dlss.dll, nvngx_dlssg.dll"
+   }
+  ],
+  "antiCheat": {
+   "kind": "none",
+   "chip": "No anti-cheat",
+   "tip": "No anti-cheat found: this game can be recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "default",
+   "foreign": false,
+   "skip": "not supported yet",
+   "recordNote": "Not available: not supported yet.",
+   "canToggle": false,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": false,
+   "compileText": "Compile",
+   "add": false,
+   "addEnabled": false,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": true,
+   "play": true,
+   "playEnabled": true,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": false,
+   "clearCacheEnabled": false,
+   "clearCacheText": "Clear cache",
+   "clearCacheTip": "SCSKiller learns this game's driver cache files the first time it compiles it or sees it running",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove Marvel’s Spider-Man Remastered from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "—",
+   "label": "not yet",
+   "headline": "Known once its first compile starts",
+   "low": false,
+   "good": false
+  },
+  "sources": [],
+  "details": [
+   {
+    "label": "Community data for your version",
+    "value": "none yet"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It runs in the background, so you can keep using the PC."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "middleware": {
+   "chip": "Also compiles: FidelityFX · DLSS (by the driver)",
+   "tip": "Upscaler DLLs next to the game. Their pipelines are compiled with it once a recording of any game has seen that DLL version: on this PC, or for FSR and XeSS on any PC that shares them.\n\nFidelityFX: 91 known pipelines, compiled with the game\n    amd_fidelityfx_dx12.dll\nXeSS: detected, added after a recording sees them\n    libxess.dll\nDLSS: compiled by the NVIDIA driver itself\n    nvngx_dlss.dll, nvngx_dlssg.dll"
+  },
+  "apiChip": "DirectX 12"
+ },
+ "steam:3472040": {
+  "id": "steam:3472040",
+  "name": "NBA 2K26",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\NBA 2K26\\NBA2K26.exe",
+  "exeName": "NBA2K26.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\NBA 2K26",
+  "sub": "Carved · Steam",
+  "engine": "Carved",
+  "engineChip": "Carved",
+  "engineFamily": "Carved",
+  "api": "DirectX 12",
+  "status": "unsupported",
+  "statusText": "Not supported yet",
+  "tone": "muted",
+  "statusTitle": "Not supported yet",
+  "statusReason": "No raw DXBC/DXIL shaders in its files (0.5 GB sampled): shaders are compressed or packed: needs an engine reader",
+  "rowNote": "Engine not supported yet",
+  "tip": "no raw DXBC/DXIL shaders in its files (0.5 GB sampled): shaders are compressed or packed: needs an engine reader",
+  "reason": "no raw DXBC/DXIL shaders in its files (0.5 GB sampled): shaders are compressed or packed: needs an engine reader",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "cacheText": "—",
+  "cacheEstimated": false,
+  "recommended": false,
+  "inAddAllReady": false,
+  "tags": [],
+  "antiCheat": {
+   "kind": "easyAntiCheat",
+   "name": "EasyAntiCheat",
+   "chip": "EasyAntiCheat",
+   "tip": "EasyAntiCheat treats an extra d3d12.dll as tampering: this game is never recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "default",
+   "foreign": false,
+   "skip": "anti-cheat",
+   "recordNote": "Not available: EasyAntiCheat treats an extra d3d12.dll as tampering, so this game is compiled from its files only.",
+   "canToggle": false,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": false,
+   "compileText": "Compile",
+   "add": false,
+   "addEnabled": false,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": true,
+   "play": false,
+   "playEnabled": false,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": false,
+   "clearCacheEnabled": false,
+   "clearCacheText": "Clear cache",
+   "clearCacheTip": "SCSKiller learns this game's driver cache files the first time it compiles it or sees it running",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove NBA 2K26 from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "—",
+   "label": "not yet",
+   "headline": "Known once its first compile starts",
+   "low": false,
+   "good": false
+  },
+  "sources": [],
+  "details": [
+   {
+    "label": "Community data for your version",
+    "value": "none yet"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It runs in the background, so you can keep using the PC."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "apiChip": "DirectX 12"
+ },
+ "steam:814380": {
+  "id": "steam:814380",
+  "name": "Sekiro™: Shadows Die Twice",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\Sekiro\\sekiro.exe",
+  "exeName": "sekiro.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\Sekiro",
+  "sub": "FromSoftware · Steam",
+  "engine": "FromSoftware",
+  "engineChip": "FromSoftware",
+  "engineFamily": "FromSoftware",
+  "api": "DirectX 11 or DirectX 12",
+  "status": "unsupported",
+  "statusText": "Not supported yet",
+  "tone": "muted",
+  "statusTitle": "Not supported yet",
+  "statusReason": "FromSoftware archives SCSKiller has no key for (a title it doesn't know yet)",
+  "rowNote": "Engine not supported yet",
+  "tip": "FromSoftware archives SCSKiller has no key for (a title it doesn't know yet)",
+  "reason": "FromSoftware archives SCSKiller has no key for (a title it doesn't know yet)",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "cacheText": "—",
+  "cacheEstimated": false,
+  "recommended": false,
+  "inAddAllReady": false,
+  "tags": [],
+  "antiCheat": {
+   "kind": "none",
+   "chip": "No anti-cheat",
+   "tip": "No anti-cheat found: this game can be recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "default",
+   "foreign": false,
+   "skip": "not supported yet",
+   "recordNote": "Not available: not supported yet.",
+   "canToggle": false,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": false,
+   "compileText": "Compile",
+   "add": false,
+   "addEnabled": false,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": true,
+   "play": true,
+   "playEnabled": true,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": false,
+   "clearCacheEnabled": false,
+   "clearCacheText": "Clear cache",
+   "clearCacheTip": "SCSKiller learns this game's driver cache files the first time it compiles it or sees it running",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove Sekiro™: Shadows Die Twice from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "—",
+   "label": "not yet",
+   "headline": "Known once its first compile starts",
+   "low": false,
+   "good": false
+  },
+  "sources": [],
+  "details": [
+   {
+    "label": "Community data for your version",
+    "value": "none yet"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It runs in the background, so you can keep using the PC."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "apiChip": "DirectX 11 or DirectX 12"
+ },
+ "steam:359550": {
+  "id": "steam:359550",
+  "name": "Tom Clancy's Rainbow Six Siege",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\Tom Clancy's Rainbow Six Siege\\RainbowSix.exe",
+  "exeName": "RainbowSix.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\Tom Clancy's Rainbow Six Siege",
+  "sub": "Carved · Steam",
+  "engine": "Carved",
+  "engineChip": "Carved",
+  "engineFamily": "Carved",
+  "api": "DirectX 11 or DirectX 12",
+  "status": "unsupported",
+  "statusText": "Not supported yet",
+  "tone": "muted",
+  "statusTitle": "Not supported yet",
+  "statusReason": "No raw DXBC/DXIL shaders in its files (0.5 GB sampled): shaders are compressed or packed: needs an engine reader",
+  "rowNote": "Engine not supported yet",
+  "tip": "no raw DXBC/DXIL shaders in its files (0.5 GB sampled): shaders are compressed or packed: needs an engine reader",
+  "reason": "no raw DXBC/DXIL shaders in its files (0.5 GB sampled): shaders are compressed or packed: needs an engine reader",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "cacheText": "—",
+  "cacheEstimated": false,
+  "recommended": false,
+  "inAddAllReady": false,
+  "tags": [],
+  "antiCheat": {
+   "kind": "battlEye",
+   "name": "BattlEye",
+   "chip": "BattlEye",
+   "tip": "BattlEye treats an extra d3d12.dll as tampering: this game is never recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "default",
+   "foreign": false,
+   "skip": "anti-cheat",
+   "recordNote": "Not available: BattlEye treats an extra d3d12.dll as tampering, so this game is compiled from its files only.",
+   "canToggle": false,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": false,
+   "compileText": "Compile",
+   "add": false,
+   "addEnabled": false,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": true,
+   "play": false,
+   "playEnabled": false,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": false,
+   "clearCacheEnabled": false,
+   "clearCacheText": "Clear cache",
+   "clearCacheTip": "SCSKiller learns this game's driver cache files the first time it compiles it or sees it running",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove Tom Clancy's Rainbow Six Siege from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "—",
+   "label": "not yet",
+   "headline": "Known once its first compile starts",
+   "low": false,
+   "good": false
+  },
+  "sources": [],
+  "details": [
+   {
+    "label": "Community data for your version",
+    "value": "none yet"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It runs in the background, so you can keep using the PC."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "apiChip": "DirectX 11 or DirectX 12"
+ },
+ "steam:3513350": {
+  "id": "steam:3513350",
+  "name": "Wuthering Waves",
+  "store": "Steam",
+  "manual": false,
+  "exe": "c:\\program files (x86)\\steam\\steamapps\\common\\Wuthering Waves\\Client\\Binaries\\Win64\\Client-Win64-Shipping.exe",
+  "exeName": "Client-Win64-Shipping.exe",
+  "installDir": "c:\\program files (x86)\\steam\\steamapps\\common\\Wuthering Waves",
+  "sub": "UE 4.26 · Steam",
+  "engine": "UE 4.26",
+  "engineChip": "Unreal Engine 4.26 · custom fork",
+  "engineFamily": "Unreal",
+  "api": "DirectX 11 or DirectX 12",
+  "status": "unsupported",
+  "statusText": "Not supported",
+  "tone": "muted",
+  "statusTitle": "Not supported",
+  "statusReason": "Needs a recording, which its anti-cheat blocks",
+  "rowNote": "Blocked by anti-cheat",
+  "tip": "needs a recording, which its anti-cheat blocks",
+  "reason": "needs a recording, which its anti-cheat blocks",
+  "playing": false,
+  "queued": false,
+  "compiling": false,
+  "compilingSoon": false,
+  "cacheText": "—",
+  "cacheEstimated": false,
+  "recommended": false,
+  "inAddAllReady": false,
+  "tags": [],
+  "antiCheat": {
+   "kind": "other",
+   "name": "anti-cheat",
+   "chip": "anti-cheat",
+   "tip": "anti-cheat treats an extra d3d12.dll as tampering: this game is never recorded"
+  },
+  "recorder": {
+   "installed": false,
+   "effective": false,
+   "override": "default",
+   "foreign": false,
+   "skip": "anti-cheat",
+   "recordNote": "Not available: anti-cheat treats an extra d3d12.dll as tampering, so this game is compiled from its files only.",
+   "canToggle": false,
+   "recordingBytes": 0,
+   "paused": false,
+   "canClear": true,
+   "clearTip": "Deletes the recorded pipelines. The recorder stays in"
+  },
+  "actions": {
+   "compile": false,
+   "compileText": "Compile",
+   "add": false,
+   "addEnabled": false,
+   "record": false,
+   "recordEnabled": false,
+   "details": false,
+   "why": true,
+   "play": false,
+   "playEnabled": false,
+   "playText": "Play",
+   "playTip": "Play through Steam",
+   "clearCache": false,
+   "clearCacheEnabled": false,
+   "clearCacheText": "Clear cache",
+   "clearCacheTip": "SCSKiller learns this game's driver cache files the first time it compiles it or sees it running",
+   "setAesKey": false,
+   "rename": false,
+   "gameFolder": false,
+   "remove": {
+    "text": "Remove",
+    "tip": "Hide this game. Its files, saves and compiled cache stay.",
+    "confirmTitle": "Remove Wuthering Waves from the library?",
+    "confirmText": "It stays out of the list and out of automatic compiles. Its files, saves and compiled cache stay. Show hidden on the Library page brings it back."
+   }
+  },
+  "options": {
+   "newShaders": {
+    "index": 0,
+    "choices": [
+     "Use the global setting (Compile automatically, silently)",
+     "Off",
+     "Notify me",
+     "Compile automatically and notify me",
+     "Compile automatically, silently"
+    ]
+   },
+   "rayTracing": {
+    "index": 0,
+    "choices": [
+     "Default (on)",
+     "On",
+     "Off"
+    ]
+   },
+   "leftOutOfAddAll": false
+  },
+  "beforeAfter": {
+   "shown": false,
+   "enabled": false,
+   "text": "Before and after",
+   "tip": "Measure this game cold, compile it, measure it again, and get a report you can share",
+   "voided": false,
+   "clearPending": false,
+   "hasMenu": false,
+   "compileAgain": false
+  },
+  "partlyCompiled": false,
+  "needsAesKey": false,
+  "coverage": {
+   "value": "—",
+   "label": "not yet",
+   "headline": "Known once its first compile starts",
+   "low": false,
+   "good": false
+  },
+  "sources": [],
+  "details": [
+   {
+    "label": "Community data for your version",
+    "value": "none yet"
+   }
+  ],
+  "compile": {
+   "title": "First compile",
+   "text": "It runs in the background, so you can keep using the PC."
+  },
+  "hitchRows": [],
+  "earlierSessions": [],
+  "apiChip": "DirectX 11 or DirectX 12"
+ }
+}

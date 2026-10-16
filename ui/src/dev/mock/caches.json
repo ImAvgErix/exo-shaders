@@ -1,0 +1,228 @@
+{
+ "steam:2001760": {
+  "parts": [],
+  "title": "Clear the shader cache of Beast of Reincarnation?",
+  "text": "No cache files on disk now.\n\nThe game will compile shaders during play again until you re-warm it.",
+  "note": "The game will compile shaders during play again until you re-warm it."
+ },
+ "steam:1173220": {
+  "parts": [],
+  "title": "Clear the shader cache of Bleak Faith: Forsaken?",
+  "text": "No cache files on disk now.\n\nThe game will compile shaders during play again until you re-warm it.",
+  "note": "The game will compile shaders during play again until you re-warm it."
+ },
+ "steam:2406770": {
+  "parts": [
+   {
+    "name": "Windows shader cache",
+    "bytes": 135512,
+    "size": "0 MB",
+    "files": 3,
+    "own": false
+   }
+  ],
+  "title": "Clear the shader cache of Bodycam?",
+  "text": "Windows shader cache 0 MB.\n\nThe game will compile shaders during play again until you re-warm it.",
+  "note": "The game will compile shaders during play again until you re-warm it."
+ },
+ "steam:730": {
+  "parts": [],
+  "title": "Clear the shader cache of Counter-Strike 2?",
+  "text": "No cache files on disk now.\n\nThe game will compile shaders during play again until you re-warm it.",
+  "note": "The game will compile shaders during play again until you re-warm it."
+ },
+ "steam:2101960": {
+  "parts": [],
+  "title": "Clear the shader cache of Cronos: The New Dawn?",
+  "text": "No cache files on disk now.\n\nThe game will compile shaders during play again until you re-warm it.",
+  "note": "The game will compile shaders during play again until you re-warm it."
+ },
+ "steam:1790600": {
+  "parts": [
+   {
+    "name": "Windows shader cache",
+    "bytes": 17538768,
+    "size": "17 MB",
+    "files": 3,
+    "own": false
+   }
+  ],
+  "title": "Clear the shader cache of DRAGON BALL: Sparking! ZERO?",
+  "text": "Windows shader cache 17 MB.\n\nThe game will compile shaders during play again until you re-warm it.",
+  "note": "The game will compile shaders during play again until you re-warm it."
+ },
+ "steam:2102450": {
+  "parts": [],
+  "title": "Clear the shader cache of Enotria: The Last Song?",
+  "text": "No cache files on disk now.\n\nThe game will compile shaders during play again until you re-warm it.",
+  "note": "The game will compile shaders during play again until you re-warm it."
+ },
+ "steam:2515020": {
+  "parts": [],
+  "title": "Clear the shader cache of FINAL FANTASY XVI?",
+  "text": "No cache files on disk now.\n\nThe game will compile shaders during play again until you re-warm it.",
+  "note": "The game will compile shaders during play again until you re-warm it.",
+  "gap": "the driver cache key of ffxvi.exe isn't learned yet (SCSKiller learns it when it compiles the game or sees it running): the driver cache is not cleared"
+ },
+ "steam:2215430": {
+  "parts": [],
+  "title": "Clear the shader cache of Ghost of Tsushima DIRECTOR'S CUT?",
+  "text": "No cache files on disk now.\n\nThe game will compile shaders during play again until you re-warm it.",
+  "note": "The game will compile shaders during play again until you re-warm it."
+ },
+ "steam:1593500": {
+  "parts": [],
+  "title": "Clear the shader cache of God of War?",
+  "text": "No cache files on disk now.\n\nThe game will compile shaders during play again until you re-warm it.",
+  "note": "The game will compile shaders during play again until you re-warm it."
+ },
+ "steam:1620730": {
+  "parts": [
+   {
+    "name": "Windows shader cache",
+    "bytes": 86016,
+    "size": "0 MB",
+    "files": 3,
+    "own": false
+   }
+  ],
+  "title": "Clear the shader cache of Hell is Us?",
+  "text": "Windows shader cache 0 MB.\n\nThe game will compile shaders during play again until you re-warm it.",
+  "note": "The game will compile shaders during play again until you re-warm it."
+ },
+ "steam:2149010": {
+  "parts": [],
+  "title": "Clear the shader cache of Little Nightmares Enhanced Edition?",
+  "text": "No cache files on disk now.\n\nThe game will compile shaders during play again until you re-warm it.",
+  "note": "The game will compile shaders during play again until you re-warm it."
+ },
+ "steam:860510": {
+  "parts": [],
+  "title": "Clear the shader cache of Little Nightmares II?",
+  "text": "No cache files on disk now.\n\nThe game will compile shaders during play again until you re-warm it.",
+  "note": "The game will compile shaders during play again until you re-warm it."
+ },
+ "steam:1501750": {
+  "parts": [
+   {
+    "name": "Driver cache",
+    "bytes": 0,
+    "size": "0 MB",
+    "files": 0,
+    "own": false
+   }
+  ],
+  "title": "Clear the shader cache of Lords of the Fallen?",
+  "text": "Driver cache 0 MB.\n\nThe game will compile shaders during play again until you re-warm it. Anti-cheat game: only the driver cache is cleared.",
+  "note": "The game will compile shaders during play again until you re-warm it. Anti-cheat game: only the driver cache is cleared."
+ },
+ "steam:1110910": {
+  "parts": [],
+  "title": "Clear the shader cache of Mortal Shell?",
+  "text": "No cache files on disk now.\n\nThe game will compile shaders during play again until you re-warm it.",
+  "note": "The game will compile shaders during play again until you re-warm it."
+ },
+ "steam:1172380": {
+  "parts": [],
+  "title": "Clear the shader cache of STAR WARS Jedi: Fallen Order™ ?",
+  "text": "No cache files on disk now.\n\nThe game will compile shaders during play again until you re-warm it.",
+  "note": "The game will compile shaders during play again until you re-warm it."
+ },
+ "steam:3489700": {
+  "parts": [],
+  "title": "Clear the shader cache of Stellar Blade™?",
+  "text": "No cache files on disk now.\n\nThe game will compile shaders during play again until you re-warm it.",
+  "note": "The game will compile shaders during play again until you re-warm it."
+ },
+ "riot:teamfighttactics.live": {
+  "parts": [
+   {
+    "name": "Driver cache",
+    "bytes": 0,
+    "size": "0 MB",
+    "files": 0,
+    "own": false
+   }
+  ],
+  "title": "Clear the shader cache of Teamfight Tactics?",
+  "text": "Driver cache 0 MB.\n\nThe game will compile shaders during play again until you re-warm it. Anti-cheat game: only the driver cache is cleared.",
+  "note": "The game will compile shaders during play again until you re-warm it. Anti-cheat game: only the driver cache is cleared."
+ },
+ "steam:1343240": {
+  "parts": [
+   {
+    "name": "Windows shader cache",
+    "bytes": 349800,
+    "size": "0 MB",
+    "files": 3,
+    "own": false
+   }
+  ],
+  "title": "Clear the shader cache of Thymesia?",
+  "text": "Windows shader cache 0 MB.\n\nThe game will compile shaders during play again until you re-warm it.",
+  "note": "The game will compile shaders during play again until you re-warm it."
+ },
+ "riot:valorant.live": {
+  "parts": [
+   {
+    "name": "Driver cache",
+    "bytes": 0,
+    "size": "0 MB",
+    "files": 0,
+    "own": false
+   }
+  ],
+  "title": "Clear the shader cache of VALORANT?",
+  "text": "Driver cache 0 MB.\n\nThe game will compile shaders during play again until you re-warm it. Anti-cheat game: only the driver cache is cleared.",
+  "note": "The game will compile shaders during play again until you re-warm it. Anti-cheat game: only the driver cache is cleared."
+ },
+ "steam:4126040": {
+  "parts": [],
+  "title": "Clear the shader cache of Aniimo?",
+  "text": "No cache files on disk now.\n\nThe game will compile shaders during play again until you re-warm it. Anti-cheat game: only the driver cache is cleared.",
+  "note": "The game will compile shaders during play again until you re-warm it. Anti-cheat game: only the driver cache is cleared.",
+  "gap": "the driver cache key of Aniimo.exe isn't learned yet (SCSKiller learns it when it compiles the game or sees it running): the driver cache is not cleared"
+ },
+ "riot:league_of_legends.live": {
+  "parts": [],
+  "title": "Clear the shader cache of League of Legends?",
+  "text": "No cache files on disk now.\n\nThe game will compile shaders during play again until you re-warm it. Anti-cheat game: only the driver cache is cleared.",
+  "note": "The game will compile shaders during play again until you re-warm it. Anti-cheat game: only the driver cache is cleared.",
+  "gap": "the driver cache key of League of Legends.exe isn't learned yet (SCSKiller learns it when it compiles the game or sees it running): the driver cache is not cleared"
+ },
+ "steam:1817070": {
+  "parts": [],
+  "title": "Clear the shader cache of Marvel’s Spider-Man Remastered?",
+  "text": "No cache files on disk now.\n\nThe game will compile shaders during play again until you re-warm it.",
+  "note": "The game will compile shaders during play again until you re-warm it.",
+  "gap": "the driver cache key of Spider-Man.exe isn't learned yet (SCSKiller learns it when it compiles the game or sees it running): the driver cache is not cleared"
+ },
+ "steam:3472040": {
+  "parts": [],
+  "title": "Clear the shader cache of NBA 2K26?",
+  "text": "No cache files on disk now.\n\nThe game will compile shaders during play again until you re-warm it. Anti-cheat game: only the driver cache is cleared.",
+  "note": "The game will compile shaders during play again until you re-warm it. Anti-cheat game: only the driver cache is cleared.",
+  "gap": "the driver cache key of NBA2K26.exe isn't learned yet (SCSKiller learns it when it compiles the game or sees it running): the driver cache is not cleared"
+ },
+ "steam:814380": {
+  "parts": [],
+  "title": "Clear the shader cache of Sekiro™: Shadows Die Twice?",
+  "text": "No cache files on disk now.\n\nThe game will compile shaders during play again until you re-warm it.",
+  "note": "The game will compile shaders during play again until you re-warm it.",
+  "gap": "the driver cache key of sekiro.exe isn't learned yet (SCSKiller learns it when it compiles the game or sees it running): the driver cache is not cleared"
+ },
+ "steam:359550": {
+  "parts": [],
+  "title": "Clear the shader cache of Tom Clancy's Rainbow Six Siege?",
+  "text": "No cache files on disk now.\n\nThe game will compile shaders during play again until you re-warm it. Anti-cheat game: only the driver cache is cleared.",
+  "note": "The game will compile shaders during play again until you re-warm it. Anti-cheat game: only the driver cache is cleared.",
+  "gap": "the driver cache key of RainbowSix.exe isn't learned yet (SCSKiller learns it when it compiles the game or sees it running): the driver cache is not cleared"
+ },
+ "steam:3513350": {
+  "parts": [],
+  "title": "Clear the shader cache of Wuthering Waves?",
+  "text": "No cache files on disk now.\n\nThe game will compile shaders during play again until you re-warm it. Anti-cheat game: only the driver cache is cleared.",
+  "note": "The game will compile shaders during play again until you re-warm it. Anti-cheat game: only the driver cache is cleared.",
+  "gap": "the driver cache key of Client-Win64-Shipping.exe isn't learned yet (SCSKiller learns it when it compiles the game or sees it running): the driver cache is not cleared"
+ }
+}

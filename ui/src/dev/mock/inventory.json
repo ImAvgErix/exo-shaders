@@ -1,0 +1,220 @@
+{
+ "total": "1 MB of shader caches",
+ "totalBytes": 1347648,
+ "driverInstalled": "2026-10-12T16:56:07-05:00",
+ "everythingWarning": {
+  "withOthers": "Deletes 1 MB. Every game compiles its shaders again. Games SCSKiller compiled stutter until you compile them again, and the rest build their cache as you play. The other apps and games group (1 MB) is included: apps and games outside SCSKiller build their caches again too.",
+  "withoutOthers": "Deletes 0 MB. Every game compiles its shaders again. Games SCSKiller compiled stutter until you compile them again, and the rest build their cache as you play. The other apps and games group (1 MB) is kept unless you tick it."
+ },
+ "noFolders": false,
+ "folders": [
+  {
+   "label": "DirectX 12 and 11",
+   "path": "C:\\Users\\Player\\AppData\\Local\\NVIDIA\\DXCache",
+   "size": "1 MB"
+  }
+ ],
+ "groups": [
+  {
+   "kind": "unattributed",
+   "title": "Other apps and games",
+   "caption": "Desktop apps, and games SCSKiller hasn't compiled or seen running. A game moves to its group once SCSKiller sees it running.",
+   "size": "1 MB",
+   "bytes": 1347648,
+   "deletable": false,
+   "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped.",
+   "items": [
+    {
+     "key": "0.0",
+     "name": "Unknown app 13f58350",
+     "size": "0 MB",
+     "bytes": 131072,
+     "gameIds": [],
+     "files": 2,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    },
+    {
+     "key": "0.1",
+     "name": "Unknown app 28a5492a",
+     "size": "0 MB",
+     "bytes": 131072,
+     "gameIds": [],
+     "files": 2,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    },
+    {
+     "key": "0.2",
+     "name": "Unknown app 31f6afee",
+     "size": "0 MB",
+     "bytes": 131072,
+     "gameIds": [],
+     "files": 2,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    },
+    {
+     "key": "0.3",
+     "name": "Unknown app 43c877cd",
+     "size": "0 MB",
+     "bytes": 131072,
+     "gameIds": [],
+     "files": 2,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    },
+    {
+     "key": "0.4",
+     "name": "Unknown app e4e0c354",
+     "size": "0 MB",
+     "bytes": 131072,
+     "gameIds": [],
+     "files": 2,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    },
+    {
+     "key": "0.5",
+     "name": "Unknown app ee9c70fa",
+     "size": "0 MB",
+     "bytes": 131072,
+     "gameIds": [],
+     "files": 2,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    },
+    {
+     "key": "0.6",
+     "name": "Unknown app 2ac6783f",
+     "size": "0 MB",
+     "bytes": 131072,
+     "gameIds": [],
+     "files": 2,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    },
+    {
+     "key": "0.7",
+     "name": "Unknown app 8ecda0a2",
+     "size": "0 MB",
+     "bytes": 131072,
+     "gameIds": [],
+     "files": 2,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    },
+    {
+     "key": "0.8",
+     "name": "Unknown app 1c0f1452",
+     "size": "0 MB",
+     "bytes": 65536,
+     "gameIds": [],
+     "files": 1,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    },
+    {
+     "key": "0.9",
+     "name": "Unknown app 3766cfec",
+     "size": "0 MB",
+     "bytes": 65536,
+     "gameIds": [],
+     "files": 1,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    },
+    {
+     "key": "0.10",
+     "name": "Unknown app b7ec7b1e",
+     "size": "0 MB",
+     "bytes": 65536,
+     "gameIds": [],
+     "files": 1,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    },
+    {
+     "key": "0.11",
+     "name": "Unknown app d5009bb8",
+     "size": "0 MB",
+     "bytes": 65536,
+     "gameIds": [],
+     "files": 1,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    },
+    {
+     "key": "0.12",
+     "name": "Unknown app 94940109",
+     "size": "0 MB",
+     "bytes": 8192,
+     "gameIds": [],
+     "files": 2,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    },
+    {
+     "key": "0.13",
+     "name": "Unknown app 128cd128",
+     "size": "0 MB",
+     "bytes": 4096,
+     "gameIds": [],
+     "files": 1,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    },
+    {
+     "key": "0.14",
+     "name": "Unknown app 2ac67840",
+     "size": "0 MB",
+     "bytes": 4096,
+     "gameIds": [],
+     "files": 1,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    },
+    {
+     "key": "0.15",
+     "name": "Unknown app 62d41c9b",
+     "size": "0 MB",
+     "bytes": 4096,
+     "gameIds": [],
+     "files": 1,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    },
+    {
+     "key": "0.16",
+     "name": "Unknown app 652ae241",
+     "size": "0 MB",
+     "bytes": 4096,
+     "gameIds": [],
+     "files": 1,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    },
+    {
+     "key": "0.17",
+     "name": "Unknown app 933ff8ac",
+     "size": "0 MB",
+     "bytes": 4096,
+     "gameIds": [],
+     "files": 1,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    },
+    {
+     "key": "0.18",
+     "name": "Unknown app e4e0c355",
+     "size": "0 MB",
+     "bytes": 4096,
+     "gameIds": [],
+     "files": 1,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    },
+    {
+     "key": "0.19",
+     "name": "Unknown app ed53c641",
+     "size": "0 MB",
+     "bytes": 4096,
+     "gameIds": [],
+     "files": 1,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    },
+    {
+     "key": "0.20",
+     "name": "NVIDIA OpenGL and Vulkan",
+     "size": "0 MB",
+     "bytes": 64,
+     "outside": "C:\\Users\\Player\\AppData\\Local\\NVIDIA\\GLCache\\dae675479948b9c594340edf55765be1\\6b0a6e4d306f5046",
+     "gameIds": [],
+     "files": 2,
+     "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."
+    }
+   ]
+  }
+ ]
+}

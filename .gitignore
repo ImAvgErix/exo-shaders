@@ -1,0 +1,23 @@
+# Build output and dependencies
+engine/out/
+**/bin/
+**/obj/
+ui/node_modules/
+ui/dist/
+# Decompile scratch, release downloads and the copied user data used for tests
+dec125/
+decbeta/
+v125/
+v125.zip
+testdata/
+*.log
+a.txt
+b.txt
+.claude/
+# beta.2 rebase inputs (decompiles, binaries, the prepared merge copy)
+decbeta2/
+decbeta2r/
+beta2/
+b2prep/
+b1.txt
+b2.txt

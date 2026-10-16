@@ -1,0 +1,1162 @@
+/* Exo Shaders, an unofficial fork based on SCSKiller. Copyright (C) the SCSKiller authors and Exo Shaders contributors. GPL-3.0-or-later. */
+/* Exo's look: void black, cream ink, Geist, hairlines, one pill. Tokens from Exo's ui/src/tokens.css.
+   One type scale: title 20/600, heading 13/600, body 13/400, secondary 12; controls 12/500. One line height (1.45).
+   One spacing scale: 4 8 12 16 24 32, with 20px page sides like the header. Hairlines: #1c1c1c around panels,
+   #242424 around controls, #161616 between rows. Radii: 14px cards, 999px pills. */
+:root {
+  --color-fg: #eeeeee;
+  --color-muted: #999999;
+  --color-faint: #777777;
+  --color-track: #222222;
+  --hair: #1c1c1c;
+  --hair-control: #242424;
+  --hair-row: #161616;
+  --fill: #1c1c1c;
+  /* Hover on a dark control: a solid step up from black (Exo's --hover-fill), never see-through. */
+  --wash: #141414;
+  --color-good: #3dd68c;
+  --color-bad: #ff5c5c;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+
+  --fs-title: calc(20px * var(--exo-scale, 1));
+  --fs-body: calc(13px * var(--exo-scale, 1));
+  --fs-small: calc(12px * var(--exo-scale, 1));
+  --lh: 1.45;
+  --side: 20px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  background: #000;
+  color: var(--color-fg);
+  font-family: 'Geist Variable', 'Geist', system-ui, sans-serif;
+  font-size: var(--fs-body);
+  font-weight: 400;
+  line-height: var(--lh);
+  font-feature-settings: "ss01" 1, "cv11" 1;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  cursor: default;
+}
+
+button, input, select { font: inherit; color: inherit; line-height: var(--lh); }
+button:not(:disabled), select:not(:disabled), label { cursor: pointer; }
+[hidden] { display: none !important; }
+
+:is(button, input, select):focus-visible {
+  outline: 2px solid var(--color-fg);
+  outline-offset: 2px;
+}
+
+h1, h2, h3, h4, p, ul, ol, figure { margin: 0; }
+
+.s-muted { color: var(--color-muted); }
+.s-good { color: var(--color-good); }
+.s-bad { color: var(--color-bad); }
+.s-num { font-variant-numeric: tabular-nums; }
+.s-inline { display: inline-flex; align-items: center; gap: 8px; }
+
+.is-good { color: var(--color-good); }
+.is-bad { color: var(--color-bad); }
+.is-ink { color: var(--color-fg); }
+.is-faint { color: var(--color-faint); }
+
+/* ------------------------------------------------------------------ frame */
+
+.s-app {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) 32px;
+  height: 100%;
+  background: #000;
+}
+
+.s-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px var(--side) 12px;
+}
+
+.s-title { font-size: var(--fs-title); font-weight: 600; }
+
+.s-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 var(--side) 16px;
+}
+
+/* The one live line: what is compiling right now. */
+.s-app-state {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-good);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.s-count {
+  margin-left: 8px;
+  color: var(--color-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.s-count[data-on='false'] { display: none; }
+.s-seg-item.is-on .s-count { color: var(--color-muted); }
+
+.s-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-top: 1px solid var(--hair);
+}
+
+/* Switch: a page fades in when its tab is chosen (display: none to shown restarts the animation). */
+.s-page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  animation: s-fade 200ms var(--ease-out);
+}
+
+.s-library, .s-queue, .s-cachepage {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.s-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 var(--side) 32px;
+  scrollbar-width: none;
+}
+
+.s-scroll::-webkit-scrollbar { display: none; }
+
+.s-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 16px var(--side);
+}
+
+.s-toolbar.is-end { justify-content: flex-end; }
+
+.s-toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ------------------------------------------------------------------ status line */
+
+.s-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 0 var(--side);
+  color: var(--color-muted);
+  font-size: var(--fs-small);
+  opacity: 0;
+  transition: opacity 400ms var(--ease-out);
+}
+
+.s-status.is-shown { opacity: 1; transition-duration: 160ms; }
+.s-status.is-bad { color: var(--color-bad); }
+.s-status.is-good { color: var(--color-good); }
+
+.s-status-text {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ------------------------------------------------------------------ controls */
+
+.s-btn, .s-icon-btn {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  min-width: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--hair-control);
+  border-radius: 999px;
+  background: #000;
+  color: var(--color-fg);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out), background-color 160ms var(--ease-out), opacity 160ms var(--ease-out);
+}
+
+.s-icon-btn { width: 32px; padding: 0; }
+.s-btn.is-compact { height: 28px; padding: 0 12px; }
+
+.s-btn.is-primary {
+  border-color: var(--color-fg);
+  background: var(--color-fg);
+  color: #0a0a0a;
+}
+
+.s-btn.is-danger {
+  border-color: color-mix(in srgb, var(--color-bad) 34%, transparent);
+  color: var(--color-bad);
+}
+
+.s-btn:disabled { opacity: 0.4; }
+.s-btn.is-busy { opacity: 0.6; }
+.s-btn.is-done:disabled, .s-btn[aria-busy='true']:not(.is-busy):disabled { opacity: 1; }
+
+@media (hover: hover) and (pointer: fine) {
+  :is(.s-btn, .s-icon-btn):hover:not(:disabled) { background-color: var(--wash); }
+  .s-btn.is-primary:hover:not(:disabled) { background-color: var(--color-fg); opacity: 0.88; }
+}
+
+/* A button's labels share one cell: the widest sets the width, one shows. */
+.s-faces { display: inline-grid; }
+
+.s-face {
+  display: inline-flex;
+  grid-area: 1 / 1;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 160ms var(--ease-out), visibility 0s linear 160ms;
+}
+
+.s-face[data-on='true'] {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 160ms var(--ease-out), visibility 0s;
+}
+
+.s-done-mark { flex: none; color: var(--color-good); }
+
+.s-btn-count {
+  min-width: 2ch;
+  margin-left: 6px;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  opacity: 0.7;
+}
+
+.s-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: var(--fs-small);
+  text-decoration: underline;
+  text-decoration-color: #3a3a3a;
+  text-underline-offset: 3px;
+  transition: color 160ms var(--ease-out);
+}
+
+.s-link:hover:not(:disabled) { color: var(--color-fg); }
+.s-link:disabled { opacity: 0.4; }
+
+/* Choose: the segmented pill. */
+.s-seg {
+  display: inline-flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--hair-control);
+  border-radius: 999px;
+  background: #000;
+}
+
+.s-seg-item {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color 160ms var(--ease-out), background-color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+
+.s-seg-item.is-on { background: var(--fill); color: var(--color-fg); }
+
+/* Exo's glide: one fill slides to the chosen item (switch timing, 200 ms). */
+.s-seg { position: relative; isolation: isolate; }
+.s-seg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  width: var(--glide-w, 0);
+  height: var(--glide-h, 0);
+  border-radius: 999px;
+  background: var(--fill);
+  opacity: var(--glide-o, 0);
+  transform: translate(var(--glide-x, 0), var(--glide-y, 0));
+  pointer-events: none;
+}
+.s-seg.is-glide-ready::before { transition: transform 200ms var(--ease-out), width 200ms var(--ease-out), height 200ms var(--ease-out), opacity 120ms var(--ease-out); }
+.s-seg.is-glide-ready .s-seg-item.is-on { background: transparent; }
+.s-seg-item:disabled { opacity: 0.4; }
+
+@media (hover: hover) and (pointer: fine) {
+  .s-seg-item:hover:not(.is-on):not(:disabled) { color: var(--color-fg); }
+}
+
+.s-row .s-seg-item { height: 24px; padding: 0 12px; }
+
+/* Exo's menu (ExoLauncher styles/chrome.css .exo-shelf-sort-menu, .exo-menu-item): a pill trigger and a popover. */
+.s-select {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  max-width: 280px;
+  padding: 0 12px 0 16px;
+  border: 1px solid var(--hair-control);
+  border-radius: 999px;
+  background: #000;
+  color: var(--color-fg);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color 160ms var(--ease-out), opacity 160ms var(--ease-out);
+}
+
+.s-select:disabled { opacity: 0.4; }
+.s-select[aria-expanded='true'] { background: var(--wash); }
+.s-select-text { overflow: hidden; text-overflow: ellipsis; }
+.s-select-chevron { flex: none; color: var(--color-muted); }
+
+@media (hover: hover) and (pointer: fine) {
+  .s-select:hover:not(:disabled) { background: var(--wash); }
+}
+
+.s-menu {
+  inset: auto;
+  top: anchor(bottom);
+  left: anchor(left);
+  position-try-fallbacks: flip-block, flip-inline;
+  margin: 4px 0 0;
+  flex-direction: column;
+  gap: 4px;
+  min-width: max(192px, anchor-size(width));
+  max-height: min(360px, 70vh);
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid var(--hair);
+  border-radius: 14px;
+  background: #000;
+  color: var(--color-fg);
+  box-shadow: none;
+  animation: s-fade 160ms var(--ease-out) both;
+}
+
+.s-menu:popover-open { display: flex; }
+
+.s-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: var(--fs-body);
+  color: var(--color-fg);
+  cursor: default;
+  user-select: none;
+  transition: background-color 160ms var(--ease-out), color 160ms var(--ease-out);
+}
+
+.s-menu-item:hover, .s-menu-item:focus { background: var(--wash); outline: none; }
+.s-menu-item:focus-visible { outline: 2px solid var(--color-fg); outline-offset: -2px; }
+.s-menu-item[aria-checked='true'] { background: var(--fill); }
+.s-menu-label { flex: 1; min-width: 0; }
+.s-menu-check { flex: none; opacity: 0; }
+.s-menu-item[aria-checked='true'] .s-menu-check { opacity: 1; }
+
+.s-search, .s-input {
+  height: 32px;
+  padding: 0 16px;
+  border: 1px solid var(--hair-control);
+  border-radius: 999px;
+  background: #000;
+  outline: none;
+  font-size: var(--fs-body);
+  transition: border-color 160ms var(--ease-out);
+}
+
+.s-search { width: 192px; }
+.s-input { width: 100%; }
+.s-search::placeholder, .s-input::placeholder { color: var(--color-faint); }
+.s-search:focus-visible, .s-input:focus-visible { outline: none; border-color: var(--color-fg); }
+.s-search::-webkit-search-cancel-button { filter: invert(0.6); }
+
+.s-bar {
+  position: relative;
+  display: block;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-track);
+}
+
+.s-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-fg);
+  transition: width 240ms linear;
+}
+
+.s-bar.is-good > span { background: var(--color-good); }
+.s-bar.is-bad > span { background: var(--color-bad); }
+
+.s-bar.is-indeterminate > span {
+  width: 30%;
+  animation: s-slide 1.2s var(--ease-out) infinite;
+}
+
+@keyframes s-slide {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(340%); }
+}
+
+.s-spinner {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-track);
+  border-top-color: var(--color-fg);
+  border-radius: 999px;
+  animation: s-spin 800ms linear infinite;
+}
+
+.s-spinner.is-small { width: 12px; height: 12px; border-width: 1.5px; }
+
+@keyframes s-spin { to { transform: rotate(360deg); } }
+
+.s-check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-fg);
+  font-size: var(--fs-body);
+  text-align: left;
+}
+
+.s-check-box {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--hair-control);
+  border-radius: 6px;
+  background: #000;
+  color: #0a0a0a;
+  transition: background-color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+
+.s-check-box svg { opacity: 0; transition: opacity 160ms var(--ease-out); }
+.s-check.is-on .s-check-box { border-color: var(--color-fg); background: var(--color-fg); }
+.s-check.is-on .s-check-box svg { opacity: 1; }
+.s-check:focus-visible { outline: none; }
+.s-check:focus-visible .s-check-box { outline: 2px solid var(--color-fg); outline-offset: 2px; }
+
+@media (hover: hover) and (pointer: fine) {
+  .s-check:hover:not(.is-on) .s-check-box { border-color: #3a3a3a; }
+}
+
+/* ------------------------------------------------------------------ states */
+
+.s-empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 224px;
+  padding: 32px;
+  text-align: center;
+}
+
+.s-empty-title { font-weight: 600; }
+.s-empty-line { max-width: 440px; color: var(--color-muted); }
+.s-empty > .s-btn, .s-empty > .s-spinner { margin-top: 8px; }
+
+.s-loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.s-error { color: var(--color-bad); }
+
+.s-banners {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px var(--side) 0;
+}
+
+.s-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 8px 8px 16px;
+  border: 1px solid var(--hair);
+  border-radius: 14px;
+}
+
+.s-banner-text { color: var(--color-muted); }
+.s-banner-actions { display: flex; flex: none; gap: 8px; }
+
+/* ------------------------------------------------------------------ shelves and the library */
+
+.s-shelf { margin-top: 24px; }
+.s-shelf:first-child { margin-top: 0; }
+
+.s-shelf-title { margin-bottom: 12px; font-size: var(--fs-body); font-weight: 600; }
+
+/* A shelf title with a control on its right edge (the queue's Finished > Clear). */
+.s-shelf-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 32px;
+  margin-bottom: 4px;
+}
+
+.s-shelf-head .s-shelf-title { margin: 0; }
+
+.s-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+  gap: 24px 16px;
+}
+
+.s-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+/* The ring is an outline so it sits over the cover image (an inset box-shadow paints under it). */
+.s-card-art, .s-game-cover {
+  position: relative;
+  display: block;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #000;
+  outline: 1px solid var(--hair);
+  outline-offset: -1px;
+  transition: outline-color 160ms var(--ease-out);
+}
+
+.s-card-art { margin-bottom: 8px; }
+.s-card.is-playing .s-card-art { outline: 2px solid var(--color-good); outline-offset: -2px; }
+
+@media (hover: hover) and (pointer: fine) {
+  .s-card:hover:not(.is-playing) .s-card-art { outline-color: #3a3a3a; }
+}
+
+.s-card:focus-visible { outline: none; }
+.s-card:focus-visible .s-card-art { outline: 2px solid var(--color-fg); outline-offset: -2px; }
+
+.s-card-cover {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.s-card-cover.is-blank {
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  color: var(--color-faint);
+  font-size: var(--fs-small);
+  text-align: center;
+}
+
+.s-card-progress {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  left: 12px;
+}
+
+.s-card-progress .s-bar { background: rgba(255, 255, 255, 0.16); }
+
+.s-card-name, .s-card-status {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.s-card-status { font-size: var(--fs-small); }
+
+/* ------------------------------------------------------------------ rows and lists
+   A row: label left (13px), value or control on the shared right edge (12px values), at least 42px, a #161616
+   hairline between rows. Lists (queue, cache) use the same measure. */
+
+.s-row, .s-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 42px;
+  padding: 6px 0;
+}
+
+.s-row + .s-row, .s-list-row + .s-list-row, .s-graph + .s-row { border-top: 1px solid var(--hair-row); }
+
+.s-row-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.s-row-error { color: var(--color-bad); font-size: var(--fs-small); }
+
+.s-row-control {
+  display: flex;
+  flex: none;
+  justify-content: flex-end;
+  max-width: 60%;
+}
+
+.s-value {
+  color: var(--color-muted);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.s-value.is-good { color: var(--color-good); }
+.s-value.is-bad { color: var(--color-bad); }
+
+.s-list { display: flex; flex-direction: column; }
+
+.s-list-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.s-list-name {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.s-list-name:hover { text-decoration: underline; text-decoration-color: #3a3a3a; text-underline-offset: 3px; }
+.s-list-sub { font-size: var(--fs-small); }
+
+.s-list-meta {
+  flex: none;
+  min-width: 64px;
+  color: var(--color-muted);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* Wide enough for the widest set (Show and Delete; up, down and Remove), so the meta column lines up row to row. */
+.s-list-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 152px;
+}
+
+/* ------------------------------------------------------------------ queue */
+
+.s-current {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--hair);
+  border-radius: 14px;
+}
+
+.s-current-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.s-current-name {
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.s-current-time { color: var(--color-muted); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+
+.s-current-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  min-height: calc(var(--fs-small) * var(--lh));
+  font-size: var(--fs-small);
+}
+
+.s-current-actions { display: flex; gap: 8px; }
+.s-current + .s-error { margin-top: 12px; }
+
+/* ------------------------------------------------------------------ cache */
+
+.s-budget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 16px;
+  border: 1px solid var(--hair);
+  border-radius: 14px;
+}
+
+.s-budget-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.s-budget-used { font-weight: 600; font-variant-numeric: tabular-nums; }
+.s-budget-line .s-muted { font-size: var(--fs-small); }
+.s-budget-end { margin-left: auto; }
+
+.s-budget-old {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hair-row);
+}
+
+.s-cache-group + .s-cache-group { border-top: 1px solid var(--hair-row); }
+.s-list.is-nested .s-list-row { border-top: 1px solid var(--hair-row); }
+.s-list.is-nested .s-list-main { padding-left: 16px; color: var(--color-muted); }
+
+/* ------------------------------------------------------------------ panels: the game page's sections */
+
+.s-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px;
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .s-columns { grid-template-columns: minmax(0, 1fr); }
+}
+
+.s-panel { min-width: 0; }
+.s-panel-title { margin-bottom: 4px; font-size: var(--fs-body); font-weight: 600; }
+
+/* About: one column of cards, black inside a 14px hairline. */
+.s-about-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 16px;
+}
+
+.s-info-card {
+  width: 100%;
+  max-width: 560px;
+  padding: 12px 16px 4px;
+  border: 1px solid var(--hair);
+  border-radius: 14px;
+  background: #000;
+}
+
+.s-info-title { margin-bottom: 4px; font-size: var(--fs-body); font-weight: 600; }
+
+/* ------------------------------------------------------------------ game page */
+
+.s-sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  animation: s-fade 200ms var(--ease-out);
+}
+
+/* Back: the page fades out over the library, then unmounts (App.tsx, on animationend). */
+.s-sheet.is-leaving {
+  pointer-events: none;
+  animation: s-fade-out 200ms var(--ease-out) forwards;
+}
+
+.s-sheet-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px var(--side) 32px;
+  scrollbar-width: none;
+}
+
+.s-sheet-scroll::-webkit-scrollbar { display: none; }
+
+.s-game-head {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  margin-bottom: 32px;
+}
+
+@media (max-width: 640px) {
+  .s-game-head { grid-template-columns: 120px minmax(0, 1fr); gap: 16px; }
+}
+
+.s-game-cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+.s-game-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.s-game-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin-bottom: 8px;
+}
+
+.s-game-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--fs-title);
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The state word, then one reserved line and a reserved bar slot, so nothing under them moves when they fill. */
+.s-game-word { padding-left: 44px; }
+
+.s-game-line {
+  min-height: calc(var(--fs-small) * var(--lh));
+  padding-left: 44px;
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.s-game-line.is-bad { color: var(--color-bad); white-space: normal; }
+
+.s-game-bar {
+  display: block;
+  height: 3px;
+  max-width: 420px;
+  margin: 6px 0 12px 44px;
+}
+
+.s-game-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-left: 44px;
+}
+
+/* ------------------------------------------------------------------ graph */
+
+.s-graph { margin: 8px 0 12px; }
+.s-graph svg { display: block; }
+.s-graph-grid { stroke: var(--hair-row); stroke-width: 1; }
+.s-graph-base { stroke: var(--color-track); stroke-width: 1; }
+.s-graph-axis { fill: var(--color-faint); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+.s-graph-startup { fill: rgba(255, 255, 255, 0.025); }
+.s-graph-line { fill: none; stroke-width: 1.2; stroke-linejoin: round; }
+.s-graph-line.is-ink { stroke: var(--color-fg); }
+.s-graph-line.is-faint { stroke: #555; }
+.s-graph-hitch { fill: var(--color-muted); }
+.s-graph-hitch.is-shader { fill: var(--color-bad); }
+.s-graph-hitch.is-faint { opacity: 0.55; }
+
+.s-graph-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  color: var(--color-muted);
+  font-size: var(--fs-small);
+}
+
+.s-legend::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 2px;
+  margin: 0 8px 3px 0;
+  vertical-align: middle;
+  background: currentColor;
+}
+
+.s-legend.is-ink::before { background: var(--color-fg); }
+.s-legend.is-faint::before { background: #555; }
+.s-legend.is-shader::before { width: 6px; height: 6px; border-radius: 999px; background: var(--color-bad); }
+
+.s-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.s-table th, .s-table td {
+  height: 42px;
+  padding: 0;
+  text-align: right;
+}
+
+.s-table tr + tr td, .s-table tbody tr:first-child td { border-top: 1px solid var(--hair-row); }
+.s-table th { color: var(--color-muted); font-size: var(--fs-small); font-weight: 400; }
+.s-table td:not(:first-child) { color: var(--color-muted); font-size: var(--fs-small); }
+.s-table th:first-child, .s-table td:first-child { text-align: left; }
+
+/* ------------------------------------------------------------------ dialogs */
+
+.s-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background: rgba(0, 0, 0, 0.78);
+  animation: s-fade 200ms var(--ease-out);
+}
+
+.s-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(520px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 24px;
+  border: 1px solid var(--hair);
+  border-radius: 14px;
+  background: #000;
+  scrollbar-width: none;
+}
+
+.s-dialog.is-wide { width: min(760px, 100%); }
+.s-dialog-title { font-size: var(--fs-title); font-weight: 600; }
+
+.s-dialog-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--color-muted);
+}
+
+.s-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.s-field { display: flex; flex-direction: column; gap: 8px; }
+.s-field-label { color: var(--color-muted); font-size: var(--fs-small); }
+
+/* Always one line tall, empty or not, so an error never makes the dialog grow. */
+.s-field-error {
+  min-height: calc(var(--fs-small) * var(--lh));
+  margin-top: -8px;
+  color: var(--color-bad);
+  font-size: var(--fs-small);
+}
+
+.s-input-row { display: flex; gap: 8px; align-items: center; }
+.s-input-row > .s-input { flex: 1 1 auto; min-width: 0; }
+
+.s-warn {
+  padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--color-bad) 34%, transparent);
+  border-radius: 14px;
+}
+
+.s-steps, .s-changelog {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 20px;
+  color: var(--color-muted);
+}
+
+.s-changelog { max-height: 560px; overflow-y: auto; scrollbar-width: none; }
+.s-changelog strong { color: var(--color-fg); font-weight: 600; }
+.s-changelog code { font-size: var(--fs-small); }
+
+/* ------------------------------------------------------------------ motion
+   One easing (--ease-out) and the same names as Exo's motion spec, prefixed s-. */
+
+@keyframes s-fade { from { opacity: 0; } }
+@keyframes s-fade-out { to { opacity: 0; } }
+
+/* Arrive: rises 8px into place, in turn by --i; the 16th item and later share the last delay. Plays when the element
+   mounts; the library switches it off once its first cards have landed (.is-settled), so it never replays there. */
+.s-arrive {
+  animation: s-arrive 360ms var(--ease-out) both;
+  animation-delay: calc(min(var(--i, 0), 15) * 28ms);
+}
+
+.s-library.is-settled .s-arrive { animation: none; }
+
+@keyframes s-arrive {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Work: a soft diagonal band of light crosses the art while it compiles. */
+.s-card.is-compiling .s-card-art::after,
+.s-game-cover.is-compiling::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.16) 50%, transparent 70%);
+  background-size: 250% 100%;
+  animation: s-work 1400ms linear infinite;
+  pointer-events: none;
+}
+
+@keyframes s-work {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
+}
+
+/* Done: the cover dims (240ms), a check draws itself and a green ring shows; at 2.4s all three let go over 400ms.
+   2800ms in all; the page drops .is-finished at 3000ms (Library.tsx FINISHED_MS). */
+.s-card.is-finished .s-card-cover { animation: s-done-dim 2800ms var(--ease-out) both; }
+.s-card.is-finished .s-card-art { animation: s-done-ring 2800ms var(--ease-out) both; }
+
+.s-card-check {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 48px;
+  height: 48px;
+  fill: none;
+  stroke: var(--color-good);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: s-done-draw 380ms var(--ease-out) 80ms forwards, s-done-out 2800ms var(--ease-out) both;
+}
+
+/* 240ms of 2800 = 8.57%; 2400ms = 85.71%. */
+@keyframes s-done-dim {
+  0% { filter: brightness(1); }
+  8.57%, 85.71% { filter: brightness(0.45); }
+  100% { filter: brightness(1); }
+}
+
+@keyframes s-done-ring {
+  0% { outline-color: var(--hair); }
+  8.57%, 85.71% { outline-color: var(--color-good); }
+  100% { outline-color: var(--hair); }
+}
+
+@keyframes s-done-draw { to { stroke-dashoffset: 0; } }
+
+@keyframes s-done-out {
+  0%, 85.71% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Reduced motion (Windows' setting; Exo sends no motion flag of its own): no arrive, switch, work or done motion. A
+   finished card still says so, still: dimmed, ringed, the check fully drawn, for as long as .is-finished stays. */
+@media (prefers-reduced-motion: reduce) {
+  .s-sheet, .s-scrim, .s-page, .s-menu, .s-arrive,
+  .s-card.is-compiling .s-card-art::after, .s-game-cover.is-compiling::after,
+  .s-card.is-finished .s-card-cover, .s-card.is-finished .s-card-art { animation: none; }
+  .s-card.is-compiling .s-card-art::after, .s-game-cover.is-compiling::after { content: none; }
+  .s-card-check { animation: none; stroke-dashoffset: 0; }
+  .s-card.is-finished .s-card-cover { filter: brightness(0.45); }
+  .s-card.is-finished .s-card-art { outline-color: var(--color-good); }
+  .s-face, .s-face[data-on='true'] { transition: none; }
+  .s-bar.is-indeterminate > span { animation-duration: 3s; }
+  .s-seg::before { transition: none; }
+}
