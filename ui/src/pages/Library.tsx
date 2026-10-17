@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { act, coverFor, useStore } from '../store'
 import { Bar, Btn, Empty, Select, Spinner, arriveAt, openDialog } from '../ui'
 import { AddFolderBody, AddGameBody } from './AddGame'
+import { Activity } from './Queue'
+import { InfoButton } from './About'
 import type { Game, LibrarySort, Tone } from '../types'
 
 type Show = 'all' | 'notSupported' | 'ready' | 'compiled'
@@ -81,8 +83,11 @@ export function LibraryPage({ onOpen }: { onOpen: (id: string) => void }) {
           <Btn kind="primary" disabled={app.readyCount === 0} onClick={() => act('library.addAllReady')}>
             Compile all ready<span className="s-btn-count">{app.readyCount}</span>
           </Btn>
+          <InfoButton />
         </div>
       </div>
+
+      <Activity onOpen={onOpen} />
 
       <div className="s-scroll">
         {!hasGames ? (

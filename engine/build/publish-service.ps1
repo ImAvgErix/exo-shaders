@@ -9,9 +9,9 @@
 #   native\scskiller_ags.dll        the recorder for games whose D3D12 device AGS creates (AMD)
 #   native\scskiller_warm.exe       the compile process
 #   native\segheap\scskiller_warm.exe
-#   cli\scskiller.exe, cli\scskillerw.exe (+ runtime, zlib-ng2.dll)
-#                                   ScheduledTask.TaskExe (the "re-warm after a driver update" task) and
-#                                   Elevated.CliExe (cache size / Auto Shader Compilation, run as administrator)
+#   scskiller.exe, scskillerw.exe   beside the service, sharing its one .NET runtime: ScheduledTask.TaskExe (the
+#                                   "re-warm after a driver update" task) and Elevated.CliExe (cache size / Auto
+#                                   Shader Compilation, run as administrator)
 # The native binaries aren't built from this repo: they're taken from SCSKiller 1.3.0-beta.2 (prebuilt\SOURCE.md).
 #
 #   pwsh build\publish-service.ps1 [-NativeFrom <SCSKiller.App\current>] [-Out <dir>] [-SkipCli]
@@ -57,15 +57,14 @@ New-Item -ItemType Directory -Force $Out | Out-Null
 Invoke-Dotnet @('publish', (Join-Path $engine 'src\ExoShaders.Service\ExoShaders.Service.csproj'),
     '-c', 'Release', '-r', 'win-x64', '--self-contained', 'true', '-o', $Out, '-p:DebugType=none', '-p:PublishReadyToRun=true')
 
-# The CLI the engine starts for the scheduled task and elevated driver settings
+# The CLI the engine starts for the scheduled task and elevated driver settings: published into the same folder, so
+# all three programs run on one copy of the .NET runtime (same version, same SCSKiller.Core).
 if (-not $SkipCli) {
-    $cli = Join-Path $Out 'cli'
     $cliProj = Join-Path $engine 'src\SCSKiller.Cli\SCSKiller.Cli.csproj'
-    Invoke-Dotnet @('publish', $cliProj, '-c', 'Release', '-r', 'win-x64', '--self-contained', 'true', '-o', $cli, '-p:DebugType=none', '-p:PublishReadyToRun=true')
+    Invoke-Dotnet @('publish', $cliProj, '-c', 'Release', '-r', 'win-x64', '--self-contained', 'true', '-o', $Out, '-p:DebugType=none', '-p:PublishReadyToRun=true')
     # scskillerw.exe: the same program without a console window (what the scheduled task runs), same dependencies
     Invoke-Dotnet @('publish', (Join-Path $engine 'src\SCSKiller.CliW\SCSKiller.CliW.csproj'),
-        '-c', 'Release', '-r', 'win-x64', '--self-contained', 'true', '-o', $cli, '-p:DebugType=none', '-p:PublishReadyToRun=true')
-    Copy-Item $zlib (Join-Path $cli 'zlib-ng2.dll') -Force
+        '-c', 'Release', '-r', 'win-x64', '--self-contained', 'true', '-o', $Out, '-p:DebugType=none', '-p:PublishReadyToRun=true')
 }
 
 # Native files, in the app's layout

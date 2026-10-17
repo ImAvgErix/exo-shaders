@@ -2,15 +2,19 @@
 import { useCallback, useEffect, useState } from 'react'
 import { call, errorText } from '../engine'
 import { act, say, useStore } from '../store'
-import { Bar, Btn, Empty, Spinner, arriveAt, ask, confirm } from '../ui'
+import { Bar, Btn, Empty, Panel, Spinner, arriveAt, ask, confirm } from '../ui'
 import type { Inventory } from '../types'
 
 type DeleteResult = { ok: true; bytes: number; files: number; skipped: string[]; text: string; warning: boolean }
 
-export function CachePage() {
+/** Every shader cache, read before the info dialog opens so it opens whole, never on a spinner. */
+export const readInventory = () => call<Inventory>('cache.inventory')
+
+/** The info dialog's shader cache: how full it is, every cache with what can be deleted, and Clear everything. */
+export function CacheSection({ initial }: { initial: Inventory | null }) {
   const cache = useStore(s => s.snapshot!.app.cache)
   const compiling = useStore(s => s.snapshot!.queue.compiling)
-  const [inv, setInv] = useState<Inventory | null>(null)
+  const [inv, setInv] = useState<Inventory | null>(initial)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState<Set<string>>(new Set())
 
@@ -23,7 +27,7 @@ export function CachePage() {
     }
   }, [])
 
-  useEffect(() => { void read() }, [read])
+  useEffect(() => { if (!initial) void read() }, [read, initial])
 
   async function del(params: Record<string, unknown>, title: string, text: string) {
     const r = await ask({ title, text, buttons: [{ label: 'Delete', value: 'ok', kind: 'danger' }] })
@@ -59,14 +63,11 @@ export function CachePage() {
 
   const toggle = (k: string) => setOpen(prev => { const n = new Set(prev); if (n.has(k)) n.delete(k); else n.add(k); return n })
 
+  // limitText is "of 10 GB limit", "· DirectX 12 ...", "no limit" or "limit unknown".
+  const limit = cache ? (/^(of|·)/.test(cache.limitText) ? ` ${cache.limitText}` : ` · ${cache.limitText}`) : ''
   return (
-    <div className="s-cachepage">
-      <div className="s-toolbar is-end">
-        <div className="s-toolbar-group">
-          <Btn kind="danger" disabled={compiling || !inv || inv.totalBytes === 0} onClick={() => (inv ? everything(inv) : undefined)}>Clear everything</Btn>
-        </div>
-      </div>
-      <div className="s-scroll">
+    <Panel title={cache ? `Shader cache · ${cache.usedText}${limit}` : 'Shader cache'}>
+      <div>
         {cache ? <Budget compiling={compiling} oldDriverFree={inv?.oldDriver?.freeText} onFreed={read} /> : null}
 
         {error ? (
@@ -101,7 +102,10 @@ export function CachePage() {
           </section>
         ))}
       </div>
-    </div>
+      <div className="s-dialog-actions">
+        <Btn kind="danger" disabled={compiling || !inv || inv.totalBytes === 0} onClick={() => (inv ? everything(inv) : undefined)}>Clear everything</Btn>
+      </div>
+    </Panel>
   )
 }
 

@@ -1,45 +1,47 @@
 // Exo Shaders, an unofficial fork based on SCSKiller. Copyright (C) the SCSKiller authors and Exo Shaders contributors. GPL-3.0-or-later.
-// About: the version and the licence credit to SCSKiller (a GPL requirement), plus hidden games and added folders
-// when there are any, since this is the only place to bring them back.
-import { useId, type ReactNode } from 'react'
+// The toolbar's info button: one dialog with the shader cache, then About (the version and the license credit to
+// SCSKiller, a GPL requirement), hidden games and added folders, since this is the only place to bring them back.
 import { act, useStore } from '../store'
-import { Btn, Row, Value, arriveAt, confirm } from '../ui'
+import { Btn, InfoBtn, Panel, Row, Value, confirm, openDialog } from '../ui'
+import { CacheSection, readInventory } from './Cache'
+import type { Inventory } from '../types'
 
-function Card({ title, i, children }: { title: string; i: number; children: ReactNode }) {
-  const id = useId()
-  return (
-    <section className="s-info-card s-arrive" style={arriveAt(i)} aria-labelledby={id}>
-      <h3 id={id} className="s-info-title">{title}</h3>
-      {children}
-    </section>
-  )
+/** The toolbar's "i": shader cache and about, in one dialog that opens with the caches already read. */
+export function InfoButton() {
+  const open = async () => {
+    const inventory = await readInventory().catch(() => null)
+    void openDialog(close => <InfoBody inventory={inventory} onClose={close} />, { wide: true })
+  }
+  return <InfoBtn label="Shader cache and about" onClick={() => void open()} />
 }
 
-export function AboutPage() {
+function InfoBody({ inventory, onClose }: { inventory: Inventory | null; onClose: () => void }) {
   const app = useStore(s => s.snapshot!.app)
   const hidden = useStore(s => s.snapshot!.hidden)
   const manualFolders = useStore(s => s.snapshot!.manualFolders)
 
   return (
-    <div className="s-scroll s-about-page">
-      <Card title="Exo Shaders" i={0}>
+    <>
+      <h2 className="s-dialog-title">Exo Shaders</h2>
+      <CacheSection initial={inventory} />
+      <Panel title="About" i={1}>
         <Row label="Version"><Value>{app.version ?? '—'}</Value></Row>
         <Row label="Based on"><Value>{app.engineVersion ? `SCSKiller ${app.engineVersion}` : 'SCSKiller'}</Value></Row>
         <Row label="An unofficial fork of SCSKiller by the SCSKiller authors"><Value>GPL-3.0</Value></Row>
-      </Card>
+      </Panel>
 
       {hidden.length > 0 ? (
-        <Card title="Hidden games" i={1}>
+        <Panel title="Hidden games" i={2}>
           {hidden.map(h => (
             <Row key={h.id} label={h.name}>
               <Btn compact onClick={() => act('games.show', { id: h.id })}>Show</Btn>
             </Row>
           ))}
-        </Card>
+        </Panel>
       ) : null}
 
       {manualFolders.length > 0 ? (
-        <Card title="Added folders" i={2}>
+        <Panel title="Added folders" i={3}>
           {manualFolders.map(f => (
             <Row key={f} label={f}>
               <Btn compact onClick={async () => {
@@ -47,8 +49,12 @@ export function AboutPage() {
               }}>Remove</Btn>
             </Row>
           ))}
-        </Card>
+        </Panel>
       ) : null}
-    </div>
+
+      <div className="s-dialog-actions">
+        <Btn kind="primary" onClick={onClose}>Done</Btn>
+      </div>
+    </>
   )
 }

@@ -1,7 +1,7 @@
 // Exo Shaders, an unofficial fork based on SCSKiller. Copyright (C) the SCSKiller authors and Exo Shaders contributors. GPL-3.0-or-later.
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import '@fontsource-variable/geist'
+import '@fontsource-variable/inter'
 import './shaders.css'
 import { embedded } from './engine'
 import { App } from './App'

@@ -8202,7 +8202,7 @@ public sealed class ScsKiller : IScsKiller
 		}
 		else
 		{
-			ScheduledTask.Register(ScheduledTask.TaskExe() ?? throw new FileNotFoundException("the command-line tool (cli\\scskiller.exe) is not next to the app"));
+			ScheduledTask.Register(ScheduledTask.TaskExe() ?? throw new FileNotFoundException("the command-line tool (scskiller.exe) is not next to the app"));
 		}
 	}
 

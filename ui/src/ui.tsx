@@ -65,13 +65,11 @@ function useGlide<E extends HTMLElement>() {
   return ref
 }
 
-export function Segmented<T extends string | number>({ label, options, value, onChange, onSame, disabled = false }: {
+export function Segmented<T extends string | number>({ label, options, value, onChange, disabled = false }: {
   label: string
   options: readonly { value: T; label: ReactNode }[]
   value: T | null | undefined
   onChange: (value: T) => void
-  /** Pressing the item that's already chosen (the Library tab under an open game goes back to the library). */
-  onSame?: () => void
   disabled?: boolean
 }) {
   const glide = useGlide<HTMLSpanElement>()
@@ -80,7 +78,7 @@ export function Segmented<T extends string | number>({ label, options, value, on
       {options.map(o => (
         <button key={String(o.value)} type="button" role="radio" aria-checked={o.value === value}
           className={`s-seg-item${o.value === value ? ' is-on' : ''}`} disabled={disabled}
-          onClick={() => (o.value !== value ? onChange(o.value) : onSame?.())}>
+          onClick={() => { if (o.value !== value) onChange(o.value) }}>
           {o.label}
         </button>
       ))}
@@ -216,7 +214,8 @@ export function Btn({ children, onClick, kind = 'plain', disabled = false, busy 
   const [phase, setPhase] = useState<'idle' | 'running' | 'done'>('idle')
   const live = useRef(true)
   const timer = useRef<number | undefined>(undefined)
-  useEffect(() => () => { live.current = false; window.clearTimeout(timer.current) }, [])
+  // Set on every mount: StrictMode mounts twice, and a stale false would hold the button disabled after its first click.
+  useEffect(() => { live.current = true; return () => { live.current = false; window.clearTimeout(timer.current) } }, [])
   const click = async (e: MouseEvent) => {
     if (!onClick) return
     const r = onClick(e)
@@ -259,6 +258,15 @@ function IconBtn({ label, onClick, children }: { label: string; onClick: () => v
     <button type="button" className="s-icon-btn" aria-label={label} onClick={onClick}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">{children}</svg>
     </button>
+  )
+}
+
+export function InfoBtn({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <IconBtn label={label} onClick={onClick}>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M12 11v5.5M12 7.6v.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </IconBtn>
   )
 }
 

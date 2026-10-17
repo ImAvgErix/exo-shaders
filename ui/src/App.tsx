@@ -1,22 +1,16 @@
 // Exo Shaders, an unofficial fork based on SCSKiller. Copyright (C) the SCSKiller authors and Exo Shaders contributors. GPL-3.0-or-later.
 import { useCallback, useEffect, useState } from 'react'
-import { call, closeSheet } from './engine'
+import { call, closeSheet, embedded } from './engine'
 import { act, loadSnapshot, setOpenGameFromNotice, start, useStore } from './store'
-import { BackBtn, Boundary, Btn, CloseBtn, DialogHost, Empty, LinkBtn, Segmented, Spinner, openDialog } from './ui'
+import { BackBtn, Boundary, Btn, CloseBtn, DialogHost, Empty, LinkBtn, Spinner, openDialog } from './ui'
 import { LibraryPage } from './pages/Library'
 import { GamePage } from './pages/Game'
-import { QueuePage } from './pages/Queue'
-import { CachePage } from './pages/Cache'
-import { AboutPage } from './pages/About'
 import { WhatsNewBody } from './pages/WhatsNew'
 import type { Span } from './types'
-
-type Tab = 'library' | 'queue' | 'cache' | 'about'
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 export function App() {
-  const [tab, setTab] = useState<Tab>('library')
   const [gameId, setGameId] = useState<string | null>(null)
   // The game page fades out (200ms) before it unmounts; the library under it is already there.
   const [leaving, setLeaving] = useState(false)
@@ -27,7 +21,7 @@ export function App() {
   const exiting = useStore(s => s.exiting)
   const status = useStore(s => s.status)
 
-  const openGame = useCallback((id: string) => { setLeaving(false); setTab('library'); setGameId(id) }, [])
+  const openGame = useCallback((id: string) => { setLeaving(false); setGameId(id) }, [])
   const back = useCallback(() => {
     if (reducedMotion()) setGameId(null)
     else setLeaving(true)
@@ -60,7 +54,6 @@ export function App() {
 
   const blocked = addon?.state === 'blocked'
   const game = gameId ? snapshot?.games.find(g => g.id === gameId) ?? null : null
-  const waiting = snapshot?.app.waitingCount ?? 0
 
   let body
   if (blocked) {
@@ -79,39 +72,20 @@ export function App() {
     body = (
       <>
         <Banners />
-        {/* The library stays mounted so its search, filter and scroll survive a tab switch. Each .s-page fades in when shown. */}
-        <div className="s-page" hidden={tab !== 'library'}><LibraryPage onOpen={openGame} /></div>
-        {tab === 'queue' ? <div className="s-page"><QueuePage onOpen={openGame} /></div> : null}
-        {tab === 'cache' ? <div className="s-page"><CachePage /></div> : null}
-        {tab === 'about' ? <div className="s-page"><AboutPage /></div> : null}
+        <LibraryPage onOpen={openGame} />
       </>
     )
   }
 
   return (
     <div className="s-app">
-      <header className="s-head">
-        <h1 className="s-title">Shaders</h1>
-        <CloseBtn label="Close Shaders" onClick={closeSheet} />
-      </header>
-      {snapshot && !blocked ? (
-        <nav className="s-tabs" aria-label="Shaders">
-          <Segmented<Tab>
-            label="Page"
-            value={tab}
-            onChange={t => { setGameId(null); setLeaving(false); setTab(t) }}
-            onSame={gameId ? back : undefined}
-            options={[
-              { value: 'library', label: 'Library' },
-              // The count shows only while games wait.
-              { value: 'queue', label: <>Queue<span className="s-count" data-on={waiting > 0}>{waiting}</span></> },
-              { value: 'cache', label: 'Cache' },
-              { value: 'about', label: 'About' },
-            ]}
-          />
-          {snapshot.app.status === 'compiling' ? <span className="s-app-state">{snapshot.app.statusLine}</span> : null}
-        </nav>
-      ) : null}
+      {/* Inside Exo the GPU room has the title and the close button. */}
+      {!embedded && (
+        <header className="s-head">
+          <h1 className="s-title">Shaders</h1>
+          <CloseBtn label="Close Shaders" onClick={closeSheet} />
+        </header>
+      )}
       <main className="s-body">
         <Boundary>{body}</Boundary>
         {gameId && snapshot && !blocked ? (
@@ -123,12 +97,13 @@ export function App() {
           </div>
         ) : null}
       </main>
-      <footer className={`s-status${status ? ' is-shown' : ''}${status?.tone === 'bad' ? ' is-bad' : status?.tone === 'good' ? ' is-good' : ''}`} role="status" aria-live="polite">
+      {/* The passing status message floats over the bottom edge; nothing sits there otherwise. */}
+      <div className={`s-status${status ? ' is-shown' : ''}${status?.tone === 'bad' ? ' is-bad' : status?.tone === 'good' ? ' is-good' : ''}`} role="status" aria-live="polite">
         {status ? <>
           <span className="s-status-text">{status.text}</span>
           {status.action ? <LinkBtn onClick={status.action.run}>{status.action.label}</LinkBtn> : null}
         </> : null}
-      </footer>
+      </div>
       <Boundary><DialogHost /></Boundary>
     </div>
   )
@@ -148,13 +123,19 @@ function Banners() {
   const app = useStore(s => s.snapshot?.app)
   if (!app) return null
   const stale = app.driverStale?.notify ? app.driverStale : null
-  if (!app.gpu.notice && !stale) return null
+  const cacheWarn = app.cache?.warn
+  if (!app.gpu.notice && !stale && !cacheWarn) return null
   return (
     <div className="s-banners">
       {app.gpu.notice ? (
         <div className="s-banner">
           <span className="s-banner-text">{app.gpu.notice}</span>
           <Btn compact onClick={() => act('app.dismissGpuNotice')}>Dismiss</Btn>
+        </div>
+      ) : null}
+      {cacheWarn ? (
+        <div className="s-banner">
+          <span className="s-banner-text s-bad">{cacheWarn}</span>
         </div>
       ) : null}
       {stale ? (

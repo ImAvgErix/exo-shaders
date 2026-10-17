@@ -1,5 +1,5 @@
 /* Exo Shaders, an unofficial fork based on SCSKiller. Copyright (C) the SCSKiller authors and Exo Shaders contributors. GPL-3.0-or-later. */
-/* Exo's look: void black, cream ink, Geist, hairlines, one pill. Tokens from Exo's ui/src/tokens.css.
+/* Exo's look: void black, cream ink, Inter, hairlines, one pill. Tokens from Exo's ui/src/tokens.css.
    One type scale: title 20/600, heading 13/600, body 13/400, secondary 12; controls 12/500. One line height (1.45).
    One spacing scale: 4 8 12 16 24 32, with 20px page sides like the header. Hairlines: #1c1c1c around panels,
    #242424 around controls, #161616 between rows. Radii: 14px cards, 999px pills. */
@@ -37,7 +37,7 @@ html, body, #root {
 body {
   background: #000;
   color: var(--color-fg);
-  font-family: 'Geist Variable', 'Geist', system-ui, sans-serif;
+  font-family: 'Inter Variable', 'Inter', system-ui, sans-serif;
   font-size: var(--fs-body);
   font-weight: 400;
   line-height: var(--lh);
@@ -73,8 +73,8 @@ h1, h2, h3, h4, p, ul, ol, figure { margin: 0; }
 
 .s-app {
   position: relative;
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) 32px;
+  display: flex;
+  flex-direction: column;
   height: 100%;
   background: #000;
 }
@@ -89,52 +89,15 @@ h1, h2, h3, h4, p, ul, ol, figure { margin: 0; }
 
 .s-title { font-size: var(--fs-title); font-weight: 600; }
 
-.s-tabs {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 0 var(--side) 16px;
-}
-
-/* The one live line: what is compiling right now. */
-.s-app-state {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--color-good);
-  font-size: var(--fs-small);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.s-count {
-  margin-left: 8px;
-  color: var(--color-faint);
-  font-variant-numeric: tabular-nums;
-}
-
-.s-count[data-on='false'] { display: none; }
-.s-seg-item.is-on .s-count { color: var(--color-muted); }
-
 .s-body {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  border-top: 1px solid var(--hair);
-}
-
-/* Switch: a page fades in when its tab is chosen (display: none to shown restarts the animation). */
-.s-page {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-height: 0;
-  animation: s-fade 200ms var(--ease-out);
 }
 
-.s-library, .s-queue, .s-cachepage {
+.s-library {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -160,8 +123,6 @@ h1, h2, h3, h4, p, ul, ol, figure { margin: 0; }
   padding: 16px var(--side);
 }
 
-.s-toolbar.is-end { justify-content: flex-end; }
-
 .s-toolbar-group {
   display: flex;
   flex-wrap: wrap;
@@ -169,19 +130,31 @@ h1, h2, h3, h4, p, ul, ol, figure { margin: 0; }
   gap: 8px;
 }
 
-/* ------------------------------------------------------------------ status line */
+/* ------------------------------------------------------------------ status: a passing message over the bottom edge */
 
 .s-status {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  z-index: 5;
   display: flex;
   align-items: center;
   gap: 12px;
-  min-width: 0;
-  padding: 0 var(--side);
+  max-width: calc(100% - 2 * var(--side));
+  padding: 8px 14px;
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  background: #0a0a0a;
   color: var(--color-muted);
   font-size: var(--fs-small);
+  white-space: nowrap;
+  transform: translateX(-50%);
   opacity: 0;
+  pointer-events: none;
   transition: opacity 400ms var(--ease-out);
 }
+
+.s-status.is-shown { pointer-events: auto; }
 
 .s-status.is-shown { opacity: 1; transition-duration: 160ms; }
 .s-status.is-bad { color: var(--color-bad); }
@@ -558,18 +531,6 @@ h1, h2, h3, h4, p, ul, ol, figure { margin: 0; }
 
 .s-shelf-title { margin-bottom: 12px; font-size: var(--fs-body); font-weight: 600; }
 
-/* A shelf title with a control on its right edge (the queue's Finished > Clear). */
-.s-shelf-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  min-height: 32px;
-  margin-bottom: 4px;
-}
-
-.s-shelf-head .s-shelf-title { margin: 0; }
-
 .s-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
@@ -729,48 +690,45 @@ h1, h2, h3, h4, p, ul, ol, figure { margin: 0; }
   min-width: 152px;
 }
 
-/* ------------------------------------------------------------------ queue */
+/* ------------------------------------------------------------------ activity: the queue's strip over the grid */
 
-.s-current {
+.s-activity {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid var(--hair);
-  border-radius: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 0 var(--side) 16px;
+  padding: 8px 0 12px;
+  border-block: 1px solid var(--hair-row);
+  animation: s-fade 200ms var(--ease-out);
 }
 
-.s-current-head {
+.s-activity-main {
   display: flex;
+  flex: 1 1 320px;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
-.s-current-name {
+.s-activity-main .s-list-name { flex: none; max-width: 40%; }
+
+.s-activity-line {
+  display: flex;
+  gap: 12px;
   min-width: 0;
-  padding: 0;
   overflow: hidden;
-  border: 0;
-  background: transparent;
-  font-weight: 600;
-  text-align: left;
-  white-space: nowrap;
+  font-size: var(--fs-small);
   text-overflow: ellipsis;
 }
 
-.s-current-time { color: var(--color-muted); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
-
-.s-current-line {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
-  min-height: calc(var(--fs-small) * var(--lh));
-  font-size: var(--fs-small);
-}
-
-.s-current-actions { display: flex; gap: 8px; }
-.s-current + .s-error { margin-top: 12px; }
+.s-activity-line > span { overflow: hidden; text-overflow: ellipsis; }
+.s-activity-end { display: flex; flex: none; align-items: center; gap: 8px; font-size: var(--fs-small); }
+.s-activity-bar, .s-activity-warn { flex-basis: 100%; }
+.s-activity-bar .s-bar { display: block; }
+.s-activity-warn { font-size: var(--fs-small); }
 
 /* ------------------------------------------------------------------ cache */
 
@@ -823,25 +781,6 @@ h1, h2, h3, h4, p, ul, ol, figure { margin: 0; }
 
 .s-panel { min-width: 0; }
 .s-panel-title { margin-bottom: 4px; font-size: var(--fs-body); font-weight: 600; }
-
-/* About: one column of cards, black inside a 14px hairline. */
-.s-about-page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding-top: 16px;
-}
-
-.s-info-card {
-  width: 100%;
-  max-width: 560px;
-  padding: 12px 16px 4px;
-  border: 1px solid var(--hair);
-  border-radius: 14px;
-  background: #000;
-}
-
-.s-info-title { margin-bottom: 4px; font-size: var(--fs-body); font-weight: 600; }
 
 /* ------------------------------------------------------------------ game page */
 
@@ -1149,7 +1088,7 @@ h1, h2, h3, h4, p, ul, ol, figure { margin: 0; }
 /* Reduced motion (Windows' setting; Exo sends no motion flag of its own): no arrive, switch, work or done motion. A
    finished card still says so, still: dimmed, ringed, the check fully drawn, for as long as .is-finished stays. */
 @media (prefers-reduced-motion: reduce) {
-  .s-sheet, .s-scrim, .s-page, .s-menu, .s-arrive,
+  .s-sheet, .s-scrim, .s-activity, .s-menu, .s-arrive,
   .s-card.is-compiling .s-card-art::after, .s-game-cover.is-compiling::after,
   .s-card.is-finished .s-card-cover, .s-card.is-finished .s-card-art { animation: none; }
   .s-card.is-compiling .s-card-art::after, .s-game-cover.is-compiling::after { content: none; }

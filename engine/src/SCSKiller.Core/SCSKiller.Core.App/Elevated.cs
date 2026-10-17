@@ -28,7 +28,7 @@ public static class Elevated
 
 	public static Result? Run(params string[] args)
 	{
-		string? fileName = CliExe() ?? throw new FileNotFoundException("the command-line tool (cli\\scskiller.exe) is not next to the app");
+		string? fileName = CliExe() ?? throw new FileNotFoundException("the command-line tool (scskiller.exe) is not next to the app");
 		string text = Path.Combine(Path.GetTempPath(), $"scskiller-elevated-{Guid.NewGuid():N}.json");
 		int num = 0;
 		string[] array = new string[3 + args.Length];
@@ -109,10 +109,13 @@ public static class Elevated
 		{
 			baseDir = AppContext.BaseDirectory;
 		}
-		string text = Path.Combine(baseDir, "cli", "scskiller.exe");
-		if (File.Exists(text))
+		// Beside the engine (one shared runtime), or the older cli\ folder.
+		foreach (string candidate in new[] { Path.Combine(baseDir, "scskiller.exe"), Path.Combine(baseDir, "cli", "scskiller.exe") })
 		{
-			return text;
+			if (File.Exists(candidate))
+			{
+				return candidate;
+			}
 		}
 		for (DirectoryInfo directoryInfo = new DirectoryInfo(baseDir); directoryInfo != null; directoryInfo = directoryInfo.Parent)
 		{
