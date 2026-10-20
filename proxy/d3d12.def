@@ -1,0 +1,86 @@
+LIBRARY d3d12
+EXPORTS
+    stub_Ordinal99                                   @99 NONAME
+    SetAppCompatStringPointer = stub_SetAppCompatStringPointer @100
+    D3D12CreateDevice = Proxy_D3D12CreateDevice      @101
+    D3D12GetDebugInterface = stub_D3D12GetDebugInterface @102
+    D3D12CoreCreateLayeredDevice = stub_D3D12CoreCreateLayeredDevice @103
+    D3D12CoreGetLayeredDeviceSize = stub_D3D12CoreGetLayeredDeviceSize @104
+    D3D12CoreRegisterLayers = stub_D3D12CoreRegisterLayers @105
+    D3D12CreateRootSignatureDeserializer = stub_D3D12CreateRootSignatureDeserializer @106
+    D3D12CreateVersionedRootSignatureDeserializer = stub_D3D12CreateVersionedRootSignatureDeserializer @107
+    D3D12DeviceRemovedExtendedData = stub_D3D12DeviceRemovedExtendedData @108
+    D3D12EnableExperimentalFeatures = stub_D3D12EnableExperimentalFeatures @109
+    D3D12GetInterface = Proxy_D3D12GetInterface      @110
+    D3D12PIXEventsReplaceBlock = stub_D3D12PIXEventsReplaceBlock @111
+    D3D12PIXGetThreadInfo = stub_D3D12PIXGetThreadInfo @112
+    D3D12PIXNotifyWakeFromFenceSignal = stub_D3D12PIXNotifyWakeFromFenceSignal @113
+    D3D12PIXReportCounter = stub_D3D12PIXReportCounter @114
+    D3D12SerializeRootSignature = stub_D3D12SerializeRootSignature @115
+    D3D12SerializeVersionedRootSignature = stub_D3D12SerializeVersionedRootSignature @116
+    GetBehaviorValue = stub_GetBehaviorValue         @117
+    D3D11CreateDeviceForD3D12 = stub_D3D11CreateDeviceForD3D12        @1
+    D3DKMTCloseAdapter = stub_D3DKMTCloseAdapter                      @2
+    D3DKMTDestroyAllocation = stub_D3DKMTDestroyAllocation            @3
+    D3DKMTDestroyContext = stub_D3DKMTDestroyContext                  @4
+    D3DKMTDestroyDevice = stub_D3DKMTDestroyDevice                    @5
+    D3DKMTDestroySynchronizationObject = stub_D3DKMTDestroySynchronizationObject @6
+    D3DKMTPresent = stub_D3DKMTPresent                                @7
+    D3DKMTQueryAdapterInfo = stub_D3DKMTQueryAdapterInfo              @8
+    D3DKMTSetDisplayPrivateDriverFormat = stub_D3DKMTSetDisplayPrivateDriverFormat @9
+    D3DKMTSignalSynchronizationObject = stub_D3DKMTSignalSynchronizationObject @10
+    D3DKMTUnlock = stub_D3DKMTUnlock                                  @11
+    D3DKMTWaitForSynchronizationObject = stub_D3DKMTWaitForSynchronizationObject @12
+    EnableFeatureLevelUpgrade = stub_EnableFeatureLevelUpgrade        @13
+    OpenAdapter10 = stub_OpenAdapter10                                @14
+    OpenAdapter10_2 = stub_OpenAdapter10_2                            @15
+    CreateDirect3D11DeviceFromDXGIDevice = stub_CreateDirect3D11DeviceFromDXGIDevice @16
+    CreateDirect3D11SurfaceFromDXGISurface = stub_CreateDirect3D11SurfaceFromDXGISurface @17
+    D3D11CoreCreateDevice = stub_D3D11CoreCreateDevice                @18
+    D3D11CoreCreateLayeredDevice = stub_D3D11CoreCreateLayeredDevice  @19
+    D3D11CoreGetLayeredDeviceSize = stub_D3D11CoreGetLayeredDeviceSize @20
+    D3D11CoreRegisterLayers = stub_D3D11CoreRegisterLayers            @21
+    D3D11CreateDevice = Proxy_D3D11CreateDevice                       @22
+    D3D11CreateDeviceAndSwapChain = Proxy_D3D11CreateDeviceAndSwapChain @23
+    D3D11On12CreateDevice = stub_D3D11On12CreateDevice                @24
+    D3DKMTCreateAllocation = stub_D3DKMTCreateAllocation              @25
+    D3DKMTCreateContext = stub_D3DKMTCreateContext                    @26
+    D3DKMTCreateDevice = stub_D3DKMTCreateDevice                      @27
+    D3DKMTCreateSynchronizationObject = stub_D3DKMTCreateSynchronizationObject @28
+    D3DKMTEscape = stub_D3DKMTEscape                                  @29
+    D3DKMTGetContextSchedulingPriority = stub_D3DKMTGetContextSchedulingPriority @30
+    D3DKMTGetDeviceState = stub_D3DKMTGetDeviceState                  @31
+    D3DKMTGetDisplayModeList = stub_D3DKMTGetDisplayModeList          @32
+    D3DKMTGetMultisampleMethodList = stub_D3DKMTGetMultisampleMethodList @33
+    D3DKMTGetRuntimeData = stub_D3DKMTGetRuntimeData                  @34
+    D3DKMTGetSharedPrimaryHandle = stub_D3DKMTGetSharedPrimaryHandle  @35
+    D3DKMTLock = stub_D3DKMTLock                                      @36
+    D3DKMTOpenAdapterFromHdc = stub_D3DKMTOpenAdapterFromHdc          @37
+    D3DKMTOpenResource = stub_D3DKMTOpenResource                      @38
+    D3DKMTQueryAllocationResidency = stub_D3DKMTQueryAllocationResidency @39
+    D3DKMTQueryResourceInfo = stub_D3DKMTQueryResourceInfo            @40
+    D3DKMTRender = stub_D3DKMTRender                                  @41
+    D3DKMTSetAllocationPriority = stub_D3DKMTSetAllocationPriority    @42
+    D3DKMTSetContextSchedulingPriority = stub_D3DKMTSetContextSchedulingPriority @43
+    D3DKMTSetDisplayMode = stub_D3DKMTSetDisplayMode                  @44
+    D3DKMTSetGammaRamp = stub_D3DKMTSetGammaRamp                      @45
+    D3DKMTSetVidPnSourceOwner = stub_D3DKMTSetVidPnSourceOwner        @46
+    D3DKMTWaitForVerticalBlankEvent = stub_D3DKMTWaitForVerticalBlankEvent @47
+    D3DPerformance_BeginEvent = stub_D3DPerformance_BeginEvent        @48
+    D3DPerformance_EndEvent = stub_D3DPerformance_EndEvent            @49
+    D3DPerformance_GetStatus = stub_D3DPerformance_GetStatus          @50
+    D3DPerformance_SetMarker = stub_D3DPerformance_SetMarker          @51
+    SCSKiller_Stats                                  @200
+    SCSKiller_StartWarm                              @201
+    SCSKiller_WarmOptions                            @202
+    SCSKiller_Progress                               @203
+    SCSKiller_Control                                @204
+    SCSKiller_WarmRt                                 @205
+    SCSKiller_Retry                                  @206
+    SCSKiller_WarmMemory                             @207
+    SCSKiller_WarmCrash                              @208
+    SCSKiller_Crashes                                @209
+    SCSKiller_WarmPass                               @210
+    SCSKiller_Workers                                @211
+    SCSKiller_Skipped                                @212
+    SCSKiller_Hung                                   @213

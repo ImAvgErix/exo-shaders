@@ -3,7 +3,7 @@
   <!-- Exo Shaders engine service: hosts one ScsKiller (SCSKiller.Core) headlessly and speaks NDJSON over stdin/stdout.
        See CONTRACT.md. GPL-3.0-or-later with the SCSKiller additional permission (LICENSE, LICENSE-EXCEPTION.txt). -->
   <ItemGroup>
-    <ProjectReference Include="..\SCSKiller.Core\SCSKiller.Core.csproj" />
+    <ProjectReference Include="..\..\..\src\SCSKiller.Core\SCSKiller.Core.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -29,8 +29,8 @@
     <Company>Exo Shaders (unofficial fork of SCSKiller)</Company>
     <Authors>The SCSKiller authors; Exo Shaders contributors</Authors>
     <Copyright>Copyright (C) 2026 The SCSKiller authors</Copyright>
-    <Version>1.3.0-beta.2</Version>
-    <InformationalVersion>1.3.0-beta.2</InformationalVersion>
+    <Version>1.3.0</Version>
+    <InformationalVersion>1.3.0</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 

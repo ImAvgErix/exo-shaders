@@ -27,13 +27,14 @@ internal sealed partial class Host
     public static int PolicyThreads(int cpus) => Math.Max(1, cpus - Math.Max(1, cpus / 4));
 
     /// <summary>
-    /// The compile's memory budget: a quarter of the RAM, 4 to 16 GB. The engine's Auto
-    /// gives 2 GB up to 20 GB of RAM, but the compiler needs about 1.3 GB just to load
+    /// The compile's memory budget: a quarter of the RAM, at least 4 GB, and never less than
+    /// the engine's Auto (which gives a quarter from 64 GB of RAM since 1.3.0). Auto gives
+    /// 2 GB up to 20 GB of RAM, but the compiler needs about 1.3 GB just to load
     /// (ARCHITECTURE.md, Memory budget), so on a 16 GB PC a 2 GB budget kept releasing
     /// parked state objects and rebuilding them (Little Nightmares peaked at 2.4 GB).
     /// Over the budget the compiler drops workers rather than growing, so it stays a cap.
     /// </summary>
-    public static int PolicyMemoryGB() => Math.Clamp(ScsKiller.RamGB() / 4, 4, 16);
+    public static int PolicyMemoryGB() => Math.Max(Math.Clamp(ScsKiller.RamGB() / 4, 4, 16), ScsKiller.AutoCompileMemoryGB());
 
     /// <summary>The fixed settings, from what the engine has now (fields the policy doesn't own are kept).</summary>
     public Settings PolicySettings(Settings s)

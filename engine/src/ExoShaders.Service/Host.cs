@@ -7,8 +7,8 @@
 // version, with the additional permission in LICENSE-EXCEPTION.txt. It is distributed WITHOUT ANY WARRANTY; see LICENSE.
 //
 // Hosts one ScsKiller the way the SCSKiller 1.3.0-beta.1 app does (SCSKiller.App.App.Launch / QuitAsync), minus the
-// window, the tray, the updater and every SCSKiller server feature (community database, sharing, diagnostics, active
-// check, Patreon account, content/news/rules fetches).
+// window, the tray, the updater and every SCSKiller server feature that needs an account or sends anything (community
+// database, sharing, diagnostics, problem reports, the active check, the Patreon account): see Start.
 
 using System.Collections.Concurrent;
 using SCSKiller.Core;
@@ -102,14 +102,27 @@ internal sealed partial class Host
         _log.Report($"[exo] Exo Shaders service {Program.ServiceVersion} (SCSKiller {AppVersion.Current} engine) started on Windows {Environment.OSVersion.Version}, {k.Vendor.Gpu.Name}, driver {k.Vendor.Gpu.DriverVersion}{(_opt.Safe ? ", safe mode" : "")}");
 
         // The app wires Community, Sharing, Diagnostics, ContentRoutes, ChannelAccess, UserFetch and ActiveCheck to
-        // SCSKiller's servers and the Patreon account here. Exo Shaders leaves all of them unset: the engine then skips
-        // every server call and uses what's already in the data folder. No Patreon entitlement.
+        // SCSKiller's servers and the Patreon account here. Exo Shaders reads what SCSKiller's app reads signed out, and
+        // sends nothing:
+        // - ContentRoutes: after a scan, at most about daily, the engine-support updates (plan-rules.json, game verdicts,
+        //   Maximum suggestions and news, each used only when signed with SCSKiller's pinned rules keys, ContentTrust)
+        //   and the known-stutter, confirmed-engines and boot-precompile lists. Stable channel only (no ChannelAccess).
+        // - Community, with no token: the manifest, the official recordings marked for everyone and the shared upscaler
+        //   packs, all plain downloads. Patreon and backer recordings and the community database need a token: never.
+        // Sharing (uploads), Diagnostics, ActiveCheck (the daily check), UserFetch (the account and the app's updater)
+        // and Report a problem stay unset. No Patreon entitlement.
+        if (!_opt.Safe)
+        {
+            k.ContentRoutes = RouteFailover.Default;
+            k.Community = new Community(AppStore.DefaultDir, (_, _) => Task.FromResult<string?>(null));
+        }
         k.DbEntitled = () => false;
         k.ManageRecorders = !_opt.Safe;
         k.CleanupHelper = _opt.Safe ? null : Environment.ProcessPath;
         k.CheckPlans = !_opt.Safe;
         k.UseChannels(null);   // what the app does while signed out
         k.Unseen = () => !_uiVisible;
+        k.IdleWatchInterval = TimeSpan.FromSeconds(8);   // 3 s while a game plays, is followed or compiles
 
         k.GameChanged += OnGameChanged;
         k.QueueChanged += OnQueueChanged;
@@ -453,6 +466,7 @@ internal sealed partial class Host
     // =================================================================== new shaders (App.NotifyNewShaders)
 
     private readonly HashSet<string> _autoQueued = [];
+    private readonly DateTimeOffset _session = DateTimeOffset.UtcNow;   // NewShaders.Plan: what an earlier service queued was lost with it
     private Dictionary<string, string>? _told;
     private int _newShadersPending;
     private readonly SemaphoreSlim _newShadersGate = new(1, 1);
@@ -491,8 +505,11 @@ internal sealed partial class Host
             _autoQueued.Remove(id);
         }
         _told ??= k.Store.LoadNotified();
+        // 1.3.0: forget (left the queue) and the session start let a game waiting for idle be queued again after a restart,
+        // and one another compile held back be queued once that compile ends
         var (notify, compile, notified) = NewShaders.Plan(k.Games, k.Queue, _told,
-            k.DriverStaleGames().Select(s => s.Game.Id).ToHashSet(), DateTimeOffset.UtcNow, s => NewShaders.ModeOf(s, k.Settings), k.Compiling);
+            k.DriverStaleGames().Select(s => s.Game.Id).ToHashSet(), DateTimeOffset.UtcNow, s => NewShaders.ModeOf(s, k.Settings), k.Compiling,
+            forget.ToHashSet(), _session);
         if (notify.Count == 0 && notified.Count == _told.Count && notified.All(e => _told.GetValueOrDefault(e.Key) == e.Value)) return;
         k.Store.SaveNotified(_told = notified);
         foreach (GameState g in compile)

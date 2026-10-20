@@ -1,0 +1,42 @@
+// Version resource of d3d12.dll and scskiller_warm.exe (SCSK_RC_WARM). Same product metadata as Directory.Build.props.
+#include <winres.h>
+#include "version.h"
+
+#ifdef SCSK_RC_WARM
+#define SCSK_DESC "SCSKiller driver shader cache warmer"
+#define SCSK_NAME "scskiller_warm.exe"
+#define SCSK_TYPE VFT_APP
+#else
+#define SCSK_DESC "SCSKiller D3D12 proxy"
+#define SCSK_NAME "d3d12.dll"
+#define SCSK_TYPE VFT_DLL
+#endif
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION SCSK_VERSION_NUM
+PRODUCTVERSION SCSK_VERSION_NUM
+FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+FILEFLAGS 0
+FILEOS VOS_NT_WINDOWS32
+FILETYPE SCSK_TYPE
+FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "The SCSKiller authors"
+            VALUE "FileDescription", SCSK_DESC
+            VALUE "FileVersion", SCSK_FILEVERSION_STR
+            VALUE "InternalName", SCSK_NAME
+            VALUE "LegalCopyright", "Copyright (C) 2026 The SCSKiller authors"
+            VALUE "OriginalFilename", SCSK_NAME
+            VALUE "ProductName", "SCSKiller"
+            VALUE "ProductVersion", SCSK_VERSION_STR
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

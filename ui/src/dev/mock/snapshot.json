@@ -28,7 +28,7 @@
    "configurable": true,
    "sizeIndex": 3,
    "intro": "Global driver setting, the same one as NVIDIA App › Graphics › Shader Cache Size. When the cache is full the driver deletes older entries, and those games stutter again.",
-   "path": "C:\\Users\\Player\\AppData\\Local\\NVIDIA\\DXCache",
+   "path": "C:\\Users\\Erix\\AppData\\Local\\NVIDIA\\DXCache",
    "free": 593907458048,
    "freeText": "553.1 GB",
    "freeDrive": "Free on C:",

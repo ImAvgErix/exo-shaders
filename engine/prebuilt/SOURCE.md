@@ -1,14 +1,15 @@
 # Prebuilt native files
 
-These can't be rebuilt from this repo. All are taken unchanged from SCSKiller 1.3.0-beta.2
-(the SCSKiller.App package, version 1.3.0-beta.2, channel beta). publish-service.ps1 copies them into
-engine\out\service in the app's layout.
+Taken unchanged from SCSKiller 1.3.0 (the official SCSKiller-1.3.0-Portable.zip of the v1.3.0 GitHub release,
+`current\`). Their source is in this repository (`proxy\`, built by `build\publish.ps1` with CMake); the release copies
+are used so the files match what SCSKiller ships. publish-service.ps1 copies them into engine\out\service in the app's
+layout.
 
 | File | SHA-256 | From |
 | --- | --- | --- |
-| native\d3d12.dll | e43da9fb26df4a41c21d36876a7c271eeb06fdf59538d2f2ef566ce0e2627315 | from SCSKiller 1.3.0-beta.2 |
-| native\amd_ags_x64.dll | 482b241ea855fdd59aaa7687c385ce4165b5340857e6a0e6d15ba27ecb65ee70 | from SCSKiller 1.3.0-beta.2 (same as beta.1) |
-| native\scskiller_ags.dll | a5c859d7d987adfe607942b428fe4884900d3df689386707ad118753bed1e217 | from SCSKiller 1.3.0-beta.2 (new: the recorder for games whose device AGS creates, AMD) |
-| native\scskiller_warm.exe | 9edd2b6f03a0de884ac0866ad573e7234820a2d462a4814f2bbe1f81e927b17a | from SCSKiller 1.3.0-beta.2 |
-| native\segheap\scskiller_warm.exe | 2eac8b9e72c0dce17ab91f17f0bfb648003664bb64897511664187bf66c26b9d | from SCSKiller 1.3.0-beta.2 |
-| zlib-ng2.dll | 454be2f3d10f804ace577198401431db5e95d0286b59589bc28a40085388e7c2 | from SCSKiller 1.3.0-beta.2 (same as beta.1) |
+| native\d3d12.dll | 1a66c0ee35e98958a4f667dffb1ad2a1d24b7d20938784b9bcb98ad332542162 | SCSKiller 1.3.0 |
+| native\amd_ags_x64.dll | 482b241ea855fdd59aaa7687c385ce4165b5340857e6a0e6d15ba27ecb65ee70 | SCSKiller 1.3.0 (AMD AGS, signed by AMD; same as the betas) |
+| native\scskiller_ags.dll | 4f3badbc9f17e414a21d675fcbe303e5eb5c535a823204acee8fd430154aff8b | SCSKiller 1.3.0 |
+| native\scskiller_warm.exe | db3ea35070e883e2a7f85e31a4144a14059e611c3ad0f3ccaa41316f3dc11791 | SCSKiller 1.3.0 |
+| native\segheap\scskiller_warm.exe | 8a26fbe6975de0614336715aae397295c8da86632cd782b57d02c3c3fbb21d91 | SCSKiller 1.3.0 |
+| zlib-ng2.dll | 454be2f3d10f804ace577198401431db5e95d0286b59589bc28a40085388e7c2 | SCSKiller 1.3.0 (same as the betas) |

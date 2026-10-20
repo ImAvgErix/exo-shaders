@@ -13,7 +13,7 @@ while ($true) {
 }
 Say 'No game running; installing.'
 & (Join-Path $PSScriptRoot 'Deploy-Addon.ps1') -Log $Log
-Push-Location 'C:\Users\Player\ExoLauncher'
+Push-Location 'C:\Users\Erix\ExoLauncher'
 try { pwsh -NoProfile -File tools\swap-dev.ps1 *>> $Log } finally { Pop-Location }
 Start-Sleep 5
 if (-not (Get-Process ExoLauncher -ErrorAction SilentlyContinue)) {

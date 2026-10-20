@@ -1,23 +1,40 @@
-# Build output and dependencies
+# build outputs
+proxy/build/
+__pycache__/
+
+# game content and third-party binaries: never commit
+out/
+*.db
+*.usmap
+*.dll
+
+# runtime artifacts
+*.log
+*.csv
+!tests/SCSKiller.Tests/Fixtures/**/*.csv
+bin/
+obj/
+.claude/
+
+# packaging output (build/publish.ps1)
+dist/
+
+# Exo Shaders
 engine/out/
-**/bin/
-**/obj/
+!engine/prebuilt/**/*.dll
 ui/node_modules/
 ui/dist/
-# Decompile scratch, release downloads and the copied user data used for tests
+# decompile scratch and inputs of the earlier decompiled engine, release downloads, copied user data for tests
 dec125/
 decbeta/
-v125/
-v125.zip
-testdata/
-*.log
-a.txt
-b.txt
-.claude/
-# beta.2 rebase inputs (decompiles, binaries, the prepared merge copy)
 decbeta2/
 decbeta2r/
 beta2/
 b2prep/
+v125/
+v125.zip
+testdata/
+a.txt
+b.txt
 b1.txt
 b2.txt

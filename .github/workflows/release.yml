@@ -1,0 +1,67 @@
+# A version tag builds, tests and packages exactly like build.yml, then creates a DRAFT GitHub Release with the
+# UNSIGNED zip, SHA256SUMS-unsigned.txt and the CHANGELOG.md section. CI stops there:
+# the release step (run locally) downloads these bytes, checks them, signs them (cloud HSM: no signing key or
+# certificate in CI, ever), runs vpk pack, signs the feed with the offline key and publishes. Nothing here publishes.
+#
+# Channel by repo: the private repo releases beta/alpha tags (with '-', v1.5.0-beta.1), the public repo stable
+# tags (v1.5.0). server-v* tags are not v* and belong to a separate private Linux workflow (not written yet).
+# -internal tags are built on demand (build.yml workflow_dispatch on the tag) or on a local PC: no draft.
+name: release
+
+on:
+  push:
+    tags: ['v*', '!v*-internal*']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: github.event.repository.private == contains(github.ref_name, '-')
+    uses: ./.github/workflows/build.yml
+
+  draft:
+    needs: build
+    runs-on: ubuntu-latest   # 1x minutes; only uploads
+    timeout-minutes: 10
+    permissions:
+      contents: write        # the draft release
+      id-token: write        # attestation (public repo)
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
+        with:
+          sparse-checkout: CHANGELOG.md
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c   # v8.0.1
+        with:
+          name: SCSKiller-unsigned   # SCSKiller.zip + SHA256SUMS-unsigned.txt
+
+      - name: Check the zip against the sums
+        run: grep '  SCSKiller.zip$' SHA256SUMS-unsigned.txt | sha256sum -c -
+
+      # Provenance in Sigstore's public log: stable builds on the public repo only.
+      - if: ${{ !github.event.repository.private }}
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8   # v4.2.2
+        with:
+          subject-path: SCSKiller.zip
+
+      - name: Release notes from CHANGELOG.md
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          v="${TAG#v}"
+          [ -f CHANGELOG.md ] || { echo "::error::no CHANGELOG.md"; exit 1; }
+          awk -v v="$v" '/^## /{ p = index($0, "[" v "]") > 0; next } p' CHANGELOG.md > notes.md
+          [ -s notes.md ] || { echo "::error::CHANGELOG.md has no '## [$v]' section"; exit 1; }
+
+      - name: Draft release (not published)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          pre=(); [[ "$TAG" == *-* ]] && pre=(--prerelease)
+          gh release create "$TAG" SCSKiller.zip SHA256SUMS-unsigned.txt --draft --verify-tag "${pre[@]}" \
+            --title "SCSKiller $TAG" --notes-file notes.md

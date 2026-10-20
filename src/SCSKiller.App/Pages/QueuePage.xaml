@@ -1,0 +1,250 @@
+<Page
+    x:Class="SCSKiller.App.Pages.QueuePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SCSKiller.App">
+
+    <Page.Resources>
+        <!-- Row buttons are borderless; keep them borderless when disabled (first/last row). -->
+        <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="Transparent" />
+        <SolidColorBrush x:Key="ButtonBorderBrushDisabled" Color="Transparent" />
+        <Style x:Key="RowButton" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="MinWidth" Value="32" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="RowItem" TargetType="ListViewItem" BasedOn="{StaticResource DefaultListViewItemStyle}">
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+    </Page.Resources>
+
+    <!-- Every row uses the same columns as the header: handle, number, icon, game, time, cache, actions. -->
+    <ScrollViewer>
+        <StackPanel Padding="36,28,36,28" Spacing="20">
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Compile queue" Style="{StaticResource TitleTextBlockStyle}" />
+                    <TextBlock Text="{x:Bind Vm.Summary, Mode=OneWay}" Style="{StaticResource Secondary}" />
+                    <TextBlock Text="{x:Bind Vm.PlanChecks, Mode=OneWay}" Visibility="{x:Bind Vm.HasPlanChecks, Mode=OneWay}" Style="{StaticResource Caption}"
+                               ToolTipService.ToolTip="After an update SCSKiller rebuilds the plans of compiled games in the background, without compiling. A game with more to compile shows it in the Library." />
+                    <TextBlock Text="Compiles run outside the game, under the game's name. Keep the game closed while it runs."
+                               Style="{StaticResource Caption}" TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Bottom">
+                    <Button Style="{StaticResource AccentButtonStyle}" Click="OnStart"
+                            Visibility="{x:Bind Vm.Idle, Mode=OneWay}" IsEnabled="{x:Bind Vm.CanStart, Mode=OneWay}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE945;" FontSize="14" />
+                            <TextBlock Text="Compile queue" />
+                        </StackPanel>
+                    </Button>
+                    <Button Content="{x:Bind Vm.PauseText, Mode=OneWay}" Click="OnPause" Visibility="{x:Bind Vm.HasCurrent, Mode=OneWay}" />
+                    <Button Content="Stop" Click="OnStop" Visibility="{x:Bind Vm.HasCurrent, Mode=OneWay}"
+                            ToolTipService.ToolTip="Finishes the compiles in flight, then stops. Add the game again to continue where it stopped." />
+                </StackPanel>
+            </Grid>
+
+            <InfoBar Severity="Warning" IsClosable="False" IsOpen="{x:Bind Vm.CacheWarn, Mode=OneWay}" Visibility="{x:Bind Vm.CacheWarn, Mode=OneWay}"
+                     Message="{x:Bind Vm.CacheWarnText, Mode=OneWay}">
+                <InfoBar.ActionButton>
+                    <HyperlinkButton Content="Raise the limit" Click="OnSettings" Visibility="{x:Bind Vm.CanRaiseLimit, Mode=OneWay}" />
+                </InfoBar.ActionButton>
+            </InfoBar>
+
+            <Border Style="{StaticResource Card}" Padding="0">
+                <StackPanel>
+                    <Grid Height="40" Margin="16,0" ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition Width="24" />
+                            <ColumnDefinition Width="32" />
+                            <ColumnDefinition MinWidth="160" />
+                            <ColumnDefinition Width="96" />
+                            <ColumnDefinition Width="80" />
+                            <ColumnDefinition Width="216" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="1" Grid.ColumnSpan="3" Text="Game (in run order)" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="4" Text="Time" Style="{StaticResource Caption}" TextAlignment="Right" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="5" Text="Cache" Style="{StaticResource Caption}" TextAlignment="Right" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="6" Orientation="Horizontal" HorizontalAlignment="Right" Visibility="{x:Bind Vm.CanClear, Mode=OneWay}">
+                            <!-- tooltip on a hit-testable wrapper: a disabled button shows none -->
+                            <Grid Background="Transparent" ToolTipService.ToolTip="Ctrl+click or Shift+click to select several games">
+                                <HyperlinkButton x:Name="RemoveSelected" Content="Remove selected" FontSize="12" IsEnabled="False" Click="OnRemoveSelected" />
+                            </Grid>
+                            <HyperlinkButton Content="Clear queue" FontSize="12" Click="OnClearQueue" ToolTipService.ToolTip="Removes every game but the one compiling" />
+                        </StackPanel>
+                    </Grid>
+                    <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" />
+
+                    <StackPanel Padding="20,32" Spacing="6" HorizontalAlignment="Center" Visibility="{x:Bind Vm.Empty, Mode=OneWay}">
+                        <TextBlock Text="Add games from the Library" Style="{StaticResource Section}" HorizontalAlignment="Center" />
+                        <TextBlock Text="Press Add to queue on a game, then Compile queue." Style="{StaticResource Secondary}" HorizontalAlignment="Center" />
+                        <HyperlinkButton Content="Open the Library" Click="OnLibrary" HorizontalAlignment="Center" />
+                    </StackPanel>
+
+                    <!-- The running item: not draggable, always first. -->
+                    <Grid Margin="16,10,16,10" ColumnSpacing="12" RowSpacing="6" Visibility="{x:Bind Vm.HasCurrent, Mode=OneWay}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition Width="24" />
+                            <ColumnDefinition Width="32" />
+                            <ColumnDefinition MinWidth="160" />
+                            <ColumnDefinition Width="96" />
+                            <ColumnDefinition Width="80" />
+                            <ColumnDefinition Width="216" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Border Grid.Column="1" Width="24" Height="24" CornerRadius="12" Background="{ThemeResource AccentFillColorDefaultBrush}">
+                            <TextBlock Text="1" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <Grid Grid.Column="2" Width="32" Height="32">
+                            <Border CornerRadius="8" Background="{x:Bind Vm.Current.Tile, Mode=OneWay}" Visibility="{x:Bind Vm.Current.NoIcon, Mode=OneWay}">
+                                <TextBlock Text="{x:Bind Vm.Current.Initials, Mode=OneWay}" FontSize="12" FontWeight="Bold" Foreground="White"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <Image Source="{x:Bind Vm.Current.Icon, Mode=OneWay}" />
+                        </Grid>
+                        <StackPanel Grid.Column="3" VerticalAlignment="Center" Spacing="2">
+                            <TextBlock Text="{x:Bind Vm.Current.Name, Mode=OneWay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{x:Bind Vm.CurrentDetail, Mode=OneWay}" Style="{StaticResource Caption}"
+                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" MaxLines="2" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="4" Text="{x:Bind Vm.Current.Time, Mode=OneWay}" TextAlignment="Right" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="5" Text="{x:Bind Vm.Current.Cache, Mode=OneWay}" TextAlignment="Right" VerticalAlignment="Center" />
+                        <Button Grid.Column="6" HorizontalAlignment="Right" Style="{StaticResource RowButton}" Click="OnRemoveCurrent"
+                                AutomationProperties.Name="{x:Bind Vm.Current.RemoveLabel, Mode=OneWay}" ToolTipService.ToolTip="Stop and remove">
+                            <FontIcon Glyph="&#xE711;" FontSize="14" />
+                        </Button>
+                        <ProgressBar Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="3" Value="{x:Bind Vm.Percent, Mode=OneWay}"
+                                     IsIndeterminate="{x:Bind Vm.Indeterminate, Mode=OneWay}" AutomationProperties.Name="Compile progress" />
+                    </Grid>
+
+                    <ListView x:Name="WaitingList" ItemsSource="{x:Bind Vm.Waiting}" SelectionMode="Extended" SelectionChanged="OnSelection"
+                              CanDragItems="True" CanReorderItems="True" AllowDrop="True"
+                              DragItemsStarting="OnDragStarting" DragItemsCompleted="OnDragCompleted" AutomationProperties.Name="Waiting games"
+                              ItemContainerStyle="{StaticResource RowItem}">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="local:QueueRow">
+                                <Grid ColumnSpacing="12" MinHeight="56">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="16" />
+                                        <ColumnDefinition Width="24" />
+                                        <ColumnDefinition Width="32" />
+                                        <ColumnDefinition MinWidth="160" />
+                                        <ColumnDefinition Width="96" />
+                                        <ColumnDefinition Width="80" />
+                                        <ColumnDefinition Width="216" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE76F;" FontSize="14" Foreground="{ThemeResource TextFillColorTertiaryBrush}" ToolTipService.ToolTip="Drag to reorder" />
+                                    <Border Grid.Column="1" Width="24" Height="24" CornerRadius="12" Background="{ThemeResource ControlFillColorSecondaryBrush}">
+                                        <TextBlock Text="{x:Bind Number}" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <Grid Grid.Column="2" Width="32" Height="32">
+                                        <Border CornerRadius="8" Background="{x:Bind Tile}" Visibility="{x:Bind NoIcon}">
+                                            <TextBlock Text="{x:Bind Initials}" FontSize="12" FontWeight="Bold" Foreground="White"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <Image Source="{x:Bind Icon}" />
+                                    </Grid>
+                                    <StackPanel Grid.Column="3" VerticalAlignment="Center" Spacing="2" Margin="0,6">
+                                        <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{x:Bind Note}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" MaxLines="3" ToolTipService.ToolTip="{x:Bind Note}" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="4" Text="{x:Bind Time}" TextAlignment="Right" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="5" Text="{x:Bind Cache}" TextAlignment="Right" VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="6" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="2">
+                                        <Button Content="Move to top" Style="{StaticResource RowButton}" FontSize="13" IsEnabled="{x:Bind CanUp}" Click="OnTop"
+                                                AutomationProperties.Name="{x:Bind TopLabel}" />
+                                        <Button Style="{StaticResource RowButton}" Padding="0" IsEnabled="{x:Bind CanUp}" Click="OnUp"
+                                                AutomationProperties.Name="{x:Bind UpLabel}" ToolTipService.ToolTip="Move up">
+                                            <FontIcon Glyph="&#xE70E;" FontSize="14" />
+                                        </Button>
+                                        <Button Style="{StaticResource RowButton}" Padding="0" IsEnabled="{x:Bind CanDown}" Click="OnDown"
+                                                AutomationProperties.Name="{x:Bind DownLabel}" ToolTipService.ToolTip="Move down">
+                                            <FontIcon Glyph="&#xE70D;" FontSize="14" />
+                                        </Button>
+                                        <Button Style="{StaticResource RowButton}" Padding="0" Click="OnRemove"
+                                                AutomationProperties.Name="{x:Bind RemoveLabel}" ToolTipService.ToolTip="Remove">
+                                            <FontIcon Glyph="&#xE711;" FontSize="14" />
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <StackPanel Visibility="{x:Bind Vm.HasFinished, Mode=OneWay}" Padding="0,0,0,8">
+                        <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" />
+                        <Grid Margin="16,6,16,0">
+                            <TextBlock Text="Finished" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                            <HyperlinkButton Content="Clear finished" HorizontalAlignment="Right" FontSize="12" Click="OnClearFinished" />
+                        </Grid>
+                        <ListView ItemsSource="{x:Bind Vm.Finished}" SelectionMode="None" IsItemClickEnabled="True" ItemClick="OnGameClick"
+                                  ItemContainerStyle="{StaticResource RowItem}" AutomationProperties.Name="Finished games">
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="local:QueueRow">
+                                    <Grid ColumnSpacing="12" MinHeight="48">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="16" />
+                                            <ColumnDefinition Width="24" />
+                                            <ColumnDefinition Width="32" />
+                                            <ColumnDefinition MinWidth="160" />
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="80" />
+                                            <ColumnDefinition Width="216" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="1" Glyph="{x:Bind Glyph}" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <Grid Grid.Column="2" Width="32" Height="32" Opacity="0.55">
+                                            <Border CornerRadius="8" Background="{x:Bind Tile}" Visibility="{x:Bind NoIcon}">
+                                                <TextBlock Text="{x:Bind Initials}" FontSize="12" FontWeight="Bold" Foreground="White"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <Image Source="{x:Bind Icon}" />
+                                        </Grid>
+                                        <StackPanel Grid.Column="3" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="{x:Bind Name}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{x:Bind Note}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" MaxLines="2" ToolTipService.ToolTip="{x:Bind Note}" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="4" Text="{x:Bind Time}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextAlignment="Right" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="5" Text="{x:Bind Cache}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextAlignment="Right" VerticalAlignment="Center" />
+                                        <Button Grid.Column="6" HorizontalAlignment="Right" Style="{StaticResource RowButton}" Padding="0" Click="OnRemove"
+                                                AutomationProperties.Name="{x:Bind RemoveLabel}" ToolTipService.ToolTip="Remove">
+                                            <FontIcon Glyph="&#xE711;" FontSize="14" />
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Expander Header="{x:Bind Vm.CpuSummary, Mode=OneWay}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                <StackPanel Spacing="14">
+                    <Grid>
+                        <TextBlock Text="Compile threads" />
+                        <TextBlock Text="{x:Bind Vm.ThreadsText, Mode=OneWay}" HorizontalAlignment="Right" />
+                    </Grid>
+                    <Slider Minimum="1" Maximum="{x:Bind Vm.MaxThreads}" StepFrequency="1" Value="{x:Bind Vm.Threads, Mode=TwoWay}"
+                            AutomationProperties.Name="Compile threads" />
+                    <RadioButtons Header="Priority" SelectedIndex="{x:Bind Vm.Priority, Mode=TwoWay}">
+                        <RadioButton Content="Below normal: fastest, the PC stays usable" />
+                        <RadioButton Content="Idle only: runs when nothing else needs the CPU" />
+                    </RadioButtons>
+                </StackPanel>
+            </Expander>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

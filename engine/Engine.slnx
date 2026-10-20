@@ -1,8 +1,11 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/ExoShaders.Service/ExoShaders.Service.csproj" />
-    <Project Path="src/SCSKiller.Cli/SCSKiller.Cli.csproj" />
     <Project Path="src/SCSKiller.CliW/SCSKiller.CliW.csproj" />
-    <Project Path="src/SCSKiller.Core/SCSKiller.Core.csproj" />
+    <Project Path="../src/SCSKiller.Cli/SCSKiller.Cli.csproj" />
+    <Project Path="../src/SCSKiller.Core/SCSKiller.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="../tests/SCSKiller.Tests/SCSKiller.Tests.csproj" />
   </Folder>
 </Solution>

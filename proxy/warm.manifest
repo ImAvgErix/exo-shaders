@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- The segment heap, for NVIDIA only: there the compiler's allocations wait on the NT heap's lock when many threads compile
+     at once (a 60k-pipeline warm on 32 threads: 742 s at 27% CPU, 227 s at 87%); AMD's warm takes about 25% longer on it. -->
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <heapType xmlns="http://schemas.microsoft.com/SMI/2020/WindowsSettings">SegmentHeap</heapType>
+    </windowsSettings>
+  </application>
+</assembly>

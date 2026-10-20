@@ -12,13 +12,13 @@
 #   scskiller.exe, scskillerw.exe   beside the service, sharing its one .NET runtime: ScheduledTask.TaskExe (the
 #                                   "re-warm after a driver update" task) and Elevated.CliExe (cache size / Auto
 #                                   Shader Compilation, run as administrator)
-# The native binaries aren't built from this repo: they're taken from SCSKiller 1.3.0-beta.2 (prebuilt\SOURCE.md).
+# The native binaries are taken from the SCSKiller 1.3.0 release (prebuilt\SOURCE.md); their source is proxy\.
 #
 #   pwsh build\publish-service.ps1 [-NativeFrom <SCSKiller.App\current>] [-Out <dir>] [-SkipCli]
 
 [CmdletBinding()]
 param(
-    # The beta's own native files (they can't be rebuilt from source), kept in prebuilt\.
+    # SCSKiller 1.3.0's own native files, kept in prebuilt\.
     [string]$NativeFrom = (Join-Path $PSScriptRoot '..\prebuilt'),
     [string]$Out,
     [switch]$SkipCli
@@ -26,6 +26,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $engine = Split-Path -Parent $PSScriptRoot
+$repo = Split-Path -Parent $engine
 if (-not $Out) { $Out = Join-Path $engine 'out\service' }
 $Out = [IO.Path]::GetFullPath($Out)
 
@@ -60,7 +61,7 @@ Invoke-Dotnet @('publish', (Join-Path $engine 'src\ExoShaders.Service\ExoShaders
 # The CLI the engine starts for the scheduled task and elevated driver settings: published into the same folder, so
 # all three programs run on one copy of the .NET runtime (same version, same SCSKiller.Core).
 if (-not $SkipCli) {
-    $cliProj = Join-Path $engine 'src\SCSKiller.Cli\SCSKiller.Cli.csproj'
+    $cliProj = Join-Path $repo 'src\SCSKiller.Cli\SCSKiller.Cli.csproj'
     Invoke-Dotnet @('publish', $cliProj, '-c', 'Release', '-r', 'win-x64', '--self-contained', 'true', '-o', $Out, '-p:DebugType=none', '-p:PublishReadyToRun=true')
     # scskillerw.exe: the same program without a console window (what the scheduled task runs), same dependencies
     Invoke-Dotnet @('publish', (Join-Path $engine 'src\SCSKiller.CliW\SCSKiller.CliW.csproj'),

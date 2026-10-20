@@ -10,7 +10,7 @@
  "folders": [
   {
    "label": "DirectX 12 and 11",
-   "path": "C:\\Users\\Player\\AppData\\Local\\NVIDIA\\DXCache",
+   "path": "C:\\Users\\Erix\\AppData\\Local\\NVIDIA\\DXCache",
    "size": "1 MB"
   }
  ],
@@ -209,7 +209,7 @@
      "name": "NVIDIA OpenGL and Vulkan",
      "size": "0 MB",
      "bytes": 64,
-     "outside": "C:\\Users\\Player\\AppData\\Local\\NVIDIA\\GLCache\\dae675479948b9c594340edf55765be1\\6b0a6e4d306f5046",
+     "outside": "C:\\Users\\Erix\\AppData\\Local\\NVIDIA\\GLCache\\dae675479948b9c594340edf55765be1\\6b0a6e4d306f5046",
      "gameIds": [],
      "files": 2,
      "consequence": "These apps and games build their cache again as they run, and may stutter until they have. Files in use are skipped."

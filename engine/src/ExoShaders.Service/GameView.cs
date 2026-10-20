@@ -34,8 +34,13 @@ internal sealed class ViewContext
     public bool AmdVendor => Vendor.Vendor == GpuVendor.Amd;
 }
 
-internal sealed class GameView(GameState s, ViewContext ctx)
+internal sealed class GameView(GameState state, ViewContext ctx)
 {
+    // Exo Shaders never offers the community database (a Patreon feature): the engine still reads the public manifest (for
+    // the official recordings for everyone), so its "in the community database" facts are left out of every view, as the
+    // app leaves them out for a user it shows the Patreon teaser instead.
+    private readonly GameState s = state with { InCommunityDb = null, CommunityDbPsos = 0 };
+
     private enum LeftKind { AntiCheat, EngineSlots, UnknownSlots, NotSeen, Recording, PlayedClean, PlayedCompiles, NothingKnown, PlayOnly }
 
     public const string PartlyCompiledWhy = "SCSKiller compiled this game, but the graphics driver refused a large part of it. This happens when the driver or Windows can't build pipelines the way the game does. The refused ones are built by the game the first time it needs them, which is when they can stutter. SCSKiller compiles them again after a driver update.";
@@ -277,8 +282,10 @@ internal sealed class GameView(GameState s, ViewContext ctx)
         }
     }
 
+    /// <summary>The engine's reason without its community database clause (ScsKiller.DbNote, RtNote).</summary>
     private static string NoDbNote(string r) =>
-        r.Replace("; in the community database for Patreon supporters", "").Replace("; in the community database", "");
+        r.Replace("; " + ScsKiller.InDbSupportersNote, "").Replace("; " + ScsKiller.InDbNote, "").Replace("; not in the community database yet", "")
+            .Replace(", or a community recording for this version", "");
 
     public bool CanCompile => s.Status is GameStatus.Ready or GameStatus.Warmed or GameStatus.Stale || RtPartial;
 
@@ -652,8 +659,6 @@ internal sealed class GameView(GameState s, ViewContext ctx)
                 Row(ScsKiller.CacheBudgetTitle(ctx.Vendor.Caps), Fmt.N(lo), ScsKiller.CacheBudgetNote(ctx.Vendor.Caps));
             if (s.Official is { } official)
                 Row("Official recording", $"{official.Psos:N0} pipelines", $"Published by SCSKiller for this version, downloaded {official.DownloadedAt.LocalDateTime:d}");
-            if (s.Community == null && s.InCommunityDb is { } inDb)
-                Row("The community database", inDb ? "has a recording for this version" : "not in it yet");
             if (p.MiddlewareItems > 0)
                 Row(p.MiddlewareSharedItems == 0L ? "Its upscalers, learned from recordings" : p.MiddlewareSharedItems == p.MiddlewareItems ? "Its upscalers, from shared packs" : "Its upscalers, from recordings and shared packs", Fmt.N(p.MiddlewareItems));
             if (p.D3D11Shaders > 0) Row(ScsKiller.BothApis(p) ? "DirectX 11, from the game files" : "DirectX 11 shaders", Fmt.N(p.D3D11Shaders));
@@ -710,8 +715,7 @@ internal sealed class GameView(GameState s, ViewContext ctx)
             if (p != null) Row("Pipelines in the plan", Fmt.N(p.Recorded + p.Generated + p.MiddlewareItems));
             if (s.ShaderCount.HasValue) Row("Shaders in the game files", Fmt.N(s.ShaderCount));
             if (p is { StageSets: > 0 }) Row("Shader combinations found", Fmt.N(p.StageSets));
-            if (p is { LeftOut: > 0 })
-                Row("Left out", Fmt.N(p.LeftOut) + (p.Uncovered == p.LeftOut ? " (shader slots SCSKiller can't rebuild)" : p.Uncovered > 0 ? $" ({p.Uncovered:N0} for shader slots SCSKiller can't rebuild)" : ""));
+            if (p is { LeftOut: > 0 }) Row("Left out", ScsKiller.LeftOutValue(p));
             if (p is { StageSets: 0L, Uncovered: > 0 }) Row("Left out for shader slots SCSKiller can't rebuild", Fmt.N(p.Uncovered));
             if (p != null) { Row("Recorded pipelines", Fmt.N(p.Recorded)); Row("Built from the game files", Fmt.N(p.Generated)); }
             if (p is { MiddlewareItems: > 0 }) Row("Upscaler pipelines", Fmt.N(p.MiddlewareItems));
@@ -719,7 +723,6 @@ internal sealed class GameView(GameState s, ViewContext ctx)
             if (p is { RtLibraries: > 0 })
                 Row("Ray tracing shader libraries", $"{p.RtLibraries:N0}" + (s.Engine is { NoRtPipelines: true } ? " (not used by the game)" : s.RtSkipped ? " (skipped, your setting)" : p.RtUncovered > 0 ? $" ({p.RtUncovered:N0} not compiled)" : ""));
             if (p?.RtInline is > 0) Row("Shaders that trace rays inline", Fmt.N(p.RtInline));
-            if (s.InCommunityDb is { } inDb) Row("Community data for your version", inDb ? $"{s.CommunityDbPsos:N0} pipelines" : "none yet");
             if (s.Community is { } c) Row("Downloaded community recording", c.OtherVersion ? "doesn't match your game's files" : $"{c.Psos:N0} pipelines");
             if (s.Official is { } o) Row("Official recording", $"{o.Psos:N0} pipelines");
             if (p != null) { Row("Synthesized pipeline templates", Fmt.N(p.SynthesizedTemplates)); Row("Shader layouts", $"{p.RootSignatures:N0} · {RootSigSource(p)}"); }
@@ -765,11 +768,12 @@ internal sealed class GameView(GameState s, ViewContext ctx)
         !RecordOn && CanToggleRecord && !HasRecordTip && s.NoStutter == null
         && (LeftCase is LeftKind.EngineSlots or LeftKind.NotSeen or LeftKind.PlayedCompiles or LeftKind.PlayOnly || GuessedStates || Rt || s.RtUnseen || RtInline);
 
+    // 1.3.0: with recording on, what's left from slots or stage sets no recording showed yet still says so (and how it ends)
     public object? Left
     {
         get
         {
-            if (P is null || !ShowLeftRecord) return null;
+            if (P is null || !(ShowLeftRecord || RecordOn && s.NoStutter == null && LeftCase is LeftKind.NotSeen or LeftKind.EngineSlots)) return null;
             string title = !Rt && !s.RtUnseen ? "Some shaders still compile while you play" : "Ray-traced effects aren't compiled yet";
             return new { title, text = LeftSentences() };
         }
@@ -778,11 +782,11 @@ internal sealed class GameView(GameState s, ViewContext ctx)
     private string LeftSentences()
     {
         string? rt;
-        if (s.RtUnseen) rt = Fmt.Sentence("no ray tracing seen while recording: turn it on in the game and play to cover it") + ".";
-        else if (RtInline) rt = Fmt.Sentence("ray tracing that uses separate pipelines (such as path tracing) is compiled only from a recording") + ".";
+        if (s.RtUnseen) rt = Fmt.Sentence(ScsKiller.RtUnseenNote) + ".";
+        else if (RtInline) rt = Fmt.Sentence(ScsKiller.RtInlineNote) + ".";
         else if (!Rt) rt = null;
-        else rt = CanRecord ? ScsKiller.RtNote(s.InCommunityDb, false) + "."
-            : "Ray-traced effects aren't compiled: they need a recording, " + (s.RiskEligible ? "from a session on the game page, at your own risk" : !NoAntiCheat ? "which " + ScsKiller.AntiCheatName(s) + " blocks" : s.RootUnconfirmed ? "once you confirm its game folder" : "which DLSS on NVIDIA blocks") + ".";
+        else rt = CanRecord ? ScsKiller.RtNeedsRecording + "."
+            : "Ray-traced effects aren't compiled: they need a recording, " + (s.RiskEligible ? ScsKiller.RiskNoRecording : !NoAntiCheat ? "which " + ScsKiller.AntiCheatName(s) + " blocks" : s.RootUnconfirmed ? ScsKiller.ManualNoRecording : ScsKiller.StreamlineNoRecording) + ".";
         LeftKind left = LeftCase;
         string? text = left switch
         {
@@ -790,9 +794,9 @@ internal sealed class GameView(GameState s, ViewContext ctx)
                 : !NoAntiCheat ? "Anything else compiles while you play: " + ScsKiller.AntiCheatName(s) + " blocks the recording that would find it."
                 : s.RootUnconfirmed ? "Anything else compiles while you play: confirm the game's folder (Game folder… above) to record what's missing."
                 : "Anything else compiles while you play: DLSS on NVIDIA blocks the recording that would find it.",
-            LeftKind.EngineSlots => "The rest use shader slots this game's engine adds. A 5-minute recording lets SCSKiller rebuild them.",
+            LeftKind.EngineSlots => ScsKiller.EngineSlotsNote(RecordOn),
             LeftKind.UnknownSlots => "The rest use shader slots SCSKiller can't rebuild yet, so they still compile while you play.",
-            LeftKind.NotSeen => "SCSKiller hasn't seen how the game sets the rest up yet. Playing longer with recording on teaches it.",
+            LeftKind.NotSeen => ScsKiller.NotSeenNote(RecordOn),
             LeftKind.Recording => "Recording is on: anything new you play is added the next time it compiles.",
             LeftKind.PlayedCompiles => $"Last time you played, {PlayCompiles(L!):N0} still had to compile. Recording picks them up.",
             _ when Rt || s.RtUnseen || RtInline => null,
@@ -1006,7 +1010,7 @@ internal sealed class GameView(GameState s, ViewContext ctx)
             statusReason = StatusReason,
             rowNote = RowNote.Length > 0 ? RowNote : null,
             tip = (s.Playing ? "Playing now · " : "") + FullNote,
-            reason = KeyLocked ? KeyLockedReason : s.StatusReason,
+            reason = KeyLocked ? KeyLockedReason : NoDbNote(s.StatusReason),
             playing = s.Playing,
             queued = Queued,
             compiling = compilingNow,

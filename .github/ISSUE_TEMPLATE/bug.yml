@@ -1,0 +1,58 @@
+name: Bug report
+description: Something doesn't work, or a game isn't detected or compiled as it should be.
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: SCSKiller version
+      description: The app's About page shows it.
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 24H2 (26100)
+    validations:
+      required: true
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU
+      placeholder: NVIDIA GeForce RTX 4070 / AMD Radeon RX 7800 XT
+    validations:
+      required: true
+  - type: input
+    id: driver
+    attributes:
+      label: GPU driver version
+      placeholder: "NVIDIA 610.88 / AMD Adrenalin 26.10.1"
+    validations:
+      required: true
+  - type: input
+    id: game
+    attributes:
+      label: Game
+      description: Name, and the store it's installed from (Steam, Epic, EA app, GOG, Ubisoft Connect, Xbox, Battle.net). Leave empty if the bug isn't about a game.
+      placeholder: Some Game (Steam)
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open SCSKiller
+        2. Press Compile on ...
+        3. ...
+  - type: textarea
+    id: logs
+    attributes:
+      label: Output or error text
+      description: The error shown, or the output of `scskiller status "<game>"`. If SCSKiller closed on its own or didn't start, the end of `crash.log` in `%LOCALAPPDATA%\SCSKiller`. Remove anything personal (user names in paths).
+      render: text

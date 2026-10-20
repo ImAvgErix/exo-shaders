@@ -1,3 +1,0 @@
-namespace SCSKiller.Core;
-
-public sealed record PlanStats(long Recorded, long Generated, long SynthesizedTemplates, long RootSignatures, bool RootSigRuleVerified, long ExactUnits = 0L, long InferredUnits = 0L, long GuessedUnits = 0L, double LayoutCoverage = 0.0, long D3D11Shaders = 0L, long MiddlewareItems = 0L, long Uncovered = 0L, long RtLibraries = 0L, long RtUncovered = 0L, long StageSets = 0L, long LeftOut = 0L, long MiddlewareSharedItems = 0L, long RtStateObjects = 0L, long? RtInline = null, string? RsRule = null, long? BuiltOk = null, long? BuiltN = null, long D3D11Draws = 0L, long Variants = 0L, long? CacheBudgetLeftOut = null, bool RecordedOnly = false);

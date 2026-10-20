@@ -1,0 +1,47 @@
+name: Game request
+description: Ask for a game that SCSKiller doesn't support yet, or supports badly.
+labels: [game request]
+body:
+  - type: input
+    id: game
+    attributes:
+      label: Game
+      placeholder: Some Game
+    validations:
+      required: true
+  - type: input
+    id: store
+    attributes:
+      label: Store and link
+      description: Where it's sold, with a link or the store's app id.
+      placeholder: Steam, https://store.steampowered.com/app/000000/
+    validations:
+      required: true
+  - type: input
+    id: engine
+    attributes:
+      label: Engine, if you know it
+      placeholder: Unreal Engine 5.4 / Unity / RE Engine / unknown
+  - type: dropdown
+    id: api
+    attributes:
+      label: Graphics API the game uses
+      options: [D3D12, D3D11, Vulkan, Don't know]
+    validations:
+      required: true
+  - type: input
+    id: status
+    attributes:
+      label: What SCSKiller says about it
+      description: The status the app shows for the game, if it's detected at all.
+  - type: textarea
+    id: stutter
+    attributes:
+      label: The stutter
+      description: When it happens (first time in an area, in combat, ...), and any link that describes it.
+  - type: checkboxes
+    id: anticheat
+    attributes:
+      label: Anti-cheat
+      options:
+        - label: The game uses anti-cheat (Easy Anti-Cheat, BattlEye, ...), as far as I know

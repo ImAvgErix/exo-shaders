@@ -1,6 +1,6 @@
 # Exo Shaders engine service: protocol contract
 
-`ExoShaders.Service.exe` hosts one SCSKiller engine (`ScsKiller`, the 1.3.0-beta.2 app model) the way the official
+`ExoShaders.Service.exe` hosts one SCSKiller engine (`ScsKiller`, the 1.3.0 app model) the way the official
 SCSKiller app does, with no window and no tray. A host (Exo) starts it as a child process and talks to it over
 stdin/stdout. This file is the contract the UI is built against; the service implements exactly this.
 
@@ -94,11 +94,16 @@ ExoShaders.Service.exe --offline-cleanup <gameId>     (internal: the engine's cl
   running, waiting items are removed from the queue and the compile is stopped so the graphics driver writes its
   shader cache, then the service waits for it to finish (up to `shutdown.params.waitSeconds`, default 120), stops the
   game watcher, flushes the log and exits 0.
-- Never contacts SCSKiller's servers: no community database sync, sharing, diagnostics upload, compatibility reports
-  ("Rate this compile"), problem reports (beta.2's "Report a problem": `ProblemReport`/`SendProblemAsync` aren't exposed), the anonymous daily check,
-  news/rules/stutter-list fetches, official-recording downloads, Patreon sign-in or update checks. Lists the official
-  app downloaded earlier (in the data folder) are still used. Pinned third-party downloads the engine needs to read
-  some games (Oodle/zlib codecs, FromSoftware/RE Engine key tables from GitHub) still happen as in the app.
+- Reads from SCSKiller's servers (api.scskiller.com, api.scskiller.io as its fallback) only what the official app reads
+  signed out, and sends nothing: after a scan, at most about daily, the engine-support updates (plan-rules.json, game
+  verdicts, Maximum suggestions, news; each used only when it verifies with SCSKiller's pinned rules keys, stable
+  channel) and the known-stutter, confirmed-engines and boot-precompile lists; the community manifest, the official
+  recordings marked for everyone and the shared upscaler packs (plain downloads, no token). Never: the community
+  database or Patreon/backer recordings (they need a sign-in), sharing, diagnostics upload, compatibility reports
+  ("Rate this compile"), problem reports ("Report a problem": `ProblemReport`/`SendProblemAsync` aren't exposed),
+  the anonymous daily check, Patreon sign-in or update checks. `--safe` reads nothing. Pinned third-party downloads
+  the engine needs to read some games (Oodle/zlib codecs, FromSoftware/RE Engine key tables, public Unreal key lists
+  from GitHub) still happen as in the app.
 
 ## Settings policy
 
@@ -113,7 +118,7 @@ never runs in `--safe` (it would write the data folder). It never queues, starts
 | `backgroundThreads` | the engine default (8), at most `threads` |
 | `priority` | `belowNormal` |
 | `pauseWhileGaming` | `true`; the service also pauses a running compile while any library game plays and resumes it after (the engine's own pause covers idle-time compiles only). A pause or resume the user presses wins until the games close. |
-| `maxCompileMemoryGB` | a quarter of the RAM, 4 to 16 GB |
+| `maxCompileMemoryGB` | a quarter of the RAM, 4 to 16 GB, or the engine's Auto when that is more (a quarter of the RAM from 64 GB) |
 | `maximumPlans` | `false` (Maximum is per game, below) |
 | `compileRayTracing` | `true` |
 | `hddMode` | `false` (the engine default) |
@@ -212,7 +217,7 @@ type App = {
   launchers: {name: string, games: number}[]  // the stores the library's games came from, with how many each, in the
                                 // order of Game.store below, then Exo's own labels by name ("Added by you" included)
   version: string               // the Exo Shaders service's version ("0.1.0"), as in `ready.service`
-  engineVersion: string         // the SCSKiller engine's version ("1.3.0-beta.2"), as in `ready.engine`
+  engineVersion: string         // the SCSKiller engine's version ("1.3.0"), as in `ready.engine`
 }
 ```
 

@@ -7,8 +7,8 @@ import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const exe = 'C:\\Users\\Player\\exo-shaders-work\\engine\\out\\service\\ExoShaders.Service.exe'
-const dataDir = 'C:\\Users\\Player\\exo-shaders-work\\testdata\\SCSKiller'
+const exe = 'C:\\Users\\Erix\\exo-shaders-work\\engine\\out\\service\\ExoShaders.Service.exe'
+const dataDir = 'C:\\Users\\Erix\\exo-shaders-work\\testdata\\SCSKiller'
 const out = resolve(root, 'src/dev/mock')
 mkdirSync(out, { recursive: true })
 

@@ -1,0 +1,12 @@
+﻿<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SCSKiller.App/SCSKiller.App.csproj">
+      <Platform Project="x64" />
+    </Project>
+    <Project Path="src/SCSKiller.Cli/SCSKiller.Cli.csproj" />
+    <Project Path="src/SCSKiller.Core/SCSKiller.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SCSKiller.Tests/SCSKiller.Tests.csproj" />
+  </Folder>
+</Solution>

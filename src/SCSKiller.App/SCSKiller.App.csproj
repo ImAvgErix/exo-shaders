@@ -1,0 +1,55 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>SCSKiller</AssemblyName>
+    <RootNamespace>SCSKiller.App</RootNamespace>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>            <!-- bundle .NET: no runtime prompt for users -->
+    <EnableMsixTooling>true</EnableMsixTooling>    <!-- publishes SCSKiller.pri; without it the unpackaged app crashes at start -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- DISABLE_XAML_GENERATED_MAIN: Program.cs is the entry point (one instance per session). -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+    <WinAppSdkRuntimeVersion>2.5.1</WinAppSdkRuntimeVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Component packages instead of the Microsoft.WindowsAppSDK metapackage, which adds AI/ML/Widgets/Search (+60 MB). -->
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.3.9" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" Version="$(WinAppSdkRuntimeVersion)" />
+    <!-- installer and updater: per-user install, deltas, channels -->
+    <PackageReference Include="Velopack" Version="1.2.158" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\app.ico" CopyToOutputDirectory="PreserveNewest" />
+    <!-- the About page reads it from the assembly: it doesn't depend on the file sitting next to the exe -->
+    <EmbeddedResource Include="..\..\THIRD-PARTY-NOTICES.md" LogicalName="THIRD-PARTY-NOTICES.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SCSKiller.Core\SCSKiller.Core.csproj" />
+  </ItemGroup>
+
+  <!-- WinAppSDK 2.5 self-contained output lacks this DLL (it is only inside the framework MSIX, also with the
+       metapackage), and AppNotificationManager.Register() then throws 0x8007007E. Drop this once the SDK ships it. -->
+  <Target Name="AddWinAppSdkInsightsResource" BeforeTargets="AssignTargetPaths">
+    <Unzip SourceFiles="$(NuGetPackageRoot)microsoft.windowsappsdk.runtime\$(WinAppSdkRuntimeVersion)\tools\MSIX\win10-x64\Microsoft.WindowsAppRuntime.2.msix"
+           DestinationFolder="$(IntermediateOutputPath)winappsdk" Include="Microsoft.WindowsAppRuntime.Insights.Resource.dll" SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <None Include="$(IntermediateOutputPath)winappsdk\Microsoft.WindowsAppRuntime.Insights.Resource.dll" Link="Microsoft.WindowsAppRuntime.Insights.Resource.dll"
+            CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+
+</Project>
