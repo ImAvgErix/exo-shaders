@@ -278,6 +278,7 @@ sealed class WarmRun : IWarmRun
             return p;
         }
         _p = Launch(from, 0, [], []);
+        _ = Task.Run(() => GuardMemory(log, game.Name));
         Completion = Task.Run(async () =>
         {
             try { return await Run(); }
@@ -408,6 +409,48 @@ sealed class WarmRun : IWarmRun
         public void Report(WarmProgress p) => inner.Report(p with { Total = total ?? p.Total, Failed = p.Failed + carried, DriverSkipped = p.DriverSkipped + carriedSkips, Note = note });
     }
 
+    /// <summary>Keeps the PC's RAM for the PC while a compile runs. The driver maps its shader cache file into the compile and
+    /// keeps every page it wrote resident: Marvel Rivals' compile held 7-11 GB (a 32 GB cache) and the PC had 0.3-2 GB left
+    /// for hours. So each compile process is held, from its start, to its own memory and 1 GB more (<see cref="ProcessTree.Cap"/>,
+    /// a hard working-set limit, following its own memory as it grows): Windows takes its oldest pages, the cache already
+    /// written, which stay in Windows' standby cache (free for anything else, faulted back without a read if touched), and
+    /// never what it works with. Measured on Rivals: emptying the whole working set brought it all back within 15 s, and a
+    /// limit only while RAM was short refilled 3 GB within two minutes of each lift and dipped the PC to 0.6 GB.</summary>
+    async Task GuardMemory(IProgress<string>? log, string name)
+    {
+        int capped = 0;   // the process the limit is on
+        var said = false;
+        while (true)
+        {
+            await Task.Delay(MemoryCheckEvery);
+            Process p;
+            lock (_lock)
+            {
+                if (_stopping || Completion?.IsCompleted == true) return;
+                if (_paused) continue;
+                p = _p;
+            }
+            try
+            {
+                if (p.HasExited) continue;   // between processes: the next one is _p soon
+                var (ws, mapped) = ProcessTree.Resident(p.Id);
+                if (!ProcessTree.Cap(p.Id, CapHeadroom))
+                {
+                    if (!said) log?.Report($"{name}: compile: Windows refused the compile a memory limit (it holds {ws >> 20:N0} MB)");
+                    said = true;
+                    continue;
+                }
+                if (capped != p.Id && mapped > CapHeadroom)
+                    log?.Report($"{name}: compile: holds its own memory and {CapHeadroom >> 20:N0} MB of the driver cache's pages: {(mapped - CapHeadroom) >> 20:N0} MB go to Windows' cache");
+                capped = p.Id;
+            }
+            catch (Exception e) when (e is InvalidOperationException or Win32Exception) { }   // exited meanwhile
+        }
+    }
+
+    static readonly TimeSpan MemoryCheckEvery = TimeSpan.FromSeconds(3);
+    const long CapHeadroom = 1L << 30;
+
     public void Pause()
     {
         lock (_lock)
@@ -495,7 +538,8 @@ public static class WarmOutput
             rate.Add(clock.Elapsed, d);
             if (progress == null || (e == reported && !final && since.Elapsed < KeepAlive)) return;
             (reported, since) = (e, Stopwatch.StartNew());
-            progress.Report(new WarmProgress(d, e.Total, e.Failed, rate.PerSecond ?? e.Rate, cacheGrowth(), Workers: e.Workers, Threads: e.Threads, DriverSkipped: e.DriverSkipped));
+            progress.Report(new WarmProgress(d, e.Total, e.Failed, rate.PerSecond ?? e.Rate, cacheGrowth(), Workers: e.Workers, Threads: e.Threads, DriverSkipped: e.DriverSkipped,
+                SteadyPerSecond: rate.Steady ?? 0));
         }
         while (await Task.WhenAny(reader, Task.Delay(every)) != reader) Report(false);
         await reader;
@@ -508,13 +552,29 @@ public static class WarmOutput
 /// rate is its average since it started, which stays high long after a warm slows down (the cached start is fast).</summary>
 public sealed class RecentRate
 {
-    static readonly TimeSpan Window = TimeSpan.FromSeconds(30), MinSpan = TimeSpan.FromSeconds(5);
-    readonly Queue<(TimeSpan At, long Done)> _samples = new();
+    static readonly TimeSpan Window = TimeSpan.FromSeconds(30), MinSpan = TimeSpan.FromSeconds(5), SteadyWindow = TimeSpan.FromMinutes(5),
+        SteadyEvery = TimeSpan.FromSeconds(5);
+    readonly Queue<(TimeSpan At, long Done)> _samples = new(), _steady = new();
 
     public void Add(TimeSpan at, long done)
     {
         _samples.Enqueue((at, done));
         while (_samples.Count > 2 && at - _samples.Peek().At > Window) _samples.Dequeue();
+        if (_steady.Count == 0 || at - _steady.Last().At >= SteadyEvery) _steady.Enqueue((at, done));
+        while (_steady.Count > 2 && at - _steady.Peek().At > SteadyWindow) _steady.Dequeue();
+    }
+
+    /// <summary>Pipelines per second over the last 5 minutes, once they span a minute: what time left is reckoned from. A big
+    /// game's rate swings 3x from one 30 s to the next (Marvel Rivals: 65 to 220 a second), and time left with it.</summary>
+    public double? Steady
+    {
+        get
+        {
+            if (_steady.Count < 2) return null;
+            var (t0, d0) = _steady.Peek();
+            var (t1, d1) = _steady.Last();
+            return t1 - t0 >= TimeSpan.FromMinutes(1) ? Math.Max(0, d1 - d0) / (t1 - t0).TotalSeconds : null;
+        }
     }
 
     public double? PerSecond
@@ -533,16 +593,73 @@ public sealed class RecentRate
 /// copy named like the game as a child).</summary>
 static class ProcessTree
 {
+    /// <summary>A suspended tree also gives its memory back (<see cref="Trim"/>): a paused compile, or one paused while a game
+    /// plays, held 7-11 GB (Marvel Rivals: 4 GB of its own and the driver cache's pages it had written) and the game ran short.
+    /// Resumed, it faults back the pages it touches.</summary>
     public static void Suspend(int rootPid, bool suspend)
     {
         foreach (var pid in WithDescendants(rootPid))
         {
-            var h = OpenProcess(0x0800 /* PROCESS_SUSPEND_RESUME */, false, pid);
+            var h = OpenProcess(0x0800 /* PROCESS_SUSPEND_RESUME */ | (suspend ? TrimAccess : 0), false, pid);
+            if (h == 0 && suspend) h = OpenProcess(0x0800, false, pid);
             if (h == 0) continue;   // exited meanwhile
-            _ = suspend ? NtSuspendProcess(h) : NtResumeProcess(h);
+            if (suspend) { _ = NtSuspendProcess(h); _ = K32EmptyWorkingSet(h); }
+            else _ = NtResumeProcess(h);
             CloseHandle(h);
         }
     }
+
+    const uint TrimAccess = 0x0400 /* PROCESS_QUERY_INFORMATION */ | 0x0100 /* PROCESS_SET_QUOTA */;
+
+    /// <summary>The tree's resident memory, and what of it isn't its own (pages of files it maps: the driver's shader cache).</summary>
+    public static (long WorkingSet, long Mapped) Resident(int rootPid)
+    {
+        long ws = 0, mapped = 0;
+        foreach (var pid in WithDescendants(rootPid))
+        {
+            var h = OpenProcess(0x1000 /* PROCESS_QUERY_LIMITED_INFORMATION */, false, pid);
+            if (h == 0) continue;
+            var c = new MemoryCounters { Cb = Marshal.SizeOf<MemoryCounters>() };
+            if (K32GetProcessMemoryInfo(h, ref c, c.Cb)) { ws += (long)c.WorkingSetSize; mapped += Math.Max(0, (long)c.WorkingSetSize - (long)c.PagefileUsage); }
+            CloseHandle(h);
+        }
+        return (ws, mapped);
+    }
+
+    /// <summary>Holds each process of the tree to its own committed memory plus <paramref name="headroom"/> (a hard working-set
+    /// maximum: Windows trims its least recently used pages to stay under it), or lifts that limit (null). False when Windows
+    /// refused every process the limit.</summary>
+    public static bool Cap(int rootPid, long? headroom)
+    {
+        var any = false;
+        foreach (var pid in WithDescendants(rootPid))
+        {
+            var h = OpenProcess(TrimAccess, false, pid);
+            if (h == 0) continue;
+            var c = new MemoryCounters { Cb = Marshal.SizeOf<MemoryCounters>() };
+            if (K32GetProcessMemoryInfo(h, ref c, c.Cb))
+            {
+                var max = (long)c.PagefileUsage + (headroom ?? 0) + (64L << 20);
+                any |= SetProcessWorkingSetSizeEx(h, 4 << 20, (nint)max, headroom != null ? 0x4u /* QUOTA_LIMITS_HARDWS_MAX_ENABLE */ | 0x2u /* MIN_DISABLE */
+                    : 0x8u /* QUOTA_LIMITS_HARDWS_MAX_DISABLE */ | 0x2u);
+            }
+            CloseHandle(h);
+        }
+        return any;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct MemoryCounters
+    {
+        public int Cb;
+        public uint PageFaultCount;
+        public nuint PeakWorkingSetSize, WorkingSetSize, QuotaPeakPagedPoolUsage, QuotaPagedPoolUsage, QuotaPeakNonPagedPoolUsage,
+            QuotaNonPagedPoolUsage, PagefileUsage, PeakPagefileUsage;
+    }
+
+    [DllImport("kernel32.dll")] static extern bool K32EmptyWorkingSet(nint h);
+    [DllImport("kernel32.dll")] static extern bool K32GetProcessMemoryInfo(nint h, ref MemoryCounters c, int cb);
+    [DllImport("kernel32.dll")] static extern bool SetProcessWorkingSetSizeEx(nint h, nint min, nint max, uint flags);
 
     /// <summary>One toolhelp snapshot: no process is opened; Exe has its extension.</summary>
     public static List<(int Pid, int Parent, string Exe)> Snapshot()
@@ -665,7 +782,7 @@ static class ProcessTree
     [DllImport("kernel32.dll")] static extern nint OpenProcess(uint access, bool inherit, int pid);
     [DllImport("kernel32.dll")] static extern bool CloseHandle(nint h);
     [DllImport("ntdll.dll")] static extern unsafe int NtQuerySystemInformation(int infoClass, void* info, int length, out int returned);
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] static extern int QueryDosDeviceW(string device, char[] target, int max);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] static extern int QueryDosDeviceW(string device, [Out] char[] target, int max);
     [DllImport("kernel32.dll")] static extern bool GetProcessTimes(nint h, out long created, out long exited, out long kernel, out long user);
     [DllImport("ntdll.dll")] static extern int NtSuspendProcess(nint h);
     [DllImport("ntdll.dll")] static extern int NtResumeProcess(nint h);

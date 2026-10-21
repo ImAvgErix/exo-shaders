@@ -192,7 +192,7 @@ public sealed class XboxSource(IEnumerable<string>? driveRoots = null) : IGameSo
     }
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
-    static extern int PackageFamilyNameFromId(ref PACKAGE_ID packageId, ref uint packageFamilyNameLength, char[]? packageFamilyName);
+    static extern int PackageFamilyNameFromId(ref PACKAGE_ID packageId, ref uint packageFamilyNameLength, [System.Runtime.InteropServices.Out] char[]? packageFamilyName);
 
     public static string? PackageFamilyName(string name, string publisher)
     {

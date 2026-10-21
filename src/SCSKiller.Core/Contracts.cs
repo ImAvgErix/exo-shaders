@@ -244,7 +244,8 @@ public sealed record WarmOptions(int Threads, WarmPriority Priority, long StartA
 public sealed record WarmProgress(long Done, long Total, long Failed, double PerSecond, long CacheGrowthBytes = 0, long Skipped = 0,
     string? Note = null,   // what the warm is doing besides compiling, e.g. "retrying ray tracing with fewer threads (8)"; null = nothing
     int Workers = 0, int Threads = 0,   // the threads the warm's memory budget lets run now, of the ones asked for; 0 = not reported
-    long DriverSkipped = 0);   // see WarmResult.DriverSkipped
+    long DriverSkipped = 0,    // see WarmResult.DriverSkipped
+    double SteadyPerSecond = 0);   // the rate over the last minutes (RecentRate.Steady), for time left; 0 = not known yet
 public enum WarmOutcome { Completed, Stopped, Failed }
 /// <param name="Failed">PSOs the driver rejected</param>
 /// <param name="Skipped">PSOs not replayed: a shader not in this install (see <see cref="WarmProgress.Skipped"/>)</param>

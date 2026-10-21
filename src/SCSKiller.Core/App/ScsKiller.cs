@@ -6810,6 +6810,10 @@ public sealed partial class ScsKiller : IScsKiller
             if (carefulPasses > 0) Log?.Report($"{game.Name}: careful compile: the recorded PSOs in {carefulPasses} passes on at most {cap} threads, then the rest");
 
             Stage(QueueStage.Warming);
+            // From here on the compile needs the index's hash alone (indexed). This method's lambdas share one closure, which
+            // kept the whole index through the warm: Marvel Rivals' 1.15M shaders held 4.3 GB for its whole compile.
+            index = null!;
+            ReleaseMemory();
             // Attribution: the driver-cache files a process named like the game (the staged warm) has open, sampled on its own
             // task while the warm runs (back to back until found, then every few seconds), never in the progress callback: a
             // sample opens every cache file (measured 6-10 s on a 42 GB NVIDIA cache), and progress lines queued up behind it.
@@ -7030,7 +7034,7 @@ public sealed partial class ScsKiller : IScsKiller
                         if (Vendor.Vendor == GpuVendor.Nvidia)   // a planned pipeline counts by its stages there (PendingOf)
                             warmKeys = warmKeys.Concat(WarmInputs.PlannedStages(rec.Plan!.FilePath, inputs, CrashInputs(CrashKeysNow(rec), rec.Plan.FilePath).Contains));
                         rec.WarmKeysFile = KeyFiles.Write(Store.GameDir(id), "warm", warmKeys.Distinct());
-                        (rec.WarmedIndexHash, rec.WarmedExeStamp, rec.WarmedGameVersion, rec.WarmedIndexStamp) = (index.ContentHash, ExeStamp(game), game.Version, indexStamp);
+                        (rec.WarmedIndexHash, rec.WarmedExeStamp, rec.WarmedGameVersion, rec.WarmedIndexStamp) = (indexed, ExeStamp(game), game.Version, indexStamp);
                         rec.CompileFailedBuild = null;
                         (rec.ResumeAt, rec.ResumeItems, rec.ResumeSeconds, rec.ResumeFailed) = (0, 0, 0, 0);
                         (rec.WarmedCareful, rec.FirstLaunch) = (carefulPasses > 0, null);   // judged again by the next launch
@@ -7045,7 +7049,7 @@ public sealed partial class ScsKiller : IScsKiller
                         Store.PruneKeyFiles(id);
                         KeepRejectsLog(work, id, result.Failed);
                         DropFailedLog(id);
-                        SendDiagnostics(game, index.ContentHash, work, null, result.Crashed);
+                        SendDiagnostics(game, indexed!, work, null, result.Crashed);
                         Close();
                         Ended("done");
                         Stage(QueueStage.Done);
@@ -7059,7 +7063,7 @@ public sealed partial class ScsKiller : IScsKiller
                     default:
                         if (result.Resumable) KeepResume();
                         Store.SaveGame(id, rec);
-                        SendDiagnostics(game, index.ContentHash, work, DiagnosticFailure.FromWarm(result.Error), result.Crashed);
+                        SendDiagnostics(game, indexed!, work, DiagnosticFailure.FromWarm(result.Error), result.Crashed);
                         Ended("failed");
                         Stage(QueueStage.Failed, result.Error + KeptLog(result.LogPath, id));
                         break;

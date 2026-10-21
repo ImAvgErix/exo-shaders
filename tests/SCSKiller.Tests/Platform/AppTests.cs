@@ -8190,6 +8190,31 @@ public partial class AppTests : IDisposable
     }
 
     [Fact]
+    public void Time_left_comes_from_the_last_minutes_not_the_last_30_seconds()
+    {
+        var rate = new RecentRate();
+        long done = 0;
+        for (int s = 0; s <= 50; s++) rate.Add(TimeSpan.FromSeconds(s), done += 100);
+        Assert.Null(rate.Steady);   // under a minute: not steady yet
+        for (int s = 51; s <= 300; s++) rate.Add(TimeSpan.FromSeconds(s), done += s % 60 < 30 ? 200 : 60);   // Marvel Rivals: 60-200 a second by turns
+        Assert.InRange(rate.Steady!.Value, 120, 140);   // the mean, where the 30 s rate jumps between the two
+        Assert.InRange(rate.PerSecond!.Value, 55, 205);
+    }
+
+    [Fact]
+    public void A_capped_process_keeps_its_own_memory_and_a_gigabyte_and_the_limit_lifts()
+    {
+        using var p = Process.Start(new ProcessStartInfo("cmd.exe", "/c ping -n 30 127.0.0.1 >nul") { CreateNoWindow = true, UseShellExecute = false })!;
+        try
+        {
+            Assert.True(ProcessTree.Cap(p.Id, 1L << 30));
+            Assert.True(ProcessTree.Cap(p.Id, null));
+            Assert.True(ProcessTree.Resident(p.Id).WorkingSet > 0);
+        }
+        finally { p.Kill(entireProcessTree: true); }
+    }
+
+    [Fact]
     public async Task Slow_cache_attribution_never_holds_up_the_warms_progress_and_a_stuck_warm_says_so()
     {
         var game = _game;

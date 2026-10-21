@@ -1013,11 +1013,12 @@ h1, h2, h3, h4, p, ul, ol, figure { margin: 0; }
 @keyframes s-fade { from { opacity: 0; } }
 @keyframes s-fade-out { to { opacity: 0; } }
 
-/* Arrive: rises 8px into place, in turn by --i; the 16th item and later share the last delay. Plays when the element
-   mounts; the library switches it off once its first cards have landed (.is-settled), so it never replays there. */
+/* Arrive (Exo Launcher's motion): rises 8px into place in 280ms, in turn by --i 24ms apart; the 8th item and later
+   share the last delay, so a whole shelf has landed within half a second. Plays when the element mounts; the library
+   switches it off once its first cards have landed (.is-settled), so it never replays there. */
 .s-arrive {
-  animation: s-arrive 360ms var(--ease-out) both;
-  animation-delay: calc(min(var(--i, 0), 15) * 28ms);
+  animation: s-arrive 280ms var(--ease-out) both;
+  animation-delay: calc(min(var(--i, 0), 7) * 24ms);
 }
 
 .s-library.is-settled .s-arrive { animation: none; }
@@ -1027,21 +1028,23 @@ h1, h2, h3, h4, p, ul, ol, figure { margin: 0; }
   to { opacity: 1; transform: none; }
 }
 
-/* Work: a soft diagonal band of light crosses the art while it compiles. */
+/* Work: a soft diagonal band of light crosses the art while it compiles. The band is a layer two and a half times
+   the art's width that slides across it (a transform, so the art under it never repaints); the art clips it. */
 .s-card.is-compiling .s-card-art::after,
 .s-game-cover.is-compiling::after {
   content: '';
   position: absolute;
-  inset: 0;
+  inset: 0 auto 0 0;
+  width: 250%;
   background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.16) 50%, transparent 70%);
-  background-size: 250% 100%;
   animation: s-work 1400ms linear infinite;
   pointer-events: none;
 }
 
+/* The band's light runs from one art-width before the art to one past it. */
 @keyframes s-work {
-  from { background-position: 150% 0; }
-  to { background-position: -50% 0; }
+  from { translate: -90% 0; }
+  to { translate: 30% 0; }
 }
 
 /* Done: the cover dims (240ms), a check draws itself and a green ring shows; at 2.4s all three let go over 400ms.
