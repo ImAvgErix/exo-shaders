@@ -52,7 +52,11 @@ internal sealed partial class Host
             MaxCompileMemoryGB = PolicyMemoryGB(),
             MaximumPlans = false,        // Maximum is decided per game (PolicyGame)
             CompileRayTracing = true,
-            HddMode = false,             // the engine's default: games are checked at the scan
+            HddMode = false,             // never every drive: HddDrives names the hard disks the games are on
+            HddDrives = HardDiskDrives(s.HddDrives),
+            // 1.4.0-alpha.3: games never compiled compile while the PC is idle (the games Add all ready takes), paused
+            // while a game runs like every other compile; Exo has no "start it yourself" step to wait for.
+            CompileNewGames = true,
             OnDriverUpdate = DriverUpdateMode.WhenIdle,
             OnNewShaders = NewShadersMode.Notify,
             ScanAtStart = true,
@@ -69,6 +73,45 @@ internal sealed partial class Host
             ActiveCheckAsked = true,
         };
     }
+
+    /// <summary>
+    /// HDD mode for exactly the drives the games are on that are hard disks (Windows says they incur a seek penalty):
+    /// there a game's files are read when it compiles instead of at every scan, while games on an SSD are still
+    /// checked at the scan. The same list as before keeps its instance, so the settings compare equal.
+    /// </summary>
+    private IReadOnlyList<string>? HardDiskDrives(IReadOnlyList<string>? had)
+    {
+        var roots = GameFiles.DriveRoots();
+        List<string> drives = [.. _k.Games.Select(g => GameFiles.DriveOf(g.Game.InstallDir, roots)).OfType<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase).Where(IsHardDisk).Order(StringComparer.OrdinalIgnoreCase)];
+        if (drives.Count == 0) return had is { Count: > 0 } ? null : had;
+        return had != null && had.SequenceEqual(drives, StringComparer.OrdinalIgnoreCase) ? had : drives;
+    }
+
+    /// <summary>A local drive ("D:\") on a disk that incurs a seek penalty (a spinning hard disk); SSDs, network shares
+    /// and mount points that can't be asked read as not.</summary>
+    private static bool IsHardDisk(string root)
+    {
+        if (root.Length != 3 || root[1] != ':') return false;
+        using var volume = CreateFileW(@"\\.\" + root[..2], 0, 3, 0, 3, 0, 0);
+        if (volume.IsInvalid) return false;
+        var query = new StoragePropertyQuery { PropertyId = 7 };   // StorageDeviceSeekPenaltyProperty, PropertyStandardQuery
+        return DeviceIoControl(volume, 0x2D1400, ref query, System.Runtime.InteropServices.Marshal.SizeOf<StoragePropertyQuery>(),
+            out SeekPenalty answer, System.Runtime.InteropServices.Marshal.SizeOf<SeekPenalty>(), out _, 0) && answer.IncursSeekPenalty != 0;
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct StoragePropertyQuery { public int PropertyId, QueryType; public byte Additional; }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct SeekPenalty { public int Version, Size; public byte IncursSeekPenalty; }
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    private static extern Microsoft.Win32.SafeHandles.SafeFileHandle CreateFileW(string name, uint access, uint share, nint security, uint creation, uint flags, nint template);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool DeviceIoControl(Microsoft.Win32.SafeHandles.SafeFileHandle device, uint code, ref StoragePropertyQuery input, int inputSize,
+        out SeekPenalty output, int outputSize, out int returned, nint overlapped);
 
     /// <summary>With no GPU chosen the engine compiles for the adapter with the most video memory; Intel needs the flag.</summary>
     private bool CompileGpuIsIntel()
@@ -178,6 +221,8 @@ internal sealed partial class Host
         if (g.ApiOverride != null) todo.Add(($"API {g.ApiOverride} -> auto", () => k.SetApiOverride(id, null)));
         if (g.NewShadersOverride != null) todo.Add(($"new shaders {g.NewShadersOverride} -> global", () => k.SetNewShadersMode(id, null)));
         if (g.LeftOutOfAddAll) todo.Add(("left out of compile all ready -> no", () => k.SetGameLeftOutOfAddAll(id, false)));
+        // Every shader the game can use: no compile size limit (1.4.0-alpha.3's per-game cap).
+        if (g.CacheCapGB != null) todo.Add(("compile size limit -> none", () => k.SetGameCacheCap(id, null)));
         if (g.RayTracingOverride != null) todo.Add(($"ray tracing {g.RayTracingOverride} -> default (on)", () => k.SetGameRayTracing(id, null)));
         // A game whose recording was turned off records again (RecordAllGames); an explicit "on" stays. Anti-cheat
         // games are never recorded: the engine skips them (RecorderSkip "anti-cheat") and RecordAntiCheatGames is off.

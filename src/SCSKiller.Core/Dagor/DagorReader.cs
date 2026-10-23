@@ -214,15 +214,15 @@ public sealed class DagorReader : IEngineReader
         return n == 1 ? (exe, found!) : null;
     }
 
-    const string DumpDir = "compiledShaders";
-
-    /// <summary>The dumps of the mode config.blk selects that exist: DirectX 11's, then DirectX 12's. Name: the dump's file name.</summary>
+    /// <summary>The dumps of the mode config.blk selects that exist: DirectX 11's, then DirectX 12's.</summary>
     static IEnumerable<(string Path, string Name, bool Dx12)> Dumps(Game game)
     {
         var compatibility = Video(game, "compatibilityMode") is "yes" or "true" or "1";
-        foreach (var (stem, dx12) in new[] { (compatibility ? "game.compatibility" : "game", false), (compatibility ? "game.compatibilityDX12" : "gameDX12", true) })
-            if (stem + ".ps50.shdump.bin" is var name && GameFiles.Find(game.InstallDir, $@"{DumpDir}\{name}") is var p && File.Exists(p)) yield return (p, name, dx12);
+        foreach (var (mode, dx12) in new[] { (compatibility ? "game.compatibility" : "game", false), (compatibility ? "game.compatibilityDX12" : "gameDX12", true) })
+            if (mode + ".ps50.shdump.bin" is var name && GameFiles.Find(game.InstallDir, $@"{DumpDir}\{name}") is var p && File.Exists(p)) yield return (p, name, dx12);
     }
+
+    const string DumpDir = "compiledShaders";
 
     /// <summary>The main layout of a version 11.3 dump, decompressed.</summary>
     internal static byte[] Body(byte[] dump)

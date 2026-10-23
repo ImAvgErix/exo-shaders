@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
@@ -10,7 +11,10 @@ public sealed class GaijinSource : IGameSource
 {
     public Store Store => Store.Other;
 
-    public IReadOnlyList<Game> Discover()
+    public IReadOnlyList<Game> Discover() => OperatingSystem.IsWindows() ? Installed() : [];
+
+    [SupportedOSPlatform("windows")]
+    static List<Game> Installed()
     {
         var games = new List<Game>();
         using var root = Registry.CurrentUser.OpenSubKey(@"Software\Gaijin");

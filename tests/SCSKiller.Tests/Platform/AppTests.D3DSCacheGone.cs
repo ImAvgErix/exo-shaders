@@ -40,10 +40,10 @@ public partial class AppTests
         Assert.Equal(GameStatus.Warmed, k.Games.Single().Status);
     }
 
-    /// <summary>It fails if an emptied folder reads as lost while another folder holds dbs for the game's exe (the game
-    /// moved), or if that folder isn't remembered in its place.</summary>
+    /// <summary>alpha.3's own check (ScsKiller.D3DSCacheTrimmed, ahead of D3DSCacheGone) reads only the folders on record: an
+    /// emptied one is lost even while another folder holds dbs for the game's exe, which the warm's weren't keyed to.</summary>
     [Fact]
-    public async Task An_emptied_D3DSCache_folder_with_the_games_dbs_elsewhere_is_not_lost()
+    public async Task An_emptied_D3DSCache_folder_on_record_is_lost_with_the_games_dbs_elsewhere()
     {
         var d3ds = Path.Combine(_root, "D3DSCache");
         var k = Killer(new FakeReader(Unreal), vendor: new FakeVendor(Gpu with { Vendor = GpuVendor.Nvidia, DriverVersion = "621.01" }));
@@ -55,8 +55,7 @@ public partial class AppTests
         rec.D3DSCacheFolder = "1111";
         k.Store.SaveGame(_game.Id, rec);
         k.RefreshGame(_game.Id);
-        Assert.Equal(GameStatus.Warmed, k.Games.Single().Status);
-        Assert.Equal("5555", k.Store.LoadGame(_game.Id).D3DSCacheFolder);
+        Assert.Equal((GameStatus.Stale, ScsKiller.TrimmedAllReason), (k.Games.Single().Status, k.Games.Single().StatusReason));
     }
 
     /// <summary>It fails if a folder that never held the warm's dbs (a driver before 621, a warm that deleted them, no

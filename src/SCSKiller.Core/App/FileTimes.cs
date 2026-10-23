@@ -1,9 +1,13 @@
 namespace SCSKiller.Core.App;
 
-/// <summary>When a file or folder was made. Null when the file system doesn't tell (a caller then can't judge by it).</summary>
-public static class FileTimes
+/// <summary>When a file was made. Linux: its birth time, which a rewrite keeps; .NET's creation time there is the older of
+/// the write and change times, so a rewritten file looks made just now.</summary>
+public static partial class FileTimes
 {
-    public static DateTime? CreatedUtc(string path) => File.GetCreationTimeUtc(path);
+    /// <summary><paramref name="path"/>'s creation time in UTC, its symlinks followed; null when it isn't known (Linux: the
+    /// file system keeps none, or statx fails).</summary>
+    public static partial DateTime? CreatedUtc(string path);
 
-    public static DateTime? CreatedUtc(FileSystemInfo f) => f.CreationTimeUtc;
+    /// <inheritdoc cref="CreatedUtc(string)"/>
+    public static partial DateTime? CreatedUtc(FileSystemInfo f);
 }

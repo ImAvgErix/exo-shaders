@@ -33,7 +33,7 @@ public static class ProblemReport
         }
     }
 
-    /// <summary>The report as shown and sent. <paramref name="system"/> is its system line (<see cref="CompatReport.SystemLine"/>);
+    /// <summary>The report as shown and sent. <paramref name="system"/>: <see cref="CompatReport.SystemLine"/>.
     /// <paramref name="log"/> null leaves the log section out.</summary>
     public static string Build(string appVersion, string game, string store, string? vendor, string? gpu, string? driver, string system,
         IEnumerable<(string Label, string Value)> page, IEnumerable<string>? log, Masker mask)

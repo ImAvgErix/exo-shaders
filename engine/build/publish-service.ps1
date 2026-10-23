@@ -15,13 +15,13 @@
 #   scskiller.exe, scskillerw.exe   beside the service, sharing its one .NET runtime: ScheduledTask.TaskExe (the
 #                                   "re-warm after a driver update" task) and Elevated.CliExe (cache size / Auto
 #                                   Shader Compilation, run as administrator)
-# The native binaries are taken from SCSKiller 1.4.0-alpha.2 (prebuilt\SOURCE.md); proxy\ holds the 1.3.x source only.
+# The native binaries are taken from SCSKiller 1.4.0-alpha.3 (prebuilt\SOURCE.md); proxy\ holds the 1.3.x source only.
 #
 #   pwsh build\publish-service.ps1 [-NativeFrom <SCSKiller.App\current>] [-Out <dir>] [-SkipCli]
 
 [CmdletBinding()]
 param(
-    # SCSKiller 1.4.0-alpha.2's own native files, kept in prebuilt\.
+    # SCSKiller 1.4.0-alpha.3's own native files, kept in prebuilt\.
     [string]$NativeFrom = (Join-Path $PSScriptRoot '..\prebuilt'),
     [string]$Out,
     [switch]$SkipCli

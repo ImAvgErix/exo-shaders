@@ -301,7 +301,7 @@ public class UnrealRhiTests(ITestOutputHelper output)
         Assert.False(Debug($"[ConsoleVariables]\n{on}=0\n{dump}=1\n"));
         Assert.False(Debug($"[ConsoleVariables]\n{on}=1\n"));   // crash dumps alone keep the key
         Assert.False(Debug($"[/Script/Engine.RendererSettings]\nr.GPUCrashDebugging=true\n[ConsoleVariables]\n{on}=1\n"));
-        Assert.False(Debug($"[/Script/Engine.RendererSettings]\n{dump}=1\n"));   // not a cvar section
+        Assert.True(Debug($"[/Script/Engine.RendererSettings]\n{dump}=1\n"));    // alpha.3: a [/Script/...] section counts after the cvar sections
         Assert.False(Debug($"[SystemSettings]\n{dump}=1\n", $"[SystemSettings]\n{dump}=0\n"));   // the platform file comes last
         Assert.False(Debug($"[SystemSettings]\n{dump}=1\n", $"[SystemSettings]\n{on}=false\n"));
 

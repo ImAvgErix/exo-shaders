@@ -2720,13 +2720,14 @@ public partial class AppTests : IDisposable
     [InlineData("failed install")]
     public async Task An_amd_ags_game_records_through_the_wrapper_and_every_removal_puts_its_ags_back(string path)
     {
-        var real = Planning.MiddlewarePackTests.Pe(ScsKiller.AgsName, Guid.NewGuid().ToByteArray());
+        // alpha.3 checks the wrapper fits: the game's AGS and the wrapper both export what the exe links
+        var real = ExportingCreateDevice(Planning.MiddlewarePackTests.Pe(ScsKiller.AgsName, Guid.NewGuid().ToByteArray()));
         var ags = Path.Combine(_exeDir, ScsKiller.AgsName);
         var renamed = Path.Combine(_exeDir, ScsKiller.AgsRealName);
         File.WriteAllBytes(_game.ExePath, DiscoveryAndVendorTests.ExeWithAgs());
         File.WriteAllBytes(ags, real);
         var wrapper = Path.Combine(Path.GetDirectoryName(_proxy)!, "scskiller_ags.dll");
-        File.WriteAllBytes(wrapper, [.. "MZ fake ags wrapper SCSKiller_StartWarm "u8, .. Guid.NewGuid().ToByteArray()]);
+        File.WriteAllBytes(wrapper, ExportingCreateDevice(Planning.MiddlewarePackTests.Pe("scskiller_ags.dll", "SCSKiller_StartWarm"u8.ToArray(), Guid.NewGuid().ToByteArray())));
         var was = GameFiles.WrappableAgs;
         GameFiles.WrappableAgs = new([Sha256Of(ags)], StringComparer.OrdinalIgnoreCase);
         try
@@ -2784,6 +2785,16 @@ public partial class AppTests : IDisposable
     }
 
     static string Sha256Of(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
+
+    /// <summary><paramref name="dll"/> (<see cref="Planning.MiddlewarePackTests.Pe"/>) exporting agsDriverExtensionsDX12_CreateDevice by name.</summary>
+    static byte[] ExportingCreateDevice(byte[] dll)
+    {
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(dll.AsSpan(0x200 + 24), 1);              // NumberOfNames
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(dll.AsSpan(0x200 + 32), 0x1000 + 0x80);  // AddressOfNames
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(dll.AsSpan(0x200 + 0x80), 0x1000 + 0x90);
+        "agsDriverExtensionsDX12_CreateDevice\0"u8.CopyTo(dll.AsSpan(0x200 + 0x90));
+        return dll;
+    }
 
     [Fact]
     public async Task Record_alongside_a_mod_chains_to_it_and_removal_puts_it_back_byte_for_byte()
@@ -2848,12 +2859,12 @@ public partial class AppTests : IDisposable
         k.InstallRecorder(_game.Id);
         Assert.True(File.Exists(Path.Combine(_exeDir, "d3d12.dll")));
         var log = new List<string>();
-        HookSteps.Uninstall(k.Store, log.Add, () => throw new UnauthorizedAccessException("task"), () => throw new IOException("startup"), new HashSet<string>());
+        HookSteps.Uninstall(k.Store, log.Add, () => throw new UnauthorizedAccessException("task"), () => throw new IOException("startup"), () => { }, new HashSet<string>());
         Assert.False(File.Exists(Path.Combine(_exeDir, "d3d12.dll")));
         Assert.Null(k.Store.LoadGame(_game.Id).RecorderExe);
         Assert.Equal(3, log.Count);
-        Assert.StartsWith("Uninstalling: step 1 of 3 failed", log[1]);
-        Assert.StartsWith("Uninstalling: step 2 of 3 failed", log[2]);
+        Assert.StartsWith("Uninstalling: step 1 of 4 failed", log[1]);   // the toast registration is the 4th
+        Assert.StartsWith("Uninstalling: step 2 of 4 failed", log[2]);
     }
 
     [Fact]
@@ -3856,7 +3867,8 @@ public partial class AppTests : IDisposable
         Assert.Contains("the recorder's scskiller.ini didn't match", RecordersLog());
     }
 
-    static string ProxySource() => File.ReadAllText(Path.Combine(TestEnv.RepoRoot, "proxy", "proxy.cpp"));
+    // The marker list and its EasyAntiCheat count live in admission.h since 1.4.0-alpha.3 (proxy.cpp before).
+    static string ProxySource() => File.ReadAllText(Path.Combine(TestEnv.RepoRoot, "proxy", "admission.h"));
 
     static IEnumerable<string> ProxyMarkers(string src)
     {
@@ -10966,7 +10978,7 @@ public partial class AppTests : IDisposable
         Assert.True(ScsKiller.WarmMissesGame(R(["a", "g"], ["g"], ["a"])));
         Assert.False(ScsKiller.WarmMissesGame(R(["a", "g"], ["g"], ["g"])));
         Assert.False(ScsKiller.WarmMissesGame(R(["g"], ["g"], [])));             // the warm's keys weren't seen: unknown, not a miss
-        Assert.True(ScsKiller.WarmMissesGame(R(["a", "g"], ["g"], null)));      // a record from before WarmedKeys: its warm keys are the rest
+        Assert.False(ScsKiller.WarmMissesGame(R(["a", "g"], ["g"], null)));     // a record from before WarmedKeys: no complete warm on record, unknown (alpha.3)
         Assert.False(ScsKiller.WarmMissesGame(R(["g"], ["g"], null)));
 
     }
@@ -11090,6 +11102,7 @@ public partial class AppTests : IDisposable
         k.RefreshGame(_game.Id);
         Assert.True(k.Games.Single().CompileUnreached);   // the game doesn't ship the DLL: the warm can't start it
         File.WriteAllBytes(Path.Combine(_exeDir, NvAftermath.DllName), []);
+        File.SetLastWriteTimeUtc(_game.ExePath, DateTime.UtcNow.AddMinutes(1));   // the update that brings it: alpha.3 keeps the DLL's lookup per exe build
         k.RefreshGame(_game.Id);
         var s = k.Games.Single();
         Assert.Equal((GameStatus.Stale, false, ScsKiller.AftermathReason), (s.Status, s.CompileUnreached, s.StatusReason));
@@ -11283,24 +11296,33 @@ public partial class AppTests : IDisposable
         Assert.Null(ScsKiller.AgsFor(null, exe, r));
     }
 
-    /// <summary>Split Fiction (Unreal, AGS linked into SplitFiction.exe) holds eed2a692, a driver profile on its app name that
-    /// isn't listed: its project name is registered once a plain warm missed, and kept while an AGS warm under it is the last.</summary>
+    /// <summary>Split Fiction (Unreal, AGS linked into SplitFiction.exe) holds eed2a692, a driver profile on its app name, here
+    /// as if it weren't listed (alpha.3 lists it): a plain warm that missed it gets no AGS warm to try (alpha.3: Not compatible),
+    /// and the project name is kept only while an AGS warm under it is the last.</summary>
     [Theory]
     //          warmed keys      warmed app  exe unread  AGS used
     [InlineData("",              null,       false,      false)]   // no warm yet: plain first
-    [InlineData("dxc:3ddaf749",  null,       false,      true)]    // the plain warm filled SplitFiction.exe's name hash
+    [InlineData("dxc:3ddaf749",  null,       false,      false)]   // the plain warm filled SplitFiction.exe's name hash: missed, not retried
     [InlineData("dxc:eed2a692",  null,       false,      false)]   // a plain warm reached it (a path profile): stays plain
     [InlineData("dxc:3ddaf749",  null,       true,       false)]   // AGS only assumed
     [InlineData("dxc:eed2a692",  "Split",    false,      true)]    // the AGS warm reached it
     [InlineData("dxc:c2f6f477",  "Split",    false,      true)]    // it missed too: the same warm, so Not compatible
     [InlineData("dxc:c2f6f477",  "Other",    false,      false)]
-    public void Amd_an_unlisted_app_profile_gets_the_project_name_once_a_plain_warm_missed(string warmed, string? warmedApp, bool unread, bool used)
+    public void Amd_an_unlisted_app_profile_keeps_the_project_name_only_while_its_warm_is_the_last(string warmed, string? warmedApp, bool unread, bool used)
     {
-        var r = new GameRecord { GameKeys = ["dxc:eed2a692"], WarmedKeys = warmed.Length > 0 ? [warmed] : null, WarmedAgsApp = warmedApp };
-        var reg = new AgsRegistration("Split", "UnrealEngine5.4", ExeUnread: unread);
-        Assert.Equal(used ? reg : null, ScsKiller.AgsFor(reg, "SplitFiction.exe", r));
-        r.GameKeys.Add("dxc:3ddaf749");   // its plain key held too: a plain warm reaches it
-        Assert.Null(ScsKiller.AgsFor(reg, "SplitFiction.exe", r));
+        // alpha.3 lists Split's profile (plan-rules.json): rules without it, as before it was measured
+        RulesFile.Current = RulesFile.WithServer(RulesFile.TryParse("""
+            {"rules": [{"id": "amd-ags", "requires": ["amd.ags.v1"], "match": {"family": "Any"}, "ags": {"proven": ["Townfall"]}}]}
+            """)!);
+        try
+        {
+            var r = new GameRecord { GameKeys = ["dxc:eed2a692"], WarmedKeys = warmed.Length > 0 ? [warmed] : null, WarmedAgsApp = warmedApp };
+            var reg = new AgsRegistration("Split", "UnrealEngine5.4", ExeUnread: unread);
+            Assert.Equal(used ? reg : null, ScsKiller.AgsFor(reg, "SplitFiction.exe", r));
+            r.GameKeys.Add("dxc:3ddaf749");   // its plain key held too: a plain warm reaches it
+            Assert.Null(ScsKiller.AgsFor(reg, "SplitFiction.exe", r));
+        }
+        finally { RulesFile.Current = RulesFile.Embedded; }
     }
 
     /// <summary>Server rules add AGS app-name profiles and proven app names; the embedded ones stay unless a rule replaces them by id.</summary>
@@ -11317,7 +11339,8 @@ public partial class AppTests : IDisposable
             """)!;
         Assert.Equal(["amd-ags-2"], server.Rules.Select(r => r.Id));
         Assert.Equal(["old-app: needs amd.ags.v2", "bad-key: bad ags", "no-cap: bad ags"], server.Dropped);
-        Assert.Equal("dxc:c2f6f477", AmdAppCache.AgsKey("SplitFiction.exe", "Split"));
+        Assert.Equal("dxc:eed2a692", AmdAppCache.AgsKey("SplitFiction.exe", "Split"));   // embedded since alpha.3; proven only by the server's rule
+        Assert.False(AmdAppCache.ProvenAgsApp("Split"));
         Assert.DoesNotContain("\"ags\"", System.Text.Json.JsonSerializer.Serialize(RulesFile.Embedded.Rules[0], new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)));   // rule hashes stay as they were
         try
         {
@@ -11994,13 +12017,13 @@ public partial class AppTests : IDisposable
         Assert.Equal((1, 4096L), (changes(), k.Games.Single().CacheOnDisk));
         Assert.Equal(GameStatus.Warmed, k.Games.Single().Status);
         using (var f = new FileStream(file, FileMode.Open, FileAccess.Write)) f.Write([.. "nvph"u8, 0, 0, 0, 0, .. BitConverter.GetBytes(1024L)]);
-        k.RefreshCacheSizes();   // the driver filled more of a file of the same size: its contents are never read
-        Assert.Equal(1, changes());
+        k.RefreshCacheSizes();   // the driver filled more of a file of the same size: alpha.3 reads what it holds (CacheInUse)
+        Assert.Equal((2, 4096L, 1024L), (changes(), k.Games.Single().CacheOnDisk, k.Games.Single().CacheInUse));
 
         using (new FileStream(file, FileMode.Open, FileAccess.ReadWrite, FileShare.None))   // a driver handle that shares nothing
         {
             k.RefreshGame(_game.Id);
-            Assert.Equal((2, 4096L), (changes(), k.Games.Single().CacheOnDisk));
+            Assert.Equal((3, 4096L), (changes(), k.Games.Single().CacheOnDisk));
         }
         Assert.Throws<ArgumentException>(() => k.RefreshGame("test:unknown"));
     }
@@ -12121,7 +12144,8 @@ public partial class AppTests : IDisposable
         work = Path.Combine(k.Store.GameDir(_game.Id), "work");
         var earlier = FakeD3DSCache.Folder(d3ds, "3333", Path.Combine(work, "stage-9-1", "Fake-Win64-Shipping.exe"));
         Directory.SetCreationTimeUtc(earlier, DateTime.UtcNow.AddMinutes(-5));
-        var games = FakeD3DSCache.Folder(d3ds, "4444", _game.ExePath);
+        // named as the runtime names it: alpha.3 folds a new folder of the game's exe under another name as a staged one
+        var games = FakeD3DSCache.Folder(d3ds, D3DSCache.FolderName(_game.ExePath), _game.ExePath);
         await k.ScanAsync(default);
         k.Enqueue(_game.Id);
         k.StartQueue();
@@ -12635,20 +12659,21 @@ public partial class AppTests : IDisposable
     {
         const long G = 1L << 30;
         (long, long)[] huge = [(2 * G, 2 * G), (30 * G, 32 * G)];
+        const long Ram = 256 * G;   // a PC with room for half the cache in game (alpha.3: else LargeCacheOverRam)
         const string Cost = "Very large caches can make the game start slower and use more memory.";
         Assert.Equal($"This compile adds about 32 GB, more than your 16 GB NVIDIA shader cache limit. The driver would throw most of it away. Raise the limit in Settings before you compile. {Cost}",
-            ScsKiller.QueueCacheWarning(huge, 5 * G, 34 * G, 16 * G, GpuVendor.Nvidia));   // 1: one game alone over the limit
+            ScsKiller.QueueCacheWarning(huge, 5 * G, 34 * G, 16 * G, GpuVendor.Nvidia, ram: Ram));   // 1: one game alone over the limit
         Assert.Equal($"This compile adds about 32 GB and takes the cache past your 40 GB limit, so older games may be evicted. {Cost}",
-            ScsKiller.QueueCacheWarning(huge, 10 * G, 34 * G, 40 * G, GpuVendor.Nvidia));   // only the queue's total over it
+            ScsKiller.QueueCacheWarning(huge, 10 * G, 34 * G, 40 * G, GpuVendor.Nvidia, ram: Ram));   // only the queue's total over it
         Assert.Equal("After this queue the cache is close to its 16 GB limit, older games may be evicted.",
             ScsKiller.QueueCacheWarning([(G, 17 * G)], 14 * G, G, 16 * G, GpuVendor.Amd));   // the NVIDIA text is NVIDIA's only
-        Assert.Equal($"This compile adds about 32 GB. {Cost}", ScsKiller.QueueCacheWarning(huge, 5 * G, 34 * G, 100 * G, GpuVendor.Nvidia));   // 2: within it
-        Assert.Equal($"This compile adds about 32 GB. {Cost}", ScsKiller.QueueCacheWarning(huge, 5 * G, 34 * G, null, GpuVendor.Nvidia));   // no limit
+        Assert.Equal($"This compile adds about 32 GB. {Cost}", ScsKiller.QueueCacheWarning(huge, 5 * G, 34 * G, 100 * G, GpuVendor.Nvidia, ram: Ram));   // 2: within it
+        Assert.Equal($"This compile adds about 32 GB. {Cost}", ScsKiller.QueueCacheWarning(huge, 5 * G, 34 * G, null, GpuVendor.Nvidia, ram: Ram));   // no limit
         (long, long)[] small = [(4 * G, 4 * G), (6 * G, 6 * G)];
         Assert.Equal("After this queue the cache is close to its 16 GB limit, older games may be evicted.",
-            ScsKiller.QueueCacheWarning(small, 5 * G, 10 * G, 16 * G, GpuVendor.Nvidia));   // 3: 15 of 16 GB
-        Assert.Null(ScsKiller.QueueCacheWarning(small, 2 * G, 10 * G, 16 * G, GpuVendor.Nvidia));   // 12 of 16 GB
-        Assert.Null(ScsKiller.QueueCacheWarning([], 15 * G, 0, 16 * G, GpuVendor.Nvidia));   // nothing queued
+            ScsKiller.QueueCacheWarning(small, 5 * G, 10 * G, 16 * G, GpuVendor.Nvidia, ram: Ram));   // 3: 15 of 16 GB
+        Assert.Null(ScsKiller.QueueCacheWarning(small, 2 * G, 10 * G, 16 * G, GpuVendor.Nvidia, ram: Ram));   // 12 of 16 GB
+        Assert.Null(ScsKiller.QueueCacheWarning([], 15 * G, 0, 16 * G, GpuVendor.Nvidia, ram: Ram));   // nothing queued
     }
 
     /// <summary>A plan the size of Wuthering Waves' without a recording (738,342 PSOs and 125,035 ray tracing collections),
@@ -12658,17 +12683,18 @@ public partial class AppTests : IDisposable
     public void A_wuthering_waves_sized_plan_is_warned_about()
     {
         const long G = 1L << 30;
+        const long Ram = 256 * G;   // a PC with room for half the cache in game (alpha.3: else LargeCacheOverRam)
         var kuro = new EngineInfo("Unreal", "4.26", "GAME_WutheringWaves", "D3D12", false, null);
         var estimate = ScsKiller.PlanItems(new PlanStats(0, 738_342 + 125_035, 0, 0, false))!.Value * (long)ScsKiller.DefaultBytesPerPsoOf(kuro);
         Assert.Equal(80, Math.Round(estimate / (double)G));   // the upper end of the measured and estimated sizes, not 24 KiB a pipeline
         Assert.Equal(ScsKiller.DefaultBytesPerPso, ScsKiller.DefaultBytesPerPsoOf(kuro with { Fork = null }));
         (long, long)[] queue = [(estimate, estimate)];
         const string Text = "This compile adds about 80 GB. Very large caches can make the game start slower and use more memory.";
-        Assert.Equal(Text, ScsKiller.LargeCompileWarning(queue, GpuVendor.Nvidia));
-        Assert.Equal(Text, ScsKiller.QueueCacheWarning(queue, 0, estimate, 100 * G, GpuVendor.Nvidia));
-        Assert.Equal(Text, ScsKiller.QueueCacheWarning(queue, 0, estimate, null, GpuVendor.Nvidia));
+        Assert.Equal(Text, ScsKiller.LargeCompileWarning(queue, GpuVendor.Nvidia, ram: Ram));
+        Assert.Equal(Text, ScsKiller.QueueCacheWarning(queue, 0, estimate, 100 * G, GpuVendor.Nvidia, ram: Ram));
+        Assert.Equal(Text, ScsKiller.QueueCacheWarning(queue, 0, estimate, null, GpuVendor.Nvidia, ram: Ram));
         Assert.Equal("This compile adds about 80 GB, more than your 16 GB NVIDIA shader cache limit. The driver would throw most of it away. Raise the limit in Settings before you compile. Very large caches can make the game start slower and use more memory.",
-            ScsKiller.QueueCacheWarning(queue, 0, estimate, 16 * G, GpuVendor.Nvidia));
+            ScsKiller.QueueCacheWarning(queue, 0, estimate, 16 * G, GpuVendor.Nvidia, ram: Ram));
         Assert.Equal(Text + " It's more than the AMD driver's 16 GB cache can hold.", ScsKiller.LargeCompileWarning(queue, GpuVendor.Amd));
     }
 
@@ -12695,16 +12721,18 @@ public partial class AppTests : IDisposable
     public void A_compile_over_16_gb_is_warned_about_by_vendor()
     {
         const long G = 1L << 30;
+        const long Ram = 256 * G;   // a PC with room for half the cache in game (alpha.3: else LargeCacheOverRam)
         (long, long)[] queue = [(2 * G, 2 * G), (60 * G, 64 * G + G / 2), (20 * G, 20 * G)];   // the largest growth; its estimate rounds up
         const string Text = "This compile adds about 65 GB. Very large caches can make the game start slower and use more memory.";
         Assert.Equal(Text + " It's more than the AMD driver's 16 GB cache can hold.", ScsKiller.LargeCompileWarning(queue, GpuVendor.Amd));
-        Assert.Equal(Text, ScsKiller.LargeCompileWarning(queue, GpuVendor.Nvidia));
+        Assert.Equal(Text, ScsKiller.LargeCompileWarning(queue, GpuVendor.Nvidia, ram: Ram));
+        Assert.Equal($"This compile adds about 65 GB. {ScsKiller.LargeCacheOverRam}", ScsKiller.LargeCompileWarning(queue, GpuVendor.Nvidia, ram: 32 * G));   // half of it and the game past the RAM
         Assert.Equal("32.2 GB", Format.Bytes(34_600_000_000));   // the Library's estimate, in the same units
         Assert.Equal("This compile adds about 32 GB. Very large caches can make the game start slower and use more memory.",
-            ScsKiller.LargeCompileWarning([(17 * G, 34_600_000_000)], GpuVendor.Nvidia));
-        Assert.Contains("about 20 GB.", ScsKiller.LargeCompileWarning([(17 * G, 40 * G), (20 * G, 20 * G)], GpuVendor.Nvidia));   // the game that adds the most, not the largest estimate
+            ScsKiller.LargeCompileWarning([(17 * G, 34_600_000_000)], GpuVendor.Nvidia, ram: Ram));
+        Assert.Contains("about 20 GB.", ScsKiller.LargeCompileWarning([(17 * G, 40 * G), (20 * G, 20 * G)], GpuVendor.Nvidia, ram: Ram));   // the game that adds the most, not the largest estimate
         Assert.Null(ScsKiller.LargeCompileWarning([(2 * G, 2 * G), (16 * G, 30 * G)], GpuVendor.Amd));   // growth at the cap: estimate alone doesn't trigger
-        Assert.Null(ScsKiller.LargeCompileWarning([], GpuVendor.Nvidia));
+        Assert.Null(ScsKiller.LargeCompileWarning([], GpuVendor.Nvidia, ram: Ram));
     }
 
     [Fact]
@@ -12891,9 +12919,10 @@ public partial class AppTests : IDisposable
     {
         var second = _game with { Id = "test:second", Name = "Second" };
         var k = Killer(new FakeReader(Unreal), games: [_game, second], vendor: new FakeVendor(Gpu with { Vendor = GpuVendor.Amd }));
-        k.Store.SaveWarmRates(new() { [GpuVendor.Amd] = 1000 });   // the first warm on this PC
+        k.RedetectGpu();   // alpha.3 keeps the rates per driver: the one measured on the current driver counts
+        k.Store.SaveWarmRates(new() { [$"{GpuVendor.Amd}|{k.DriverId}"] = 1000 });   // the first warm on this PC
         var rec = k.Store.LoadGame(_game.Id);
-        (rec.Plan, rec.PsoPerSecond) = (new Plan(_game.Id, "content-1", "PCD3D_SM6", "fake-1", new PlanStats(0, 10000, 0, 0, true), @"C:\x\plan.bin"), 500);
+        (rec.Plan, rec.PsoPerSecond, rec.PsoPerSecondDriver) = (new Plan(_game.Id, "content-1", "PCD3D_SM6", "fake-1", new PlanStats(0, 10000, 0, 0, true), @"C:\x\plan.bin"), 500, k.DriverId);
         k.Store.SaveGame(_game.Id, rec);
         rec = k.Store.LoadGame(second.Id);
         rec.Plan = new Plan(second.Id, "content-1", "PCD3D_SM6", "fake-1", new PlanStats(0, 4000, 0, 0, true, D3D11Shaders: 800), @"C:\x\plan.bin");
@@ -13258,10 +13287,13 @@ public partial class AppTests : IDisposable
     [Fact]
     public async Task Items_that_crash_the_driver_get_one_retry_on_a_new_driver()
     {
-        var warmer = new FakeWarmer { Crashed = ["aa"] };
+        // an item of the work order: alpha.3 retries another driver's crashers it finds there, each alone first (WarmOptions.Probe)
+        var gen = GenDb(1, d3d12: true);
+        var (aa, bb) = (PsoDb.Read(new MemoryStream(gen)).Single(r => r.Tag == 'C').Key, "bb");
+        var warmer = new FakeWarmer { Crashed = [aa] };
         async Task<ScsKiller> Compile(string driver)
         {
-            var k = Killer(new FakeReader(Unreal), warmer: warmer, driver: driver);
+            var k = Killer(new FakeReader(Unreal), new FakePlanner(gen), warmer, driver: driver);
             await k.ScanAsync(default);
             await WarmOnce(k, _game.Id);
             return k;
@@ -13270,20 +13302,21 @@ public partial class AppTests : IDisposable
 
         var k = await Compile("100.01");
         Assert.Null(warmer.Options!.SkipKeys);
-        Assert.Equal("aa@0000:0010:00000020:100.01", Kept(k));   // the driver id
+        Assert.Equal($"{aa}@0000:0010:00000020:100.01", Kept(k));   // the driver id
         await Compile("100.01");
-        Assert.Equal(["aa"], warmer.Options!.SkipKeys!);   // the same driver: never created again
+        Assert.Equal([aa], warmer.Options!.SkipKeys!);   // the same driver: never created again
 
         warmer.Crashed = null;   // the new driver compiles it
         k = await Compile("101.00");
         Assert.Null(warmer.Options!.SkipKeys);
+        Assert.Equal([aa], warmer.Options!.Probe!.Keys);
         Assert.StartsWith("@", Kept(k));
 
-        warmer.Crashed = ["bb"];
+        warmer.Crashed = [bb];
         k = await Compile("102.00");
-        Assert.Equal("bb@0000:0010:00000020:102.00", Kept(k));
+        Assert.Equal($"{bb}@0000:0010:00000020:102.00", Kept(k));
         await Compile("102.00");
-        Assert.Equal(["bb"], warmer.Options!.SkipKeys!);
+        Assert.Equal([bb], warmer.Options!.SkipKeys!);
     }
 
     /// <summary>A gen db of <paramref name="n"/> compute PSOs of distinct shaders ('C' records, one item each) and their keys.</summary>
@@ -13902,11 +13935,11 @@ public partial class AppTests : IDisposable
         Assert.Equal((GameStatus.Stale, ScsKiller.TrimmedPartReason), (k.Games.Single().Status, k.Games.Single().StatusReason));
     }
 
-    /// <summary>The warm grew the cache 20,000 KiB (<see cref="FakeWarmer"/>): at or past the limit the driver prunes it after
-    /// every compile, so no compile is offered, under a 100 MiB one the trimmed cache is.</summary>
+    /// <summary>The warm left 68 KiB of files (alpha.3 measures what the warm's files hold, not the warm's growth): at or past
+    /// the limit the driver prunes it after every compile, so no compile is offered, under a 100 MiB one the trimmed cache is.</summary>
     [Theory]
-    [InlineData(10L << 20, true)]
-    [InlineData(20_000L << 10, true)]
+    [InlineData(64L << 10, true)]
+    [InlineData(68L << 10, true)]
     [InlineData(100L << 20, false)]
     public async Task A_trimmed_nvidia_cache_over_the_drivers_limit_asks_to_raise_it_instead_of_compiling_again(long limit, bool over)
     {

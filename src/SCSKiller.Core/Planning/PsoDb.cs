@@ -515,8 +515,8 @@ public static partial class PsoDb
     /// IndependentBlendEnable is off; a logic op is -1 when LogicOpEnable is off. Mesh pipelines: empty layout, topology 0.
     /// <paramref name="Blend"/>: the canonical D3D12_BLEND_DESC (328 bytes; null: none in the record, D3D12's default);
     /// <paramref name="DepthStencil"/>: the depth-stencil desc as a canonical D3D12_DEPTH_STENCIL_DESC1 (56 bytes; null: none,
-    /// or a DEPTH_STENCIL2). Both are what a synthesized PSO copies to match the game's pipeline state.
-    /// <paramref name="ViewInstancing"/>: the view-instancing subobject's bytes (null: none, or no views).</summary>
+    /// or a DEPTH_STENCIL2). Both are what a synthesized PSO copies to match the game's pipeline state. <paramref name="ViewInstancing"/>:
+    /// the view instancing subobject's body (<see cref="ViewInstancingBytes"/>); null: none, or no views.</summary>
     public sealed record PsoState(string Rs, SortedDictionary<int, string> Stages, List<LayoutElem> Layout, uint Topology, uint[] RtFormats,
         byte[] RtWriteMasks, int[] LogicOps, uint Dsv, uint SampleCount, byte[]? Blend = null, byte[]? DepthStencil = null, byte[]? ViewInstancing = null)
     {
@@ -560,7 +560,7 @@ public static partial class PsoDb
         }
         else
         {
-            foreach (var (t, pos, end) in Subobjects(p))
+            foreach (var (t, pos, next) in Subobjects(p))
                 if (t == 12) layout = ReadLayout(p, pos);
                 else if (t == 8) blendAt = pos;
                 else if (t == 14) topo = U(p, pos);
@@ -569,7 +569,7 @@ public static partial class PsoDb
                 else if (t == 21) depth = p.AsSpan(pos, DepthStencilDesc1Size).ToArray();
                 else if (t == 11) depth = [.. p.AsSpan(pos, 52), 0, 0, 0, 0];
                 else if (t == 17) samples = U(p, pos);
-                else if (t == 22 && U(p, pos) != 0) views = p[pos..end]; // view instancing with views
+                else if (t == 22 && U(p, pos) > 0) views = p[pos..next];
         }
         var masks = new byte[rt.Length];
         var ops = new int[rt.Length];
@@ -657,8 +657,8 @@ public static partial class PsoDb
     /// differ across targets turn IndependentBlendEnable on, which nothing keys on. <paramref name="logicOp"/>: a D3D12_LOGIC_OP
     /// for every target (AMD keys the PS on it; D3D12 takes it only without independent blend), -1 = LogicOpEnable off.
     /// <paramref name="blend"/> / <paramref name="depthStencil"/>: a recorded canonical blend desc / DEPTH_STENCIL_DESC1 to use
-    /// as they are instead (masks and logic op are then the blend desc's own). <paramref name="viewInstancing"/>: a view-instancing
-    /// subobject (<see cref="ViewInstancingBytes"/>, or as recorded) to add last.</summary>
+    /// as they are instead (masks and logic op are then the blend desc's own). <paramref name="viewInstancing"/>: a view
+    /// instancing subobject's body (<see cref="ViewInstancingBytes"/>), last; null: none.</summary>
     public static byte[] Stream(string rs, IReadOnlyDictionary<int, string> stages, IReadOnlyList<LayoutElem>? layout, uint topology, uint[] rtFormats, uint dsv,
         byte[]? rtWriteMasks = null, int logicOp = -1, byte[]? blend = null, byte[]? depthStencil = null, byte[]? viewInstancing = null)
     {
@@ -714,12 +714,12 @@ public static partial class PsoDb
         return bytes;
     }
 
-    /// <summary>A canonical view-instancing subobject: u32 view count, then per view its viewport and render-target array
-    /// index, then u32 D3D12_VIEW_INSTANCING_FLAGS.</summary>
+    /// <summary>A D3D12_VIEW_INSTANCING_DESC as the proxy records it: u32 ViewInstanceCount, per view (u32 ViewportArrayIndex,
+    /// u32 RenderTargetArrayIndex), u32 Flags.</summary>
     public static byte[] ViewInstancingBytes(IReadOnlyList<(uint Viewport, uint RenderTarget)> views, uint flags)
     {
         var w = new ArrayBufferWriter().U32((uint)views.Count);
-        foreach (var (viewport, rt) in views) w.U32(viewport).U32(rt);
+        foreach (var (v, rt) in views) w.U32(v).U32(rt);
         return w.U32(flags).ToArray();
     }
 

@@ -17,12 +17,15 @@ namespace SCSKiller.Core.Vendors;
 /// share may be attributed only by a later warm. The driver writes the files through a memory map: their size grows,
 /// their LastWriteTime doesn't, so mtimes say nothing. <c>%LOCALAPPDATA%\D3DSCache</c> (the Windows runtime's DXBC->DXIL
 /// conversions) is not this cache: App.D3DSCache finds a game's folders there.</summary>
-public sealed class AmdAppCache(string dxcDir, string dxDir) : IAppCache
+public sealed class AmdAppCache(string dxcDir, string dxDir, string? vkDir = null) : IAppCache
 {
     public const string D3D12Prefix = "dxc:", D3D11Prefix = "dx:";
 
     public string DxcDir { get; } = dxcDir;   // D3D12
     public string DxDir { get; } = dxDir;     // D3D11
+    public string? VkDir { get; } = vkDir;    // Vulkan: AppCacheFiles.VulkanPrefix keys
+
+    public static readonly string[] VulkanTypes = [".parc"];
 
     /// <summary>"207c35a9.dfac411e.71efbc0e.2b1a674a.0.parc" in DxcCache -> "dxc:207c35a9"; null for anything else.</summary>
     public static string? Key(string fileName, bool d3d12)
@@ -142,10 +145,12 @@ public sealed class AmdAppCache(string dxcDir, string dxDir) : IAppCache
     public IReadOnlyList<string> Missing(IEnumerable<string> fileNames) => fileNames.Where(n => !File.Exists(Path.Combine(DxcDir, n))).ToList();
 
     /// <summary>Bytes of every file in DxcCache: what <see cref="DxcCacheCap"/> is compared with.</summary>
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     public long DxcBytes() => AmdBackend.Bytes(DxcDir);
 
     /// <summary>DxcCache within a tenth of <see cref="DxcCacheCap"/>: an eviction leaves it just under the cap, and later
     /// compiles and launches only add to it, so a missing file there is the driver making room.</summary>
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     public bool Full() => DxcBytes() >= DxcCacheCap - DxcCacheCap / 10;
 
     /// <summary>A warning when the queued games' estimated cache growth is more than the room left under the cap, else null.</summary>
@@ -167,5 +172,6 @@ public sealed class AmdAppCache(string dxcDir, string dxDir) : IAppCache
             foreach (var f in Directory.EnumerateFiles(dir, "*.parc"))
                 if (Key(Path.GetFileName(f), d3d12) is { } k) yield return (f, k);
         }
+        foreach (var f in AppCacheFiles.VulkanFiles(VkDir, VulkanTypes)) yield return f;
     }
 }

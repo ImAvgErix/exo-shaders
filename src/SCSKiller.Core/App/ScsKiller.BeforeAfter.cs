@@ -23,17 +23,18 @@ public sealed partial class ScsKiller
     public const string UnseenRedoNote = "SCSKiller wasn't running during the before run, so it couldn't check the driver cache: play it again";
     public const string FramesStoppedNote = "Frame times stopped when frame generation started, so this run can't be measured. Turn frame generation off for the before and after recording";
     public const string RestoreFailedNote = "Couldn't put back {0} of the driver's cache files: they're in {1}";
-    /// <summary>A set-aside that can't go back yet: the game or Steam holds the cache.</summary>
     public const string AsideHeldNote = "The game's shader cache is still in use, try again in a minute";
     public const string ClearHeldNote = "Couldn't clear the cache: " + AsideHeldNote;
     public const string PutBackRunningNote = "{0} is running, its shader cache goes back once it exits";
     public const string PutBackInUseNote = "{0}'s shader cache goes back once nothing uses it";
     public const string VulkanNotColdNote = "Some of NVIDIA's Vulkan cache can't be set aside, so the before run may not start cold";
 
-    /// <summary>A pair's note that playing the run again fixes: the page offers that run again.</summary>
-    public static bool RetryNote(string? note) => note is null or NoStartNote or LostNote or BuildRedoNote or DriverRedoNote or OldCacheNote or OldCacheRedoNote
-        or UnseenRedoNote or FramesStoppedNote or AsideHeldNote or ClearHeldNote or VulkanNotColdNote
+    /// <summary>A note the pair moves on from by itself or with the next run, so the app keeps waiting: a run to play again, a
+    /// put-back that waits, a start not seen yet. Any other note needs the user.</summary>
+    public static bool RetryNote(string? note) => note is null or NoStartNote or OldCacheNote or OldCacheRedoNote or UnseenRedoNote or DriverRedoNote
+        or BuildRedoNote or FramesStoppedNote or LostNote or AsideHeldNote or ClearHeldNote or VulkanNotColdNote
         || note.StartsWith("The before run ", StringComparison.Ordinal) || note.StartsWith("The after run ", StringComparison.Ordinal);
+
     // PlayReadEvery: every poll, so the app's countdown stays within a poll of the one in the game, which counts live
     static readonly TimeSpan NoStartAfter = TimeSpan.FromMinutes(5), PlayReadEvery = TimeSpan.FromSeconds(2);
 
@@ -51,12 +52,12 @@ public sealed partial class ScsKiller
         // NVIDIA, DirectX 11: the recorder isn't in the game, the pair puts it in (Frames11)
         var frames11 = Frames11(s.Engine, Vendor.Caps);
         var skip = frames11 ? PairRecorderSkip(s, rec) : s.RecorderSkip;
-        var vulkan = VulkanRoute(s.Game, s.Engine);   // the Vulkan layer times its frames
+        // the Vulkan layer times frames as the DirectX recorder does
+        var vulkan = VulkanRoute(s.Game, s.Engine);
         return !Settings.BeforeAfter ? "Before and after recording is off in Settings"
             : s.Engine?.GraphicsApi is not { } api || !api.Contains("D3D12") && !api.StartsWith("D3D11") && !vulkan
-                ? s is { Status: GameStatus.Unsupported, Engine: { } e } && VulkanPlan.IsVulkan(e) ? s.StatusReason : "Only for DirectX 12 and DirectX 11 games"
+                ? s is { Status: GameStatus.Unsupported, Engine: { } e } && Vulkan.VulkanPlan.IsVulkan(e) ? s.StatusReason : "Only for DirectX 12 and DirectX 11 games"
             : s.AnyAntiCheat ? "Not for games with anti-cheat"
-            : s.NoFrames ? "Not for this game: the recorder doesn't time its frames"
             : s.NoStutter != null ? "Not for games without shader compilation stutter"
             : !(frames11 ? RecorderWanted(s.RecorderOverride, Settings.RecordAllGames, skip, true) : s.RecorderEffective)
                 ? skip != null ? $"The recorder can't run in this game: {skip}" : "Turn the recorder on for this game first"
@@ -72,7 +73,7 @@ public sealed partial class ScsKiller
             : null;
     }
 
-    public void StartBeforeAfter(string gameId, int minutes, bool overlay = true)
+    public void StartBeforeAfter(string gameId, int minutes, bool overlay = true, bool max = false)
     {
         if (BeforeAfterBlocked(gameId) is { } why) throw new InvalidOperationException(why);
         var g = Find(gameId).Game;
@@ -83,8 +84,10 @@ public sealed partial class ScsKiller
         {
             var (survivors, gap) = ClearBeforeRun(gameId);
             var rec = Store.LoadGame(gameId);
-            rec.BeforeAfter = new BeforeAfterRecord { Stage = BeforeArmed, Minutes = minutes, ArmedAt = Clock(), DriverId = DriverId, Build = BuildNow(g), Overlay = overlay,
-                Survivors = survivors, ClearGap = gap };
+            string? note = null;
+            NotColdNote(gameId, ref note);
+            rec.BeforeAfter = new BeforeAfterRecord { Stage = BeforeArmed, Minutes = minutes, ArmedAt = Clock(), DriverId = DriverId, Build = BuildNow(g), Overlay = overlay && CountdownDraws(Find(gameId)), Max = max && MaxCompileAdds(Vendor.Caps, Find(gameId).Engine),
+                Survivors = survivors, ClearGap = gap, Problem = note };
             _played.TryRemove(gameId, out _);
             Changed(g, rec);
         }
@@ -106,11 +109,11 @@ public sealed partial class ScsKiller
         bool installed, current, iniReady;
         try
         {
-            if (VulkanRoute(s.Game, s.Engine))   // the layer, registered, and this build's
+            if (VulkanRoute(s.Game, s.Engine))   // the layer's copy registered for the exe's folder, this build's bytes
             {
-                var layer = rec.VulkanLayer is { } manifest ? Path.Combine(Path.GetDirectoryName(manifest)!, DllVulkan) : null;
-                installed = layer != null && File.Exists(rec.VulkanLayer) && VulkanLayer.Registered(rec.VulkanLayer!) && VulkanIn(s.Game, rec);
-                current = installed && (VulkanLayerSource is not { } source || !File.Exists(source) || SameBytes(layer!, source));
+                var layer = rec.VulkanLayer is { } m ? Path.Combine(Path.GetDirectoryName(m)!, Vulkan.VulkanLayer.Dll) : null;
+                installed = layer != null && File.Exists(rec.VulkanLayer) && Vulkan.VulkanLayer.Registered(rec.VulkanLayer!, s.Game) && VulkanIn(s.Game, rec);
+                current = installed && (VulkanLayerSource is not { } src || !File.Exists(src) || SameBytes(layer!, src));
             }
             else
             {
@@ -141,7 +144,9 @@ public sealed partial class ScsKiller
             {
                 try { (pending.Survivors, pending.ClearGap) = ClearBeforeRun(gameId); }
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException) { throw new InvalidOperationException($"Couldn't clear the cache: {e.Message}", e); }
-                (pending.ArmedAt, pending.ClearPending, pending.Problem) = (Clock(), false, null);
+                string? note = null;
+                NotColdNote(gameId, ref note);
+                (pending.ArmedAt, pending.ClearPending, pending.Problem) = (Clock(), false, note);
                 Changed(s.Game, rec);
             }
             return;
@@ -149,7 +154,7 @@ public sealed partial class ScsKiller
         if (rec.BeforeAfter is not { Stage: AfterReady or BeforeAfterStage.Compiling } ba) throw new InvalidOperationException("There's no after recording to continue");
         if (Voided(s.Game, ba) is { } why) throw new InvalidOperationException(why);
         Idle(s.Game);
-        // a set-aside the before run's end reads (Steam's Vulkan cache) goes back before anything compiles into it
+        // the after run must read the game's cache set aside for the before run, not one made since
         if (SetAside() is { AfterRunReads: true } q && q.PendingGame == gameId)
             lock (_setAsideLock)
                 if (q.Restore() is var left && q.PendingGame == gameId)
@@ -180,15 +185,19 @@ public sealed partial class ScsKiller
     {
         var g = Find(gameId).Game;
         var rec = Store.LoadGame(gameId);
-        if (rec.BeforeAfter is { } ba) Unpin(gameId, ba);
+        if (rec.BeforeAfter is { } ba)
+        {
+            Unpin(gameId, ba);
+            if (ba.Max) lock (_lock) _maxNext.Remove(gameId);   // the pair's Max compile, not one the game page asked for after it
+        }
         rec.BeforeAfter = null;
         _played.TryRemove(gameId, out _);
         Changed(g, rec);
         if (compile) Compile(gameId);
     }
 
-    /// <summary>AntiCheatFound: a pair not done yet ends (a done one is a report and stays). <paramref name="installing"/>:
-    /// Install's record, which it may save after this.</summary>
+    /// <summary>AntiCheatFound, a finished check's: a pair not done yet ends (a done one is a report and stays).
+    /// <paramref name="installing"/>: Install's record, which it may save after this.</summary>
     void EndPair(Game g, GameRecord? installing)
     {
         BeforeAfterRecord? ended = null;
@@ -215,12 +224,13 @@ public sealed partial class ScsKiller
         if (Store.LoadGame(gameId).BeforeAfter is not { Stage: Done, Before: { } b, After: { } a } ba) return null;
         var (before, after) = (Snapshots.Read(Store, gameId, b), Snapshots.Read(Store, gameId, a));
         // AMD's DirectX 11 cache: a key the clear didn't know may have been read without being held open, or (set aside but
-        // the key made during the run not tied to the game) wasn't known to the clear before the compile. A Vulkan game's:
-        // Steam's Vulkan cache of it wasn't all set aside
-        if (before == null || after == null) return null;
-        var notCold = AppCache is AmdAppCache && before.D3D11 ? ba.ClearGap != false ? BeforeAfter.MaybeWarm : null
-            : OperatingSystem.IsWindows() && Find(gameId) is var s && VulkanRoute(s.Game, s.Engine) && ba.ClearGap != false ? BeforeAfter.VulkanNotCold : null;
-        return new(before, after, BeforeAfter.Compare(before, after, notCold, afterHelped: AppCache is AmdAppCache && before.D3D11 && ba.DxShared));
+        // the key made during the run not tied to the game) wasn't known to the clear before the compile
+        return before == null || after == null ? null
+            : new(before, after, BeforeAfter.Compare(before, after, max: ba.Max,
+                notCold: AppCache is AmdAppCache && before.D3D11 ? ba.ClearGap != false ? BeforeAfter.MaybeWarm : null
+                    : OperatingSystem.IsWindows() && VulkanRoute(Find(gameId).Game, Find(gameId).Engine) ? ba.ClearGap != false ? BeforeAfter.VulkanNotCold : null
+                    : VulkanNotColdReport(gameId),
+                afterHelped: AppCache is AmdAppCache && before.D3D11 && ba.DxShared));
     }
 
     /// <summary>Removing the game deletes its snapshots, the pinned pair's too (Clear recording keeps them: they're reports).</summary>
@@ -291,13 +301,14 @@ public sealed partial class ScsKiller
             Changed(g, rec);
             return;
         }
+        if (ba.Max) lock (_lock) _maxNext.Add(g.Id);
         Compile(g.Id, pair: true);
         MoveInQueue(g.Id, 0);
         Changed(g, rec);
     }
 
     FrameReport? FramesNow(Game g, GameRecord rec, double? playCapMs = null) => Frames(SessionDir(g), Path.GetFileName(g.ExePath),
-        Vendor.Vendor == GpuVendor.Nvidia ? SessionLog.ReadRayQueryKeys(RayQueryKeysPath(g.Id)) : null, rec.LastPlay, playCapMs);
+        OwnDriver == GpuVendor.Nvidia ? SessionLog.ReadRayQueryKeys(RayQueryKeysPath(g.Id)) : null, rec.LastPlay, playCapMs);
 
     /// <summary>The game's launches stamped after <paramref name="since"/>, oldest first: the snapshots, the csv's launches
     /// and the frame log's (<paramref name="Last"/>, 0 = none), which keeps only the last launch.</summary>
@@ -481,12 +492,14 @@ public sealed partial class ScsKiller
             }
             Snapshots.Pin(Store, g.Id, run!.LaunchUnixMs, "before");
             ba.Before = run.LaunchUnixMs;
-            if (restoreFailed == AsideHeldNote)   // the compile waits for the cache to go back (ResumeAfterPutBack)
+            if (restoreFailed == AsideHeldNote)
             {
+                // a compile now would warm the run's folder: it starts once the set-aside one is back (the poll, or Continue)
                 (ba.Stage, ba.Dirty, ba.ArmedAt, ba.Problem) = (BeforeAfterStage.Compiling, false, Clock(), AsideHeldNote);
                 Changed(g, rec);
+                return;
             }
-            else Recompile(g, rec, restoreFailed);
+            Recompile(g, rec, restoreFailed);
         }
         catch (Exception e) { Log?.Report($"{g.Name}: before and after recording: {e.Message}"); }
     }
@@ -500,67 +513,72 @@ public sealed partial class ScsKiller
     // the game is seen running up to a poll after it starts, and the launch stamp is taken at its first hooked device
     static readonly TimeSpan LaunchFileMargin = TimeSpan.FromSeconds(30);
 
-    /// <summary>The DirectX cache set-aside for a before run: AMD's DxCache (DirectX 11), NVIDIA's DXCache. Null on other GPUs.</summary>
-    IBeforeRunAside? SetAside() => AppCache switch
+    IBeforeRunAside? SetAside()
     {
-        AmdAppCache amd => new DxQuarantine(amd.DxDir, Path.Combine(Store.DataDir, "dxcache-set-aside.json")),
-        NvidiaAppCache nvidia => new DxQuarantine(nvidia.Dir, Path.Combine(Store.DataDir, "nvidia-dxcache-set-aside.json"), nvidia: true),
-        _ => null,
-    };
+        IBeforeRunAside? linux = null;
+        LinuxAside(ref linux);
+        return linux ?? AppCache switch
+        {
+            AmdAppCache amd => new DxQuarantine(amd.DxDir, Path.Combine(Store.DataDir, "dxcache-set-aside.json")),
+            // its own journal: one of another GPU's files waits for that GPU's driver, which alone uses them
+            NvidiaAppCache nv => new DxQuarantine(nv.Dir, Path.Combine(Store.DataDir, "nvidia-dxcache-set-aside.json"), nvidia: true),
+            _ => null,
+        };
+    }
+
+    partial void LinuxAside(ref IBeforeRunAside? aside);
+
+    partial void SetAsideSteam(string gameId);
+
+    partial void OtherAsides(List<IBeforeRunAside> asides);
+
+    partial void UnlistedRuns(string gameId, List<string> roots, ref bool runs);
+
+    partial void NotColdNote(string gameId, ref string? note);
 
     string GlJournal => Path.Combine(Store.DataDir, "nvidia-glcache-set-aside.json");
 
-    /// <summary>The driver's Vulkan cache of a Steam game where Steam's launch puts it (steamapps\shadercache\&lt;app id&gt;\...,
-    /// <see cref="VulkanPlan.SteamCache"/>); null for another store's game or a driver without one there.</summary>
-    string? SteamGlCache(Game g, GpuVendor? vendor = null) =>
-        VulkanPlan.SteamCache(vendor ?? Vendor.Vendor) is { Tail: { } tail } && SteamApps(g.InstallDir) is { } apps && SteamSource.AppId(g.Id) is { } appId
-            ? Path.Combine([apps, "shadercache", appId.ToString(System.Globalization.CultureInfo.InvariantCulture), .. tail]) : null;
+    /// <summary>Steam's folder of the game's app where Steam's shader pre-caching points this vendor's Vulkan cache
+    /// (<see cref="VulkanPlan.SteamCache"/>: NVIDIA's GLCache, AMD's AMDv1): the driver reads it for that app alone. Null outside
+    /// a Steam library, or for a vendor Steam doesn't point there.</summary>
+    string? SteamGlCache(Game g, GpuVendor? vendor = null) => VulkanPlan.SteamCache(vendor ?? OwnDriver) is (_, { } tail) && MesaLinux.SteamApps(g.InstallDir) is { } apps && SteamSource.AppId(g.Id) is { } app
+        ? Path.Combine([apps, "shadercache", app.ToString(System.Globalization.CultureInfo.InvariantCulture), .. tail]) : null;
 
-    /// <summary>The steamapps folder of a game in a Steam library (...\steamapps\common\&lt;folder&gt;); null otherwise.</summary>
-    static string? SteamApps(string installDir)
-    {
-        var install = Path.TrimEndingDirectorySeparator(Path.GetFullPath(installDir)) + Path.DirectorySeparatorChar;
-        var at = install.IndexOf(SteamSource.CommonPart, StringComparison.OrdinalIgnoreCase);
-        return at >= 0 && install.Length != at + SteamSource.CommonPart.Length ? install[..(at + SteamSource.AppsPart.Length)] : null;
-    }
-
-    /// <summary>The Vulkan cache set-aside whose journal is pending, when its folder is still where the journal's game's
-    /// Steam cache goes (a Steam cache folder of a Steam app, for a game no longer listed); null otherwise: no such folder is touched.</summary>
+    /// <summary>The GLCache set-aside in progress, its folder from the journal: only Steam's GLCache folder of the journal's
+    /// game, the one of its install while it is listed. A journal naming any other folder is never acted on, and keeps every
+    /// later set-aside out.</summary>
     DxQuarantine? GlSetAside()
     {
-        if (!OperatingSystem.IsWindows() || DxQuarantine.Read(GlJournal) is not { Dir: { } dir } j || SteamSource.AppId(j.GameId) is not { } appId) return null;
+        if (!OperatingSystem.IsWindows() || DxQuarantine.Read(GlJournal) is not { Dir: { } dir } j || SteamSource.AppId(j.GameId) is not { } app) return null;
+        // either vendor's folder: one set aside before the GPU changed is still put back
         GpuVendor[] vendors = [GpuVendor.Nvidia, GpuVendor.Amd];
-        if (Games.FirstOrDefault(s => s.Game.Id == j.GameId) is { } listed && !vendors.Any(v => SteamGlCache(listed.Game, v) is { } at && SamePath(at, dir))) return null;
+        if (Games.FirstOrDefault(s => s.Game.Id == j.GameId) is { } listed && !vendors.Any(v => SteamGlCache(listed.Game, v) is { } own && SamePath(own, dir))) return null;
         var full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(dir));
         var parts = full.Split(Path.DirectorySeparatorChar);
         foreach (var v in vendors)
-            if (VulkanPlan.SteamCache(v) is { Tail: { } tail })
-            {
-                string[] end = ["steamapps", "shadercache", appId.ToString(System.Globalization.CultureInfo.InvariantCulture), .. tail];
-                if (parts.Length > end.Length && parts[^end.Length..].SequenceEqual(end, StringComparer.OrdinalIgnoreCase)) return GlQuarantine(full);
-            }
+            if (VulkanPlan.SteamCache(v) is (_, { } leaf) && (string[])["steamapps", "shadercache", app.ToString(System.Globalization.CultureInfo.InvariantCulture), .. leaf] is var tail
+                && parts.Length > tail.Length && parts[^tail.Length..].SequenceEqual(tail, StringComparer.OrdinalIgnoreCase)) return GlQuarantine(full);
         return null;
     }
 
-    /// <summary>Steam's Vulkan cache folder of a game set aside whole for its before run; never while Steam replays shaders.</summary>
     DxQuarantine GlQuarantine(string dir) => new(dir, GlJournal, glCache: true) { Busy = SteamReplaying };
 
-    /// <summary>A Vulkan game's before run: Steam's Vulkan cache of it set aside. True when it is cold: nothing was left
-    /// behind and the game's last launch had its Vulkan cache there.</summary>
+    /// <summary>A Steam Vulkan game on Windows: Steam's GLCache folder of its app set aside for the before run. Cold when all of
+    /// it was and the game's last session ran with its cache there. The driver's own Vulkan cache is the clear's, by the keys
+    /// learned for the game (<see cref="AppCacheFiles.VulkanPrefix"/>). Nothing moves while a file is
+    /// held open or Steam replays the game's shaders.</summary>
     bool SetAsideVulkan(GameState s, GameRecord rec)
     {
-        if (SteamGlCache(s.Game) is not { } cache) return false;
+        if (SteamGlCache(s.Game) is not { } dir) return false;
         lock (_setAsideLock)
         {
-            var j = GlQuarantine(cache).SetAside(s.Game.Id, _ => false, SteamReplaying());
-            Log?.Report($"{s.Game.Name}: {j.Moves.Count} files of Steam's Vulkan cache set aside for the before run"
-                + (j.Skipped.Count > 0 ? ", none moved: in use, Steam processing shaders, or another set-aside not put back yet" : ""));
-            var root = cache;   // the folder the launch's environment names
-            for (var n = VulkanPlan.SteamCache(Vendor.Vendor)!.Value.Tail.Length; n > 1; n--) root = Path.GetDirectoryName(root)!;
-            var launched = VulkanPlan.CachePath(rec.VulkanCacheEnv, Vendor.Vendor);
-            var there = launched != null && (SamePath(launched, root) || SamePath(launched, cache));
-            if (!there) Log?.Report($"{s.Game.Name}: its last launch's Vulkan cache wasn't in {root}, so the before run may not be cold");
-            return j.Skipped.Count == 0 && there;
+            var done = GlQuarantine(dir).SetAside(s.Game.Id, _ => false, held: SteamReplaying());
+            Log?.Report($"{s.Game.Name}: {done.Moves.Count} files of Steam's Vulkan cache set aside for the before run" + (done.Skipped.Count > 0 ? ", none moved: in use, Steam processing shaders, or another set-aside not put back yet" : ""));
+            var nv = dir;   // the folder the vendor's variable names: the first of its tail
+            for (var up = VulkanPlan.SteamCache(Vendor.Vendor)!.Value.Tail.Length; up > 1; up--) nv = Path.GetDirectoryName(nv)!;
+            var redirected = VulkanPlan.CachePath(rec.VulkanCacheEnv, Vendor.Vendor) is { } path && (SamePath(path, nv) || SamePath(path, dir));
+            if (!redirected) Log?.Report($"{s.Game.Name}: its last launch's Vulkan cache wasn't in {nv}, so the before run may not be cold");
+            return done.Skipped.Count == 0 && redirected;
         }
     }
 
@@ -570,20 +588,30 @@ public sealed partial class ScsKiller
         catch (Exception e) when (e is ArgumentException or NotSupportedException or PathTooLongException) { return false; }
     }
 
-    /// <summary>The before run's clear (the game's own caches too). On AMD, for a DirectX 11 game whose DxCache key isn't
-    /// known, and on NVIDIA for any game whose keys aren't all known, every DirectX cache file of no known game is set aside
-    /// (DxQuarantine) until the run ends, so the run is cold there too; skipped while another game's run has files set aside.
-    /// A Vulkan game's is Steam's Vulkan cache of it (<see cref="SetAsideVulkan"/>). The keys left with files, and whether
+    /// <summary>The report's line for a before run that read a Vulkan cache SCSKiller couldn't set aside.</summary>
+    string? VulkanNotColdReport(string gameId)
+    {
+        string? note = null;
+        NotColdNote(gameId, ref note);
+        return note == null ? null : BeforeAfter.VulkanNotCold;
+    }
+
+    /// <summary>The before run's clear (the game's own caches too). With a key of the game not known (on AMD, a DirectX 11
+    /// game's DxCache key, on NVIDIA any), every driver cache file of no known game is set aside (DxQuarantine) until the
+    /// run ends, so the run is cold there too; skipped while another game's run has files set aside. A file left in use
+    /// stays among the survivors, so a game seen holding it plays again (OldCache). The keys left with files, and whether
     /// the clear may have missed some of the game's.</summary>
     (HashSet<string>? Survivors, bool Gap) ClearBeforeRun(string gameId)
     {
-        // an earlier run's Vulkan set-aside first: the clear below would delete what goes back
-        if (OperatingSystem.IsWindows() && PutBackGl(gameId) is { } held) throw new InvalidOperationException(held.Length > 0 ? held : AsideHeldNote);
+        SetAsideSteam(gameId);   // refused before anything is cleared
+        // the last run's GLCache files still aside: a set-aside over the run's files would make this one warm
+        if (OperatingSystem.IsWindows() && PutBackGl(gameId) is { } waits) throw new InvalidOperationException(waits.Length > 0 ? waits : AsideHeldNote);
         ClearCache(gameId, gamePrecache: true);
         var s = Find(gameId);
         var rec = Store.LoadGame(gameId);
         bool gap = ClearGap(s, rec);
-        if (OperatingSystem.IsWindows() && VulkanRoute(s.Game, s.Engine)) return ([], !SetAsideVulkan(s, rec));
+        // its cache is Vulkan's alone: Steam's folder set aside, or outside Steam its Vulkan keys' files, which the clear deleted
+        if (OperatingSystem.IsWindows() && VulkanRoute(s.Game, s.Engine)) return SteamGlCache(s.Game) == null ? (Survivors(), gap) : ([], !SetAsideVulkan(s, rec));
         if (gap && (Dx11Only(s) || AppCache is NvidiaAppCache) && SetAside() is DxQuarantine q)
             lock (_setAsideLock)
             {
@@ -594,7 +622,7 @@ public sealed partial class ScsKiller
                     var done = q.SetAside(gameId, known.Contains);
                     Log?.Report($"{s.Game.Name}: {done.Moves.Count} driver cache files of other apps set aside for the before run"
                         + (done.Skipped.Count > 0 ? $", {done.Skipped.Count} left in use" : ""));
-                    // NVIDIA's files are named by the exe: one left in use, or a same-named game's, may still be the game's
+                    // a run nothing saw may have used a file left, or a same-named game's key, which is kept
                     var exe = Path.GetFileName(s.Game.ExePath);
                     gap = AppCache is NvidiaAppCache && (done.Skipped.Count > 0
                         || Games.Any(o => o.Game.Id != gameId && Path.GetFileName(o.Game.ExePath).Equals(exe, StringComparison.OrdinalIgnoreCase)));
@@ -618,12 +646,18 @@ public sealed partial class ScsKiller
         finally { foreach (var h in open) h.Dispose(); }
     }
 
-    static bool Dx11Only(GameState s) => s.Engine?.GraphicsApi is { } api && api.StartsWith("D3D11") && !api.Contains("D3D12");
+    static bool Dx11Only(GameState s) => s.Engine is { } e && Dx11Only(e);
+    internal static bool Dx11Only(EngineInfo e) => e.GraphicsApi.StartsWith("D3D11") && !e.GraphicsApi.Contains("D3D12");
+
+    /// <summary>The recorder can draw the in-game countdown: not in a DirectX 12 game beside Ubisoft Connect's loader on Windows,
+    /// where it hooks no dxgi slot and System32's swap chain doesn't name its queue.</summary>
+    public static bool CountdownDraws(GameState s) => !OperatingSystem.IsWindows() || Dx11Only(s) || s.Engine is { } e && Vulkan.VulkanPlan.IsVulkan(e)
+        || !File.Exists(Path.Combine(Path.GetDirectoryName(s.Game.ExePath)!, "upc_r2_loader64.dll"));
 
     static string F(string format, params object[] args) => string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args);
 
-    /// <summary>The before run's end: the Vulkan set-aside goes back, then the DirectX one (<see cref="EndDxSetAside"/>).
-    /// The line to show when a file couldn't be put back, or <see cref="AsideHeldNote"/> while the cache is still held.</summary>
+    /// <summary>The before run's end: its GLCache set-aside goes back (one still waiting holds the compile: AsideHeldNote, and
+    /// the poll puts it back), then the DxCache one.</summary>
     string? EndSetAside(Game g, GameRecord rec, BeforeAfterRecord ba, bool learn, long? launchUnixMs)
     {
         var gl = PutBackGl(g.Id);
@@ -631,11 +665,12 @@ public sealed partial class ScsKiller
         return gl is { Length: > 0 } ? gl : dx ?? (gl == "" ? AsideHeldNote : null);
     }
 
-    /// <summary>The before run's end, with DirectX cache files set aside for it. On AMD the DxCache key made during the run is
-    /// the game's (learned; its set-aside files, the old cache, are deleted) when the game's own process was seen holding it,
-    /// or else when it is the only key made since the game started, held by no process, no other game has the exe name and
-    /// the game didn't run D3D12. Any other key made: DxShared, nothing learned. The rest goes back, and everything while
-    /// another game has the exe name. The line to show when a file couldn't be put back.</summary>
+    /// <summary>The before run's end, with DxCache files set aside for it: the DxCache key made during the run is the game's
+    /// (learned; its set-aside files, the old cache, are deleted) when the game's own process was seen holding it, or else
+    /// when it is the only key made since the game started, held by no process, no other game has the exe name and the game
+    /// didn't run D3D12. Any other key made: DxShared, nothing learned. The rest goes back, and everything while another game
+    /// has the exe name. On NVIDIA everything goes back: the clear that follows deletes the keys the game was seen holding.
+    /// The line to show when a file couldn't be put back.</summary>
     string? EndDxSetAside(Game g, GameRecord rec, BeforeAfterRecord ba, bool learn, long? launchUnixMs)
     {
         if (SetAside() is not { } q) return null;
@@ -661,9 +696,8 @@ public sealed partial class ScsKiller
                         ? (rec.LastPlay is { } w && w.From <= launch && launch <= w.To ? w.From : launch).UtcDateTime - LaunchFileMargin : DateTime.MaxValue;
                     var files = made.ToDictionary(k => k, k => amd.FilesOf([k]));
                     // NTFS tunneling gives a file made again soon after its set-aside namesake left that file's creation time
-                    bool Tunneled(FileInfo f) => j.Moves.Any(m => m.From.Equals(f.FullName, StringComparison.OrdinalIgnoreCase) && File.Exists(m.To)
-                        && (FileTimes.CreatedUtc(m.To) is not { } moved || moved == FileTimes.CreatedUtc(f)));
-                    // a file system without creation times can't tell which key the run made
+                    bool Tunneled(FileInfo f) => j.Moves.Any(m => m.From.Equals(f.FullName, StringComparison.OrdinalIgnoreCase) && File.Exists(m.To) && FileTimes.CreatedUtc(m.To) is var was && (was == null || was == FileTimes.CreatedUtc(f)));
+                    // a file not known when made may be from before the launch or one of several keys made since: nothing is learned
                     if (own.Count == 0 && !twin && made.All(k => files[k].Count > 0 && files[k].All(f => FileTimes.CreatedUtc(f) != null) && !files[k].Any(Tunneled))
                         && made.Where(k => files[k].All(f => FileTimes.CreatedUtc(f) >= since)).ToList() is [var only]
                         && !now.Any(k => k.StartsWith(AmdAppCache.D3D12Prefix, StringComparison.Ordinal) && New(k)
@@ -682,18 +716,23 @@ public sealed partial class ScsKiller
                 }
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException) { Log?.Report($"{g.Name}: the DirectX 11 cache key wasn't learned: {e.Message}"); }
             var left = q.Restore(twin ? null : learned);
-            if (left.Count == 0) return q.AfterRunReads && q.PendingGame == g.Id ? AsideHeldNote : null;
+            if (left.Count == 0) return q.AfterRunReads && q.PendingGame == g.Id ? AsideHeldNote : null;   // a put-back that waits: still aside
             Log?.Report($"{g.Name}: {left.Count} driver cache files couldn't be put back from {q.Folder}");
             return F(RestoreFailedNote, left.Count, q.Folder);
         }
     }
 
     /// <summary>PollGames: files set aside for a run that won't end through BeforeAfterExited (cancelled, started over, the
-    /// game removed, the app stopped while nothing was armed) go back once nothing of the game runs. <paramref name="resume"/>:
-    /// a pair that waited for a Vulkan set-aside to go back moves on (<see cref="ResumeAfterPutBack"/>).</summary>
+    /// game removed, the app stopped while nothing was armed) go back. <paramref name="resume"/>: a pair whose put-back
+    /// waited then goes on (<see cref="ResumeAfterPutBack"/>).</summary>
     void PutBackSetAside(bool resume = true)
     {
-        string? pending = null;
+        List<IBeforeRunAside> others = [];
+        OtherAsides(others);
+        foreach (var o in others)   // no run under this driver reads it: back whatever the pair's stage
+            lock (_setAsideLock)
+                if (o.PendingGame is { } other && !AsideGameRuns(other)) TryPutBack(o, other);
+        string? waiting = null;
         var reads = false;
         foreach (var q in PairAsides())
         {
@@ -701,48 +740,52 @@ public sealed partial class ScsKiller
                 if (q.PendingGame is { } id)
                 {
                     var game = Games.FirstOrDefault(s => s.Game.Id == id);
-                    // not listed yet (a start): its record still says whether the run is armed
+                    // before the first scan lists the games, the record tells an armed run's set-aside from one to put back
                     var ba = game != null || Volatile.Read(ref _listed) == 0 ? Store.LoadGame(id).BeforeAfter : null;
-                    if (ba is not { Stage: BeforeArmed, ClearPending: false } && !AsideGameRuns(id)
-                        && TryPutBack(q, id) is { } failed && game != null && ba != null)
-                        ShowPair(game.Game.Id, new(ba.Stage, ba.Minutes, failed, _played.GetValueOrDefault(game.Game.Id)));
+                    if (ba is not { Stage: BeforeArmed, ClearPending: false } && !AsideGameRuns(id) && TryPutBack(q, id) is { } note && game != null && ba != null)
+                        ShowPair(game.Game.Id, new(ba.Stage, ba.Minutes, note, _played.GetValueOrDefault(game.Game.Id)));
                 }
-            if (q.AfterRunReads)
-            {
-                reads = true;
-                pending ??= q.PendingGame;
-            }
+            if (!q.AfterRunReads) continue;
+            reads = true;
+            waiting ??= q.PendingGame;
         }
-        if (resume && reads) ResumeAfterPutBack(pending);
+        if (resume && reads) ResumeAfterPutBack(waiting);
     }
 
-    /// <summary>The before run's set-asides: the DirectX one and Steam's Vulkan one, where there is one.</summary>
+    /// <summary>The set-asides a pair's before run makes under this driver: the driver cache's (Steam's folder on Linux) and on
+    /// Windows the GLCache one of a Vulkan game.</summary>
     IEnumerable<IBeforeRunAside> PairAsides() => new IBeforeRunAside?[] { SetAside(), GlSetAside() }.OfType<IBeforeRunAside>();
 
-    /// <summary>The game's Vulkan set-aside goes back: null when there is none (or it went), "" while it can't yet (the game
-    /// or Steam holds it), else the line saying what couldn't be put back.</summary>
+    /// <summary>The GLCache set-aside of <paramref name="gameId"/> put back: null when done or there was none, "" while the
+    /// game runs, its files are held or Steam replays or merges, else the line to show for the files that couldn't be.</summary>
     string? PutBackGl(string gameId)
     {
         lock (_setAsideLock)
         {
-            if (GlSetAside() is not { PendingGame: { } pending } q || pending != gameId) return null;
+            if (GlSetAside() is not { PendingGame: { } id } q || id != gameId) return null;
             if (AsideGameRuns(gameId)) return "";
             return TryPutBack(q, gameId) ?? (q.PendingGame == null ? null : "");
         }
     }
 
-    /// <summary>A process of the game runs: listed, by its exe and folders; not listed, from its recorder's folders.</summary>
+    /// <summary>The game a set-aside is pending for runs, so its cache isn't swapped under it: a listed game as
+    /// <see cref="GameRunning(Game)"/> sees it, an unlisted one (before the first scan lists the games, or removed) while a
+    /// process runs from its recorded install folder or <see cref="UnlistedRuns"/> says so.</summary>
     bool AsideGameRuns(string id)
     {
         if (IsPlaying(id)) return true;
         if (Games.FirstOrDefault(s => s.Game.Id == id) is { } listed) return GameRunning(listed.Game);
         var rec = Store.LoadGame(id);
-        var roots = new[] { rec.RecorderInstallDir, Path.GetDirectoryName(rec.RecorderExe) }.OfType<string>().ToList();
-        return roots.Count > 0 && Processes(true).Any(p => ProcessPath(p.Pid) is { } path
+        List<string> roots = [.. new[] { rec.RecorderInstallDir, Path.GetDirectoryName(rec.RecorderExe) }.OfType<string>()];
+        var runs = false;
+        UnlistedRuns(id, roots, ref runs);
+        return runs || roots.Count > 0 && Processes(true).Any(p => ProcessPath(p.Pid) is { } path
             && roots.Any(r => GameFiles.Inside(r, path) || GameFiles.FinalPath(r) is { } real && GameFiles.Inside(real, path)));
     }
 
-    /// <summary>Puts the set-aside back; the line to show when some of it couldn't be (kept until it can), else null.</summary>
+    readonly ConcurrentDictionary<string, string> _putBackLeft = new();   // game id -> why the last put-back of its set-aside left files
+
+    /// <summary>One put-back of what <paramref name="q"/> holds for <paramref name="id"/>: null, or why files couldn't go back.</summary>
     string? TryPutBack(IBeforeRunAside q, string id)
     {
         if (q.Restore() is not { Count: > 0 } left)
@@ -754,18 +797,20 @@ public sealed partial class ScsKiller
         return _putBackLeft[id] = F(RestoreFailedNote, left.Count, q.Folder);
     }
 
-    readonly ConcurrentDictionary<string, string> _putBackLeft = new();   // game id -> what of its set-aside couldn't go back yet
-
-    /// <summary>The app's close: waits until every set-aside driver cache is back, polling the games (the watcher may have
-    /// stopped) and saying what it waits for. The game whose before run is armed: its set-aside stays, and it is returned.</summary>
+    /// <summary>Waits until every cache a before run set aside is back (this driver's, and on Linux the other driver's), as
+    /// the poll puts them back: it polls itself while nothing else does, every <see cref="WatchInterval"/>, and reports why
+    /// it waits to <paramref name="status"/> when that changes. An armed before run's cache stays aside, as its run reads it.
+    /// Returns null once nothing is set aside, or the armed game's id. Cancelled: OperationCanceledException between polls,
+    /// never during a put-back, and the journal keeps what is still aside for the next poll or start.</summary>
     public async Task<string?> PutBackSetAsideAsync(IProgress<string>? status, CancellationToken ct)
     {
         string? said = null;
         while (true)
         {
             ct.ThrowIfCancellationRequested();
+            // the watcher's poll does it while it runs
             if (Environment.TickCount64 - Volatile.Read(ref _polledAt) > 2 * WatchInterval.TotalMilliseconds)
-                try { await Task.Run(PollGames, CancellationToken.None); }   // puts back what nothing runs for
+                try { await Task.Run(PollGames, CancellationToken.None); }
                 catch (Exception e) { Log?.Report($"putting back set-aside caches: {e.Message}"); }
             var (armed, why) = SetAsideWait();
             if (why == null) return armed;
@@ -774,55 +819,66 @@ public sealed partial class ScsKiller
         }
     }
 
-    /// <summary>What a put-back waits for, the first set-aside still pending (null: none); Armed: a game whose before run is
-    /// armed (its set-aside stays).</summary>
+    /// <summary>Why a set-aside cache isn't back (null: none is aside but an armed before run's), and that armed game.</summary>
     (string? Armed, string? Why) SetAsideWait()
     {
+        List<IBeforeRunAside> others = [];
+        OtherAsides(others);
+        var own = PairAsides().ToList();
         string? armed = null;
-        foreach (var q in PairAsides().ToList())
+        foreach (var q in own.Concat(others))
         {
             if (q.PendingGame is not { } id) continue;
-            var listed = Games.FirstOrDefault(s => s.Game.Id == id);
-            if ((listed != null || Volatile.Read(ref _listed) == 0) && Store.LoadGame(id).BeforeAfter is { Stage: BeforeArmed, ClearPending: false })
+            var game = Games.FirstOrDefault(s => s.Game.Id == id);
+            if (own.Contains(q) && (game != null || Volatile.Read(ref _listed) == 0) && Store.LoadGame(id).BeforeAfter is { Stage: BeforeArmed, ClearPending: false })
             {
                 armed = id;
                 continue;
             }
-            var name = listed?.Game.Name ?? id;
-            return (armed, AsideGameRuns(id) ? F(PutBackRunningNote, name) : _putBackLeft.TryGetValue(id, out var left) ? left : F(PutBackInUseNote, name));
+            var name = game?.Game.Name ?? id;
+            return (armed, AsideGameRuns(id) ? F(PutBackRunningNote, name) : _putBackLeft.TryGetValue(id, out var note) ? note : F(PutBackInUseNote, name));
         }
         return (armed, null);
     }
 
-    /// <summary>The set-asides still pending: the game, where the files wait, and the files.</summary>
-    public List<(string Game, string Folder, List<string> Files)> SetAsideLeft() =>
-        [.. PairAsides().Where(q => q.PendingGame != null)
-            .Select(q => (q.PendingGame!, q.Folder, q is DxQuarantine { Pending: { } j } ? j.Moves.Select(m => m.To).Where(File.Exists).ToList() : []))];
+    /// <summary>What is still set aside, a game's folder then each file set aside in it (DxQuarantine's journal names them), for
+    /// a caller that exits before it is back: the journal stays, and the next start's poll puts it back.</summary>
+    public List<(string Game, string Folder, List<string> Files)> SetAsideLeft()
+    {
+        List<IBeforeRunAside> all = [.. PairAsides()];
+        OtherAsides(all);
+        return [.. all.Where(q => q.PendingGame != null).Select(q => (q.PendingGame!, q.Folder,
+            q is DxQuarantine { Pending: { } j } ? j.Moves.Select(m => m.To).Where(File.Exists).ToList() : new List<string>()))];
+    }
 
-    /// <summary>A Vulkan set-aside is back: a pair whose compile or clear waited for it (<see cref="AsideHeldNote"/>) moves on,
-    /// unless its game runs or compiles; the clear only when no other set-aside is <paramref name="pending"/>.</summary>
+    /// <summary>A pair whose put-back waited goes on once nothing of its game is aside (<paramref name="pending"/>: the game
+    /// whose is), as Continue would: a counted before run compiles, a rearm whose clear met the wait clears. A voided pair, a
+    /// running game or a compile in the queue keeps the note and its button.</summary>
     void ResumeAfterPutBack(string? pending)
     {
-        foreach (var s in Games.Where(s => s.Game.Id != pending && s.BeforeAfter is { Stage: BeforeAfterStage.Compiling, Problem: AsideHeldNote } or { Stage: BeforeArmed, Problem: ClearHeldNote }))
+        foreach (var s in Games.Where(s => s.Game.Id != pending
+                     && s.BeforeAfter is { Stage: BeforeAfterStage.Compiling, Problem: AsideHeldNote } or { Stage: BeforeArmed, Problem: ClearHeldNote }))
         {
             var g = s.Game;
-            if (IsPlaying(g.Id) || GameRunning(g) || QueueItemOf(g.Id) is { } q && !Finished(q.Stage)) continue;
+            if (IsPlaying(g.Id) || GameRunning(g) || QueueItemOf(g.Id) is { } queued && !Finished(queued.Stage)) continue;
             var rec = Store.LoadGame(g.Id);
-            if (rec.BeforeAfter is not { } ba) continue;
-            switch (ba.Stage)
+            switch (rec.BeforeAfter)
             {
-                case BeforeAfterStage.Compiling when ba.Problem == AsideHeldNote && Voided(g, ba) == null:
+                case { Stage: BeforeAfterStage.Compiling, Problem: AsideHeldNote } ba when Voided(g, ba) == null:
                     Log?.Report($"{g.Name}: the before run's cache is back, its compile starts");
                     Recompile(g, rec, null);
                     break;
-                case BeforeArmed when ba.ClearPending && ba.Problem == ClearHeldNote && pending == null:
+                // its clear would refuse while another game's cache is aside
+                case { Stage: BeforeArmed, ClearPending: true, Problem: ClearHeldNote } ba when pending == null:
                     Log?.Report($"{g.Name}: the before run's cache is back, it's cleared again");
                     lock (_setAsideLock)
                     {
                         try
                         {
                             var (survivors, gap) = ClearBeforeRun(g.Id);
-                            (ba.ArmedAt, ba.ClearPending, ba.Problem, ba.Survivors, ba.ClearGap, ba.DxShared) = (Clock(), false, null, survivors, gap, false);
+                            string? note = null;
+                            NotColdNote(g.Id, ref note);
+                            (ba.ArmedAt, ba.ClearPending, ba.Problem, ba.Survivors, ba.ClearGap, ba.DxShared) = (Clock(), false, note, survivors, gap, false);
                         }
                         catch (Exception e) when (e is InvalidOperationException or IOException or UnauthorizedAccessException) { ba.Problem = $"Couldn't clear the cache: {e.Message}"; }
                         Changed(g, rec);

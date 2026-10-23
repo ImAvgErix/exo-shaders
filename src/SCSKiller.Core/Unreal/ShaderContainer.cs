@@ -80,6 +80,35 @@ public static class ShaderContainer
         }
     }
 
+    /// <summary>One read's shader model names, binding and signature lists, each kept once: a game's shaders repeat few of
+    /// them (High on Life: 34,215 shaders, 1,092 binding lists, 4,823 input signatures).</summary>
+    public sealed class SharedLists
+    {
+        readonly ConcurrentDictionary<IReadOnlyList<Binding>, IReadOnlyList<Binding>> bindings = new(Seq<Binding>.Instance);
+        readonly ConcurrentDictionary<IReadOnlyList<SigElement>, IReadOnlyList<SigElement>> sigs = new(Seq<SigElement>.Instance);
+        readonly ConcurrentDictionary<string, string> models = new();
+
+        public ShaderInfo Share(ShaderInfo s) => s with
+        {
+            ShaderModel = models.GetOrAdd(s.ShaderModel, s.ShaderModel),
+            Bindings = bindings.GetOrAdd(s.Bindings, s.Bindings),
+            Inputs = sigs.GetOrAdd(s.Inputs, s.Inputs),
+            Outputs = sigs.GetOrAdd(s.Outputs, s.Outputs),
+        };
+
+        sealed class Seq<T> : IEqualityComparer<IReadOnlyList<T>>
+        {
+            public static readonly Seq<T> Instance = new();
+            public bool Equals(IReadOnlyList<T>? a, IReadOnlyList<T>? b) => ReferenceEquals(a, b) || a != null && b != null && a.SequenceEqual(b);
+            public int GetHashCode(IReadOnlyList<T> list)
+            {
+                var h = new HashCode();
+                foreach (var x in list) h.Add(x);
+                return h.ToHashCode();
+            }
+        }
+    }
+
     /// <summary>Root-signature inputs of a UE5 shader, read by <see cref="Planning.RootSig"/>. The engine moved them between
     /// fields over time (ShaderCore.h, D3D12Shader.h, D3DShaderCompilerDXC.cpp at 5.0.3-5.6.0 release tags); the compiler sets
     /// both places from the same condition where both exist, so the union is right for every 5.x.</summary>
@@ -106,35 +135,6 @@ public static class ShaderContainer
         }
     }
 
-    /// <summary>Interns the lists and shader models a game's shaders share (many have identical bindings and signatures),
-    /// so an index of hundreds of thousands of shaders holds each distinct one once. Thread-safe.</summary>
-    public sealed class SharedLists
-    {
-        sealed class Seq<T> : IEqualityComparer<IReadOnlyList<T>>
-        {
-            public static readonly Seq<T> Instance = new();
-            public bool Equals(IReadOnlyList<T>? a, IReadOnlyList<T>? b) => a == b || a != null && b != null && a.SequenceEqual(b);
-            public int GetHashCode(IReadOnlyList<T> list)
-            {
-                var h = new HashCode();
-                foreach (var item in list) h.Add(item);
-                return h.ToHashCode();
-            }
-        }
-
-        readonly ConcurrentDictionary<IReadOnlyList<Binding>, IReadOnlyList<Binding>> bindings = new(Seq<Binding>.Instance);
-        readonly ConcurrentDictionary<IReadOnlyList<SigElement>, IReadOnlyList<SigElement>> sigs = new(Seq<SigElement>.Instance);
-        readonly ConcurrentDictionary<string, string> models = new();
-
-        public ShaderInfo Share(ShaderInfo s) => s with
-        {
-            ShaderModel = models.GetOrAdd(s.ShaderModel, s.ShaderModel),
-            Bindings = bindings.GetOrAdd(s.Bindings, s.Bindings),
-            Inputs = sigs.GetOrAdd(s.Inputs, s.Inputs),
-            Outputs = sigs.GetOrAdd(s.Outputs, s.Outputs),
-        };
-    }
-
     /// <summary>A mesh shader's per-primitive outputs (PSG1) follow its per-vertex ones in <see cref="ShaderInfo.Outputs"/>
     /// at this register plus their row: their rows count from 0, and a PS packs them after its own per-vertex inputs.</summary>
     public const int PrimitiveRow = 0x10000;
@@ -143,25 +143,23 @@ public static class ShaderContainer
     /// malformed container (ArgumentException).</summary>
     public const int MaxSigElements = 1024;
 
-    /// <summary>Bytes a signature element's semantic name may have (HLSL's are short): a longer one is a malformed container.</summary>
-    public const int MaxSemantic = 256;
-
-    /// <summary>Bytes of distinct semantic names a signature part may decode, whatever its size: real ones are a few
-    /// hundred, so a large part of overlapping names can't decode into far more strings than shaders use.</summary>
-    public const int SemanticBudget = 64 << 10;
-
     /// <summary>Bytes of distinct names a container's part may decode: its distinct names fit in it, so more means names
     /// that overlap (each a suffix of a longer one) and would decode into far more strings than the part holds.</summary>
     internal static long NameBudget(int partLength) => 2L * partLength + (64 << 10);
 
-    /// <summary>The ASCII string at <paramref name="at"/> of its string table <paramref name="d"/>, up to its NUL, of any
-    /// length up to <paramref name="max"/> bytes; ArgumentException when it starts outside the table, runs past it or
+    /// <summary>Length of a signature semantic, and the decoded bytes of distinct semantics one signature part may hold (128
+    /// elements per stream at that length): more is a malformed container. The longest system value, SV_RenderTargetArrayIndex,
+    /// has 25. RDAT function names have no such cap: DXC writes them unabbreviated.</summary>
+    public const int MaxSemantic = 256, SemanticBudget = 2 * 128 * MaxSemantic;
+
+    /// <summary>The ASCII string at <paramref name="at"/> of its string table <paramref name="d"/>, up to its NUL, of at most
+    /// <paramref name="max"/> bytes; ArgumentException when it starts outside the table, runs past it or past
     /// <paramref name="max"/>, or would take <paramref name="budget"/> below 0. Callers cache names by offset, so a shared
     /// name is decoded once.</summary>
     static string Name(ReadOnlySpan<byte> d, int at, ref long budget, int max = int.MaxValue)
     {
         if ((uint)at > (uint)d.Length) throw new ArgumentException("a name outside its string table");
-        var n = d[at..][..(int)Math.Min(max + 1L, d.Length - at)].IndexOf((byte)0);   // only as far as a name may go
+        var n = d[at..][..(int)Math.Min(max + 1L, d.Length - at)].IndexOf((byte)0);
         if (n < 0) throw new ArgumentException(d.Length - at > max ? $"a name over {max} bytes" : "a name without its end");
         if ((budget -= 2L * n) < 0) throw new ArgumentException("names over the part's budget");   // UTF-16 once decoded
         return Encoding.ASCII.GetString(d.Slice(at, n));

@@ -177,7 +177,7 @@ public sealed class FromSoftReader(string dataDir, Func<string, byte[]?>? downlo
 
         using var content = IncrementalHash.CreateHash(HashAlgorithmName.SHA1);
         content.AppendData(Encoding.UTF8.GetBytes($"{Family} {IndexVersion}\n"));
-        foreach (var (rel, f) in title.Archives.Length == 0 ? SourceFiles(dir, title) : archives.Select(a => (a.Rel, File: a.Bhd))) // a key found later changes it
+        foreach (var (rel, f) in title.Archives.Length == 0 ? SourceFiles(dir, title) : archives.Select(a => (a.Rel, a.Bhd))) // a key found later changes it
             content.AppendData(Encoding.UTF8.GetBytes($"{GameFiles.Rel(dir, f.FullName, f.FullName, rel)}|{f.Length}|{f.LastWriteTimeUtc.Ticks}\n"));
         var platforms = shaders.Keys.Select(s => platformOf[s]).Distinct()
             .OrderBy(p => p is CarvedReader.Platform or D3D11 ? 0 : 1).ThenBy(p => p, StringComparer.Ordinal).ToList();
@@ -215,16 +215,15 @@ public sealed class FromSoftReader(string dataDir, Func<string, byte[]?>? downlo
     static string Pool(string at)
     {
         var parts = at.Split('|');
+        // a binder's file names are Windows paths (N:\...\x.shaderbdle)
         return string.Join('|', (parts.Length > 1 ? parts[..^1] : parts).Select((p, i) => i == 0 ? p : Path.GetFileName(GameFiles.Under("", p))));
     }
 
-    /// <summary>What the shaders come from (the content hash): the title's archive headers, or its loose shader files; each
-    /// with its path relative to the exe's folder.</summary>
+    /// <summary>What the shaders come from (the content hash): the title's archive headers, or its loose shader files; each with
+    /// its path under <paramref name="dir"/> as Windows spells it (an archive's: its <see cref="Title.Archives"/> name).</summary>
     static IEnumerable<(string Rel, FileInfo File)> SourceFiles(string dir, Title title) => title.Archives.Length == 0
-        ? GameFiles.EnumerateFiles(new DirectoryInfo(GameFiles.Find(dir, "shader")), "*.dcx").OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(f => (Rel: $@"shader\{f.Name}", File: f))
-        : title.Archives.Select(a => (Rel: a + ".bhd", File: new FileInfo(GameFiles.Find(dir, a + ".bhd"))))
-            .Where(f => f.File.Exists && File.Exists(GameFiles.ChangeExtension(f.File.FullName, ".bdt")));
+        ? GameFiles.EnumerateFiles(new DirectoryInfo(GameFiles.Find(dir, "shader")), "*.dcx").OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase).Select(f => ($@"shader\{f.Name}", f))
+        : title.Archives.Select(a => (a + ".bhd", new FileInfo(GameFiles.Find(dir, a + ".bhd")))).Where(f => f.Item2.Exists && File.Exists(GameFiles.ChangeExtension(f.Item2.FullName, ".bdt")));
 
     /// <summary>The title's archives present (a .bhd with its .bdt) that a key opens, in <see cref="Title.Archives"/> order,
     /// each with its key; the others are left out. <paramref name="why"/>, a line for the user: which shaders are left out,
@@ -236,8 +235,7 @@ public sealed class FromSoftReader(string dataDir, Func<string, byte[]?>? downlo
         if (title.Archives.Length == 0) return [];
         var present = SourceFiles(dir, title).ToList();
         var found = keys.Get(game, present.ToDictionary(f => Path.GetFileNameWithoutExtension(f.Rel), f => f.File.FullName), fetch ? title.Uxm : null, out var missing, log);
-        var opened = present.Where(f => found.ContainsKey(Path.GetFileNameWithoutExtension(f.Rel)))
-            .Select(f => (f.File, f.Rel, found[Path.GetFileNameWithoutExtension(f.Rel)])).ToList();
+        var opened = present.Where(f => found.ContainsKey(Path.GetFileNameWithoutExtension(f.Rel))).Select(f => (f.File, f.Rel, found[Path.GetFileNameWithoutExtension(f.Rel)])).ToList();
         if (missing.Count == 0) return opened;
         log?.Report($"{title.Name}: no key for its archives {string.Join(", ", missing)}: the game's exe doesn't carry them in the clear"
             + (title.Uxm != null ? " and none that opens them could be downloaded (UXM Selective Unpack's)" : "")

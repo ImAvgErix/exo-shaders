@@ -14,7 +14,8 @@ public sealed record UnitPick(List<LayoutElem> Layout, uint Topology, string Sha
 /// shapes, max(L, S) PSOs cover them all (zipped), not L x S. Units:
 ///   VS = (VS, read layout, topology, next stage: PS / none / GS / HS, root signature as the VS sees it)
 ///   PS = (PS, root signature, export shape); CS, MS, AS, GS, HS, DS = (shader, root signature)
-/// with each state part only when the policy keys on it (NVIDIA: shader + whole root signature).</summary>
+/// with each state part only when the policy keys on it (NVIDIA: shader + whole root signature), and every stage of a
+/// pipeline with view instancing keyed on it too (NVIDIA keys a compile on it).</summary>
 public sealed class UnitCover(ExactLayouts facts)
 {
     public ExactLayouts Facts { get; } = facts;
@@ -44,21 +45,21 @@ public sealed class UnitCover(ExactLayouts facts)
         return Units(x, s.Stages, s.Rs, read, s.Topology, x.ShapeOf(s), s.ViewInstancing);
     }
 
-    /// <summary>The units of one PSO: <paramref name="readLayout"/> as <see cref="ExactLayouts.ReadLayout"/> returns it.
-    /// <paramref name="views"/>: its view-instancing subobject, if any.</summary>
+    /// <summary>The units of one PSO: <paramref name="readLayout"/> as <see cref="ExactLayouts.ReadLayout"/> returns it,
+    /// <paramref name="views"/> its view instancing (<see cref="PsoDb.PsoState.ViewInstancing"/>).</summary>
     public static IEnumerable<Unit> Units(ExactLayouts x, IReadOnlyDictionary<int, string> stages, string rs, IReadOnlyList<LayoutElem> readLayout, uint topology, string shape,
         byte[]? views = null)
     {
         foreach (var (st, sh) in stages)
         {
             var stage = (Stage)st;
-            yield return Viewed(stage == Stage.Vertex ? VsUnit(x, stages, sh, rs, readLayout, topology, shape)
+            var u = stage == Stage.Vertex ? VsUnit(x, stages, sh, rs, readLayout, topology, shape)
                 : stage == Stage.Pixel ? PsUnit(x, sh, rs, shape)
-                : new Unit(stage, sh, x.RsKey(rs)), views);
+                : new Unit(stage, sh, x.RsKey(rs));
+            yield return Viewed(u, views);
         }
     }
 
-    /// <summary>A unit keyed on the PSO's view instancing too: the driver compiles each stage per view set.</summary>
     static Unit Viewed(Unit u, byte[]? views) => views == null ? u : u with { Key = u.Key + "|vi:" + Convert.ToHexStringLower(views) };
 
     static Unit VsUnit(ExactLayouts x, IReadOnlyDictionary<int, string> stages, string vs, string rs, IReadOnlyList<LayoutElem> readLayout, uint topology, string shape)
@@ -156,7 +157,7 @@ public sealed class UnitCover(ExactLayouts facts)
         return picks;
     }
 
-    /// <summary>One candidate stage set with its resolved state candidates (see <see cref="Cover"/>).</summary>
+    /// <summary>One candidate stage set with its resolved state candidates (see <see cref="Cover"/>) and view instancing.</summary>
     public sealed record Candidate(IReadOnlyDictionary<int, string> Stages, string Rs, IReadOnlyList<List<LayoutElem>> Layouts,
         IReadOnlyList<uint> Topologies, IReadOnlyList<string> Shapes, byte[]? Views = null);
 

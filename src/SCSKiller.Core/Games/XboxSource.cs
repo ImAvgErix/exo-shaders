@@ -12,8 +12,8 @@ public sealed class XboxSource(IEnumerable<string>? driveRoots = null) : IGameSo
 {
     public Store Store => Store.Xbox;
 
-    /// <summary>Games listed before, by id: the exe a config names none for is reused while the game's version and folder
-    /// are the same and the exe is there.</summary>
+    /// <summary>Games listed before, by id: the exe found below Content for a game whose config and Content folder name none
+    /// is reused while the game's version and folder are the same and the exe is there.</summary>
     public IReadOnlyDictionary<string, Game>? Known { get; set; }
 
     public IReadOnlyList<Game> Discover()
@@ -107,6 +107,7 @@ public sealed class XboxSource(IEnumerable<string>? driveRoots = null) : IGameSo
             .Where(IsGameExecutable)
             .Select(e => e.Attribute("Name")?.Value)
             .FirstOrDefault(n => n != null)
+            ?? RootExe(content)
             ?? (known?.GetValueOrDefault($"xbox:{familyName ?? name}") is { Version: { } was } k && was == version && k.InstallDir.Equals(content, StringComparison.OrdinalIgnoreCase)
                 && File.Exists(k.ExePath) && Pickable(k.ExePath) ? k.ExePath : FindExeFallback(content));
         if (exeRel == null) return null;
@@ -151,8 +152,20 @@ public sealed class XboxSource(IEnumerable<string>? driveRoots = null) : IGameSo
         return !string.Equals(e.Attribute("IsDevOnly")?.Value, "true", StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>No config entry survived the helper filter (e.g. Darktide's config lists only its launcher): pick
-    /// the largest non-helper-named exe under Content.</summary>
+    /// <summary>No config entry survived the helper filter: the largest non-helper exe in Content itself, as the game it is
+    /// (an Unreal stub's Shipping exe, an EasyAntiCheat bootstrap's target). DOOM Eternal's config names only its launcher,
+    /// and its mod sandbox in a subfolder is larger than the game in the root.</summary>
+    static string? RootExe(string content)
+    {
+        var excluded = NotTheGame(content);
+        var exe = Directory.EnumerateFiles(content, "*.exe", new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = 0 })
+            .Where(f => Pickable(f) && !excluded.Contains(Path.GetFullPath(f)))
+            .Select(f => new FileInfo(f)).MaxBy(f => f.Length)?.FullName;
+        return exe == null ? null : GameFiles.GameExe(content, exe);
+    }
+
+    /// <summary>Nothing in Content itself either (e.g. Darktide's config lists only its launcher): the largest non-helper
+    /// exe under Content.</summary>
     static string? FindExeFallback(string content)
     {
         var opts = new EnumerationOptions { RecurseSubdirectories = true, MaxRecursionDepth = 3, IgnoreInaccessible = true, AttributesToSkip = 0 };

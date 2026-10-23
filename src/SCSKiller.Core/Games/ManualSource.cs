@@ -3,7 +3,6 @@ using System.Security.Cryptography;
 using System.Text;
 using SCSKiller.Core.App;
 using SCSKiller.Core.Carved;
-using SCSKiller.Core.StarEngine;
 
 namespace SCSKiller.Core.Games;
 
@@ -24,11 +23,10 @@ public sealed class ManualSource(AppStore store) : IGameSource
     // the app, the CLI and the scheduled task may change the list at once: one read-modify-write at a time per data folder
     readonly string _mutex = MutexName(store.DataDir);
 
-    public Store Store => Store.Manual;
-
-    /// <summary>The mutex that serializes changes to the list of the data folder <paramref name="dataDir"/>.</summary>
     internal static string MutexName(string dataDir) =>
         @"Local\SCSKiller.manual-games." + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(dataDir).ToUpperInvariant())))[..16];
+
+    public Store Store => Store.Manual;
 
     // game id -> its folder and whether it is confirmed, as the last read of the list had it (replaced whole under the mutex)
     volatile Dictionary<string, (string Root, bool Confirmed)> _roots = [];
@@ -352,9 +350,8 @@ public sealed class ManualSource(AppStore store) : IGameSource
             foreach (var n in new[] { v.ProductName, v.FileDescription })
                 if (n?.Trim() is { Length: > 0 } name && !Generic.Contains(name, StringComparer.OrdinalIgnoreCase)
                     && !name.Contains("Bootstrap", StringComparison.OrdinalIgnoreCase) && !name.Contains("launcher", StringComparison.OrdinalIgnoreCase))
-                    return StarEngineReader.Channel(exe) is { } channel ? $"{name} ({channel})" : name;
+                    return StarEngine.StarEngineReader.Channel(exe) is { } channel ? $"{name} ({channel})" : name;   // LIVE and PTU: two games
         }
-        // Star Citizen's channels (LIVE, PTU) are installs of one game: each is named by its folder
-        return StarEngineReader.Channel(exe) is { } star ? $"Star Citizen ({star})" : Path.GetFileName(root);
+        return StarEngine.StarEngineReader.Channel(exe) is { } ch ? $"Star Citizen ({ch})" : Path.GetFileName(root);
     }
 }

@@ -13,7 +13,8 @@ namespace SCSKiller.Tests.Glacier;
 /// <summary>007 First Light on this machine (read-only; skipped when absent): found by the Glacier 2 reader before the
 /// carver, its material effects' shaders indexed with the root signatures they carry, planned without a recording. Measured
 /// (October 2026 build): 1,085 effects, 16,082 shaders (8,927 PS, 4,905 VS, 1,165 CS, 1,070 ray tracing libraries), 2 root
-/// signatures; 8,418 of the 8,426 shaders in Retail\PipelineCache.bin among them; 128,761 pipelines planned.</summary>
+/// signatures; 8,418 of the 8,426 shaders in Retail\PipelineCache.bin among them; 128,761 stage sets, 25,507 pipelines planned
+/// (alpha.3 plans each shader of a pool that pairs every VS with every PS once: 103,254 sets left out).</summary>
 [Trait("Needs", "Game")]
 public class GlacierGameTests(ITestOutputHelper output)
 {
@@ -51,7 +52,8 @@ public class GlacierGameTests(ITestOutputHelper output)
         sw.Restart();
         var plan = new Planner().Build(game, engine, index, null, Ff7.Nvidia, Ff7.TempDir("glacier-plan"), new Log(output.WriteLine), CancellationToken.None);
         output.WriteLine($"plan {sw.Elapsed.TotalSeconds:F1}s: {plan.Stats}");
-        Assert.True(plan.Stats.Generated > 100_000);
+        Assert.True(plan.Stats.StageSets > 100_000);
+        Assert.True(plan.Stats.Generated > 20_000);
         Assert.Equal(0, plan.Stats.Uncovered);
     }
 

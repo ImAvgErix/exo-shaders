@@ -171,6 +171,12 @@ public static class ReShade
     public static string? RenoDxFolder(string fileName) =>
         fileName.StartsWith("renodx-", StringComparison.OrdinalIgnoreCase) ? Path.GetFileNameWithoutExtension(fileName)["renodx-".Length..] : null;
 
+    /// <summary>"RenoDX" when an add-on file named like its builds sits in the exe's folder or the install root, judged by file
+    /// names alone (an anti-cheat install's files aren't read); null = none.</summary>
+    public static string? RenoDxByName(Game game) =>
+        new[] { GameFiles.DirKey(Path.GetDirectoryName(game.ExePath)!), GameFiles.DirKey(game.InstallDir) }.Distinct(StringComparer.OrdinalIgnoreCase)
+            .Any(d => List(d)?.Any(f => (Ext(f, ".addon") || Ext(f, ".addon64")) && RenoDxFolder(f.Name) != null) == true) ? "RenoDX" : null;
+
     /// <summary>ReShade where the game loads it: an Xbox app game's package root (<see cref="PackageRoot"/>) under a name
     /// the game loads, else the exe's folder; else the install root under any name. Known by its version resource (any
     /// DLL there) or, for one of its usual names, its own bytes; null = none. Its add-ons are the ones in ReShade.ini's
@@ -379,6 +385,13 @@ public static class ReShade
         return Cached(f, "dxvk", () => !IsReShade(f) && Find(f, "dxvkvars", DxvkVars) >= 0
             && ScsKiller.ChainBlocker(f.FullName) == ScsKiller.SkipVulkanMod) is true;
     }
+
+    /// <summary>MFG Unlocker beside the exe under a name it loads as (its README's list), by its version resource's ProductName.</summary>
+    public static bool MfgUnlocker(string exeDir) => MfgUnlockerNames.Any(n => new FileInfo(GameFiles.Find(exeDir, n)) is var f
+        && Cached(f, "mfgunlocker", () => PeVersionInfo.GetVersionInfo(f.FullName).ProductName == "MFG Unlocker") is true);
+
+    static readonly string[] MfgUnlockerNames = ["version.dll", "dinput8.dll", "winmm.dll", "d3d9.dll", "d3d10.dll", "d3d11.dll", "d3d12.dll", "dxgi.dll",
+        "dsound.dll", "wininet.dll", "winhttp.dll", "binkw64.dll", "bink2w64.dll", "xinput1_1.dll", "xinput1_2.dll", "xinput1_3.dll", "xinput1_4.dll"];
 
     // "vkd3d-proton" alone isn't enough here: OptiScaler and other wrappers name it in their own strings
     static readonly byte[][] DxvkVars = ["DXVK_LOG_LEVEL"u8.ToArray(), "DXVK_HUD"u8.ToArray()];

@@ -817,7 +817,7 @@
       "id": "amd-ags",
       "requires": ["amd.ags.v1"],
       "match": {"family": "Any"},
-      "ags": {"profiles": {"Phoenix": "d32786a7", "OakGame": "f2f80824", "Griffin": "38810766"}, "proven": ["Townfall", "Griffin"]}
+      "ags": {"profiles": {"Phoenix": "d32786a7", "OakGame": "f2f80824", "Griffin": "38810766", "Split": "eed2a692"}, "proven": ["Townfall", "Griffin"]}
     },
     {
       "id": "nv-aftermath",

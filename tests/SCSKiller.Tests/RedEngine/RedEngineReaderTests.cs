@@ -331,7 +331,7 @@ public class RedEngineReaderTests
         Assert.Equal("red3: bad byStages: a stage set with no description", Assert.Single(loaded.Dropped));
 
         var unchecked_ = (RulesFile)typeof(RulesFile).GetConstructors(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-            .Single().Invoke([new List<PlanRule> { noDefault }, new List<string>()]);
+            .Single().Invoke([new List<PlanRule> { noDefault }, new List<string>(), null]);   // alpha.3 adds the identity rules
         var d = Data.Value;
         var reader = new RedEngineReader();
         var engine = reader.Detect(d.Game)!;

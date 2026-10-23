@@ -15,6 +15,7 @@ namespace SCSKiller.Core.Vendors;
 ///
 /// Cache size: the driver caps DxcCache at a fixed <see cref="AmdAppCache.DxcCacheCap"/>; Adrenalin, the registry and
 /// ADLX offer no size setting (only the shader cache mode and a reset).</summary>
+[System.Runtime.Versioning.SupportedOSPlatform("windows")]
 public sealed class AmdBackend : IGpuVendorBackend, IRefreshableGpu
 {
     const string DisplayClass = @"SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}";
@@ -72,10 +73,12 @@ public sealed class AmdBackend : IGpuVendorBackend, IRefreshableGpu
     public GpuInfo Gpu { get; private set; }
     public VendorCaps Caps { get; } = new("amd-1", CacheKeyedByExeName: true, StateIndependentCache: false, CacheSizeConfigurable: false,
         PerStageCache: true, RtCacheGranularity: RtCacheGranularity.WholeObject,   // selftest dxr 3: only an exact repeat of the whole object hits
-        VulkanKey: "device", VulkanCacheCap: SteamVulkanCacheFile);   // a Vulkan cache is the device's, not the exe's
+        VulkanKey: Vulkan.VulkanPlan.DeviceKey,   // measured: Steam's AMDv1 file, its entries keyed on the device's enabled extensions
+        VulkanCacheCap: SteamVulkanCacheFile);
 
-    /// <summary>The bytes a game's Vulkan pipeline cache file holds at most (1.5 GiB).</summary>
-    public const long SteamVulkanCacheFile = 1536L << 20;
+    /// <summary>Steam's AMDv1\steamapp_shader_cache.parc stops growing at this size (measured, Detroit: Become Human, 65,460
+    /// pipelines).</summary>
+    public const long SteamVulkanCacheFile = 1_610_612_736;
 
     static string LocalAppData => Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
     /// <summary>D3D12 shader/pipeline cache.</summary>
@@ -83,8 +86,8 @@ public sealed class AmdBackend : IGpuVendorBackend, IRefreshableGpu
     /// <summary>D3D11 shader cache.</summary>
     public static string D3D11CacheDir => Path.Combine(LocalAppData, "AMD", "DxCache");
 
-    /// <summary>DxcCache + DxCache per-application files.</summary>
-    public AmdAppCache AppCache { get; } = new(CacheDir, D3D11CacheDir);
+    /// <summary>DxcCache + DxCache per-application files, and VkCache's.</summary>
+    public AmdAppCache AppCache { get; } = new(CacheDir, D3D11CacheDir, Vulkan.VulkanPlan.DefaultCache(GpuVendor.Amd));
     IAppCache? IGpuVendorBackend.AppCache => AppCache;
 
     /// <summary>Both caches: DxcCache (D3D12) + DxCache (D3D11) bytes; <see cref="CacheUsage.Path"/> is the DxcCache folder

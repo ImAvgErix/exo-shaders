@@ -88,6 +88,7 @@ public sealed class ReEngineReader(string dataDir, Func<string, string?>? downlo
     static readonly uint[] ShaderMagics = [0x00464453, 0x4F49434F];
 
     public sealed record Loc(string Pak, int Entry, int Offset, int Size);
+    const string Dlc = "dlc";
 
     /// <summary>Where each container was found, per game id, from the last Index (in memory only, like CarvedReader).</summary>
     readonly ConcurrentDictionary<string, IReadOnlyDictionary<string, Loc>> located = new();
@@ -135,11 +136,13 @@ public sealed class ReEngineReader(string dataDir, Func<string, string?>? downlo
         if (paks.Error != null) throw new InvalidDataException(paks.Error);
         var final = paks.Final().ToList();
         int encrypted = 0, unreadable = 0;
-        var files = final.AsParallel().WithCancellation(ct).Where(f =>
+        var shaderFiles = new ConcurrentBag<(RePak Pak, int Index)>();
+        Parallel.ForEach(final, ReaderLoops.Options(ct), f =>
         {
-            if (f.Pak.Entries[f.Index].Encryption != 0) { Interlocked.Increment(ref encrypted); return false; }
-            return Magic(f.Pak, f.Index) is { } m && ShaderMagics.Contains(m);
-        }).ToList();
+            if (f.Pak.Entries[f.Index].Encryption != 0) Interlocked.Increment(ref encrypted);
+            else if (Magic(f.Pak, f.Index) is { } m && ShaderMagics.Contains(m)) shaderFiles.Add(f);
+        });
+        var files = shaderFiles.ToList();
         var probed = sw.Elapsed.TotalSeconds;
 
         var locs = new ConcurrentDictionary<string, Loc>();
@@ -149,7 +152,7 @@ public sealed class ReEngineReader(string dataDir, Func<string, string?>? downlo
         long bytes = 0, containers = 0, bad = 0;
         // ponytail: one decompressed material file per worker in memory (PRAGMATA: 5 MB average); cap the parallelism if a
         // title ships material files in the hundreds of MB
-        Parallel.ForEach(files, new ParallelOptions { TaskScheduler = TaskScheduler.Current, CancellationToken = ct }, f =>
+        Parallel.ForEach(files, ReaderLoops.Options(ct), f =>
         {
             byte[] data;
             try { data = f.Pak.Read(f.Pak.Entries[f.Index]); }
@@ -208,11 +211,11 @@ public sealed class ReEngineReader(string dataDir, Func<string, string?>? downlo
         }
 
         using var content = IncrementalHash.CreateHash(HashAlgorithmName.SHA1);
-        var dlc = GameFiles.Find(dir, Paks.Dlc);
+        var dlc = GameFiles.Find(dir, Dlc);
         foreach (var p in paks.All)
         {
             var fi = new FileInfo(p.Path);
-            content.AppendData(Encoding.UTF8.GetBytes($"{GameFiles.Rel(dir, p.Path, dlc, Paks.Dlc)}|{fi.Length}|{fi.LastWriteTimeUtc.Ticks}\n"));
+            content.AppendData(Encoding.UTF8.GetBytes($"{GameFiles.Rel(dir, p.Path, dlc, Dlc)}|{fi.Length}|{fi.LastWriteTimeUtc.Ticks}\n"));
         }
         log?.Report($"{paks.All.Count} packages, {final.Count} files (probed in {probed:F1}s{(encrypted > 0 ? $", {encrypted} resource-encrypted skipped" : "")}): "
             + $"{files.Count} shader files{(unreadable > 0 ? $" ({unreadable} unreadable)" : "")}, {bytes / 1e9:F2} GB decompressed, {containers} containers -> {shaders.Count} shaders ("
@@ -320,8 +323,6 @@ public sealed class ReEngineReader(string dataDir, Func<string, string?>? downlo
         public readonly RePak? Base;
         public string? Error;
         public string? Failed;   // the package Error is about
-
-        public const string Dlc = "dlc";
 
         static readonly Regex Patch = new(@"\.patch_(\d+)\.pak$", RegexOptions.IgnoreCase);
 

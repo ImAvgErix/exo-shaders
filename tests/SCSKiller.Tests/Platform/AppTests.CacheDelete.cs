@@ -54,6 +54,15 @@ public partial class AppTests
         return (k, ours, other);
     }
 
+    /// <summary>alpha.3 deletes a listed game's own item whole, through its Clear cache: an item it shares with an uninstalled
+    /// game of the same exe name still goes unit by unit, past the checks against what the page read. The shared item's name.</summary>
+    string SharedWithUninstalled(ScsKiller k)
+    {
+        var exe = Path.GetFileName(_game.ExePath).ToUpperInvariant();
+        k.Store.SaveGame("steam:77", new GameRecord { WarmedExeName = exe });
+        return $"Fake Game, {exe} (steam_77)";
+    }
+
     static CacheItem ItemOf(CacheInventory inv, CacheGroupKind kind, string name) =>
         inv.Groups.Single(g => g.Kind == kind).Items.Single(i => i.Name == name);
 
@@ -91,7 +100,7 @@ public partial class AppTests
 
         // another process compiles the game: it holds the game's compile lock
         using (new FileStream(Path.Combine(k.Store.GameDir(_game.Id), "compile.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
-            Assert.Equal(["Fake Game: a compile of it is in progress"], k.DeleteCaches([both[0]]).Skipped);
+            Assert.Equal(["Fake Game: a compile of Fake Game is in progress"], k.DeleteCaches([both[0]]).Skipped);   // alpha.3: its Clear cache's words
         Assert.All([.. ours, gone], f => Assert.True(File.Exists(f)));
         Assert.Equal(GameStatus.Warmed, k.Games.Single().Status);
     }
@@ -100,11 +109,12 @@ public partial class AppTests
     public async Task A_file_changed_since_the_page_read_it_keeps_its_whole_key_and_the_rest_goes()
     {
         var (k, ours, other) = await CompiledOnNvidia();
+        var name = SharedWithUninstalled(k);
         var inv = k.CacheInventory();
         File.WriteAllBytes(ours[1], new byte[262144]);   // the driver grew it meanwhile
 
         var r = k.DeleteCaches(inv.Everything(withOthers: true));
-        Assert.Equal(["Fake Game: 32e6a91d33333333.nvph changed since the page read it"], r.Skipped);
+        Assert.Equal([$"{name}: 32e6a91d33333333.nvph changed since the page read it"], r.Skipped);
         Assert.All(ours, f => Assert.True(File.Exists(f)));
         Assert.False(File.Exists(other));
         Assert.Equal(GameStatus.Warmed, k.Games.Single().Status);   // none of its files went
@@ -178,12 +188,13 @@ public partial class AppTests
     public async Task A_file_the_driver_added_to_a_key_after_the_page_read_it_keeps_the_whole_key()
     {
         var (k, ours, _) = await CompiledOnNvidia();
-        var item = ItemOf(k.CacheInventory(), CacheGroupKind.Installed, "Fake Game");
+        var name = SharedWithUninstalled(k);
+        var item = ItemOf(k.CacheInventory(), CacheGroupKind.Installed, name);
         var added = CacheFile("bc2fa91d33333333.nvph", 2048);   // a ray tracing file, written by the game played since
         // file times come from a coarser clock than the read's: one made just after the read can look older than it
         File.SetCreationTimeUtc(added, DateTime.UtcNow.AddMinutes(-5));
 
-        Assert.Equal(["Fake Game: bc2fa91d33333333.nvph was added since the page read it"], k.DeleteCaches([item]).Skipped);
+        Assert.Equal([$"{name}: bc2fa91d33333333.nvph was added since the page read it"], k.DeleteCaches([item]).Skipped);
         Assert.All([.. ours, added], f => Assert.True(File.Exists(f)));
     }
 
@@ -224,10 +235,11 @@ public partial class AppTests
         File.WriteAllBytes(outside, new byte[512]);
         // needs Developer Mode or admin, as on the PCs these tests run on
         File.CreateSymbolicLink(Path.Combine(_root, "DXCache", "bc2fa91d33333333.nvph"), outside);
-        var item = ItemOf(k.CacheInventory(), CacheGroupKind.Installed, "Fake Game");
+        var name = SharedWithUninstalled(k);
+        var item = ItemOf(k.CacheInventory(), CacheGroupKind.Installed, name);
         Assert.Equal(2, item.Files.Count);   // the link isn't listed
 
-        Assert.Equal(["Fake Game: bc2fa91d33333333.nvph is a link"], k.DeleteCaches([item]).Skipped);
+        Assert.Equal([$"{name}: bc2fa91d33333333.nvph is a link"], k.DeleteCaches([item]).Skipped);
         Assert.All([.. ours, outside], f => Assert.True(File.Exists(f)));
     }
 
@@ -265,8 +277,9 @@ public partial class AppTests
     public async Task Freeing_what_an_older_driver_wrote_keeps_the_games_compile()
     {
         var (k, ours, _) = await CompiledOnNvidia();
-        var old = CacheFile("fc52a91d33333333.nvph", 1024);
+        var old = CacheFile("fc52a91d66666666.nvph", 1024);   // a key the current driver doesn't use (alpha.3: whole keys only)
         File.SetLastWriteTimeUtc(old, DateTime.UtcNow.AddDays(-30));
+        File.SetLastWriteTimeUtc(CacheFile("fc52a91d33333333.nvph", 512), DateTime.UtcNow.AddDays(-30));   // the game's key: the driver still uses it
         var inv = k.CacheInventory();
         Assert.Equal(1024, k.OldDriverBytes());
         var group = inv.Groups.Single(g => g.Kind == CacheGroupKind.OldDriver);

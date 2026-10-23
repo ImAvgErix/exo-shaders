@@ -317,7 +317,7 @@ public class UpdateTests : IDisposable
         Staged.Save(_dir);
         var loaded = StagedUpdate.Load(_dir)!;
         Assert.Equal((Staged.Channel, Staged.Version, Staged.FileName, Staged.Size, Staged.Sha256), (loaded.Channel, loaded.Version, loaded.FileName, loaded.Size, loaded.Sha256));
-        Assert.Null(loaded.Refused(Keys));   // the feed and its signature, byte for byte
+        Assert.Null(loaded.Refused(Keys, FeedOs.Windows));   // the feed and its signature, byte for byte
         File.WriteAllText(Path.Combine(_dir, "update-staged.json"), "{\"Channel\":\"stable\"");   // torn write
         Assert.Null(StagedUpdate.Load(_dir));
         File.WriteAllText(Path.Combine(_dir, "update-staged.json"), "{}");
@@ -331,24 +331,24 @@ public class UpdateTests : IDisposable
     [Fact]
     public void A_staged_record_its_signed_feeds_dont_back_is_refused()
     {
-        Assert.Null(Staged.Refused(Keys));
-        Assert.Null(StagedBeta.Refused(Keys));
-        Assert.Null((StagedBeta with { Channel = "internal" }).Refused(Keys));   // internal's check reads beta's and stable's feeds
+        Assert.Null(Staged.Refused(Keys, FeedOs.Windows));
+        Assert.Null(StagedBeta.Refused(Keys, FeedOs.Windows));
+        Assert.Null((StagedBeta with { Channel = "internal" }).Refused(Keys, FeedOs.Windows));   // internal's check reads beta's and stable's feeds
         // the record says stable but holds only a beta feed: a beta package passed off as stable
         Assert.NotNull((Staged with { Version = StagedBeta.Version, FileName = StagedBeta.FileName, Size = StagedBeta.Size, Sha256 = StagedBeta.Sha256,
-            Feeds = new Dictionary<string, SignedFeed> { ["beta"] = StagedBeta.Feeds["beta"] } }).Refused(Keys));
-        Assert.NotNull((StagedBeta with { Channel = "stable" }).Refused(Keys));
-        Assert.NotNull((Staged with { Sha256 = "ef56" }).Refused(Keys));      // another package's hash
-        Assert.NotNull((Staged with { Size = 1 }).Refused(Keys));
-        Assert.NotNull((Staged with { Version = "1.9.0" }).Refused(Keys));
-        Assert.NotNull((Staged with { FileName = "other.nupkg" }).Refused(Keys));
-        Assert.NotNull((Staged with { Channel = "nonsense" }).Refused(Keys));
-        Assert.NotNull((Staged with { Feeds = new Dictionary<string, SignedFeed>() }).Refused(Keys));
+            Feeds = new Dictionary<string, SignedFeed> { ["beta"] = StagedBeta.Feeds["beta"] } }).Refused(Keys, FeedOs.Windows));
+        Assert.NotNull((StagedBeta with { Channel = "stable" }).Refused(Keys, FeedOs.Windows));
+        Assert.NotNull((Staged with { Sha256 = "ef56" }).Refused(Keys, FeedOs.Windows));      // another package's hash
+        Assert.NotNull((Staged with { Size = 1 }).Refused(Keys, FeedOs.Windows));
+        Assert.NotNull((Staged with { Version = "1.9.0" }).Refused(Keys, FeedOs.Windows));
+        Assert.NotNull((Staged with { FileName = "other.nupkg" }).Refused(Keys, FeedOs.Windows));
+        Assert.NotNull((Staged with { Channel = "nonsense" }).Refused(Keys, FeedOs.Windows));
+        Assert.NotNull((Staged with { Feeds = new Dictionary<string, SignedFeed>() }).Refused(Keys, FeedOs.Windows));
         var edited = StableFeed.ToArray();
         edited[^5] = (byte)'9';   // the size in the feed, after it was signed
-        Assert.NotNull((Staged with { Feeds = new Dictionary<string, SignedFeed> { ["stable"] = Staged.Feeds["stable"] with { Feed = edited } } }).Refused(Keys));
-        Assert.NotNull((Staged with { Feeds = new Dictionary<string, SignedFeed> { ["stable"] = new(BetaFeed, StagedBeta.Feeds["beta"].Sig) } }).Refused(Keys));   // beta's signature under stable
-        Assert.NotNull(Staged.Refused(new Dictionary<string, string> { ["rel-b"] = B.Public }));   // a key that isn't pinned
+        Assert.NotNull((Staged with { Feeds = new Dictionary<string, SignedFeed> { ["stable"] = Staged.Feeds["stable"] with { Feed = edited } } }).Refused(Keys, FeedOs.Windows));
+        Assert.NotNull((Staged with { Feeds = new Dictionary<string, SignedFeed> { ["stable"] = new(BetaFeed, StagedBeta.Feeds["beta"].Sig) } }).Refused(Keys, FeedOs.Windows));   // beta's signature under stable
+        Assert.NotNull(Staged.Refused(new Dictionary<string, string> { ["rel-b"] = B.Public }, FeedOs.Windows));   // a key that isn't pinned
     }
 
     [Fact]
@@ -560,7 +560,7 @@ public class UpdateTests : IDisposable
 
     /// <summary>The App's source: the start and the tray's Quit both ask <see cref="AutoInstall.HeldBack"/> before applying,
     /// the start takes the staged download from the disk, and Windows' session end never applies.</summary>
-    [Fact]
+    [Fact(Skip = "Exo Shaders leaves out the WinUI app's updater (Updater.cs, UpdateHooks.cs): Exo updates it with Exo")]
     public void Start_and_Quit_apply_only_through_the_automatic_install_rules()
     {
         var app = Path.Combine(TestEnv.RepoRoot, "src", "SCSKiller.App");
@@ -582,7 +582,7 @@ public class UpdateTests : IDisposable
         // the start knows the games before it asks whether one runs, and asks again right before the handover
         Assert.True(start.IndexOf("await App.Core.ScanAsync(") is >= 0 and var scan && scan < start.IndexOf("BeginUpdate()"));
         Assert.Contains("now => Untouched() && !GameRunning() && AutoInstall.On(App.Core.Settings, now.Channel)", start);   // the download actually handed over
-        Assert.Contains("s.Refused(FeedTrust.ReleaseKeys)", updater);
+        Assert.Contains("s.Refused(FeedTrust.ReleaseKeys, FeedOs.Windows)", updater);
         Assert.Contains(".SetAutoApplyOnStartup(false)", File.ReadAllText(Path.Combine(app, "UpdateHooks.cs")));
         Assert.Contains("if (ready?.Channel == channel && !SignedFeedSource.Partial) Stage(null);", updater);   // a feed missing a channel drops nothing
         var appXaml = File.ReadAllText(Path.Combine(app, "App.xaml.cs"));

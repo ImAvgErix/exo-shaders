@@ -236,7 +236,7 @@ public sealed class NaughtyDogReader : IEngineReader
     /// <summary>The archives of each folder of build\pc (in the install or a folder of it, UNCHARTED's Uncharted4_data) that
     /// holds a shaders.psarc; for a game of a collection only its own (<see cref="CollectionGame.Data"/>). A folder with an
     /// updated-fx-paks archive keeps its material shaders there, and its other archives (UNCHARTED: about 120 GB of levels,
-    /// textures and animation) hold none: only those two are read. Rel: the archive's path in the install.</summary>
+    /// textures and animation) hold none: only those two are read. Each with its path under the install as Windows spells it.</summary>
     static IEnumerable<(FileInfo File, string Rel)> Archives(Game game)
     {
         var install = new DirectoryInfo(game.InstallDir);
@@ -250,8 +250,8 @@ public sealed class NaughtyDogReader : IEngineReader
             .Where(d => File.Exists(GameFiles.Find(d.FullName, Globals)) && (only == null || Path.GetFullPath(d.FullName).Equals(only, StringComparison.OrdinalIgnoreCase))).SelectMany(d =>
         {
             var all = GameFiles.EnumerateFiles(d, "*.psarc", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0 }).ToList();
-            var read = all.Any(Fx) ? all.Where(f => Fx(f) || f.Name.Equals(Globals, StringComparison.OrdinalIgnoreCase)) : all;
-            return read.Select(f => (f, GameFiles.Rel(game.InstallDir, f.FullName, d.Parent!.FullName, BuildPc)));
+            return (all.Any(Fx) ? all.Where(f => Fx(f) || f.Name.Equals(Globals, StringComparison.OrdinalIgnoreCase)) : all)
+                .Select(f => (f, GameFiles.Rel(game.InstallDir, f.FullName, d.Parent!.FullName, BuildPc)));
         });
     }
 }

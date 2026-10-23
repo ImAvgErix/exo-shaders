@@ -289,7 +289,7 @@ public class InlineShadersTests(ITestOutputHelper output)
         {
             var memory = Assert.Throws<PlanTooBigException>(() => new UnrealReader(Ff7.TempDir("inline-budget-data")) { MemoryBudget = 1 }.IndexInline(provider, game, null, CancellationToken.None));
             Assert.StartsWith("the shader read outgrew its memory limit of ", memory.Message);
-            Assert.EndsWith(" GB on this PC at 0 of 40 packages: this game's packages hold more shaders than a compile can read", memory.Message);
+            Assert.EndsWith(" GB on this PC at 0 of 40 packages: SCSKiller ran out of its read budget while reading this game's packages", memory.Message);   // alpha.3's words
             Assert.DoesNotContain(";", memory.Message);
             Assert.Single(new UnrealReader(Ff7.TempDir("inline-budget-data")).IndexInline(provider, game, null, CancellationToken.None).Shaders);   // within the default budget
         }

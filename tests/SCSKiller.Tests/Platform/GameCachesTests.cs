@@ -29,6 +29,16 @@ static class FakeD3DSCache
         return dir;
     }
 
+    /// <summary>An app_id row as a WAL holds it (alpha.3 reads only whole records): its header (its size, the rowid alias's
+    /// type 0, exe_path's text type), then the path in UTF-8.</summary>
+    public static byte[] WalRow(string exePath)
+    {
+        var path = Encoding.UTF8.GetBytes(exePath);
+        var type = 13 + 2 * path.Length;
+        byte[] varint = type < 128 ? [(byte)type] : [(byte)(0x80 | type >> 7), (byte)(type & 0x7F)];
+        return [(byte)(2 + varint.Length), 0, .. varint, .. path];
+    }
+
     public static void Db(string path, params string[] exePaths)
     {
         Assert.Equal(0, sqlite3_open(path, out var db));
@@ -68,7 +78,7 @@ public class GameCachesTests : IDisposable
         var walOnly = Path.Combine(d3ds, "04");   // a db without the table yet: its rows are only in the WAL
         Directory.CreateDirectory(walOnly);
         File.WriteAllBytes(Path.Combine(walOnly, "a.dxcache"), []);
-        File.WriteAllBytes(Path.Combine(walOnly, "a.dxcache-wal"), Encoding.Latin1.GetBytes("junk" + g.ExePath + "\0more"));
+        File.WriteAllBytes(Path.Combine(walOnly, "a.dxcache-wal"), [.. "junk"u8, .. FakeD3DSCache.WalRow(g.ExePath), .. "more"u8]);
 
         var mixed = FakeD3DSCache.Folder(d3ds, "05", g.ExePath);   // a second db names another exe: not positively the game's
         FakeD3DSCache.Db(Path.Combine(mixed, "other.dxcache"), @"C:\Other\other.exe");
@@ -133,11 +143,11 @@ public class GameCachesTests : IDisposable
         var walOnly = Path.Combine(_root, "D3DSCache", "01");
         Directory.CreateDirectory(walOnly);
         File.WriteAllBytes(Path.Combine(walOnly, "a.dxcache"), []);
-        File.WriteAllBytes(Path.Combine(walOnly, "a.dxcache-wal"), [.. "junk"u8, .. Encoding.UTF8.GetBytes(g.ExePath), 0, .. "more"u8]);   // SQLite's text: UTF-8
+        File.WriteAllBytes(Path.Combine(walOnly, "a.dxcache-wal"), [.. "junk"u8, .. FakeD3DSCache.WalRow(g.ExePath), .. "more"u8]);   // SQLite's text: UTF-8
         Assert.Equal([walOnly], D3DSCache.FoldersOf(Path.Combine(_root, "D3DSCache"), g));
 
         // a fragment of a path before a byte that isn't UTF-8 text: not joined to the path after it
-        File.WriteAllBytes(Path.Combine(walOnly, "a.dxcache-wal"), [.. @"C:\partial"u8, 0xFF, .. Encoding.UTF8.GetBytes(g.ExePath), 0]);
+        File.WriteAllBytes(Path.Combine(walOnly, "a.dxcache-wal"), [.. @"C:\partial"u8, 0xFF, .. FakeD3DSCache.WalRow(g.ExePath), 0]);
         Assert.Equal([g.ExePath], D3DSCache.ExePaths(walOnly)!);
     }
 

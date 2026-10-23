@@ -194,7 +194,7 @@ public sealed class NixxesReader : IEngineReader
 
     /// <param name="Kind"><see cref="Archive"/>: a PSARC, each .xpps entry a source; <see cref="Whole"/>: a DSAR file's
     /// stream; <see cref="Plain"/>: the file itself</param>
-    /// <param name="Rel">its path relative to the install, as the index stamps it</param>
+    /// <param name="Rel">its path under the install as Windows spells it</param>
     sealed record SourceFile(string Path, int Kind, string Library, string Rel);
     const int Archive = 0;
 
@@ -247,12 +247,9 @@ public sealed class NixxesReader : IEngineReader
         switch (layout)
         {
             case SuckerPunch:
-            {
                 var psarcs = GameFiles.Find(dir, Psarcs);
-                foreach (var f in Order(Files(psarcs, "*.psarc")))
-                    yield return new SourceFile(f.FullName, Archive, "", GameFiles.Rel(dir, f.FullName, psarcs, Psarcs));
+                foreach (var f in Order(Files(psarcs, "*.psarc"))) yield return new SourceFile(f.FullName, Archive, "", GameFiles.Rel(dir, f.FullName, psarcs, Psarcs));
                 break;
-            }
             case Insomniac:
                 foreach (var name in new[] { "material", "materialgraph" })
                     if (GameFiles.Find(dir, $@"d\{name}") is var path && File.Exists(path))
@@ -266,15 +263,10 @@ public sealed class NixxesReader : IEngineReader
                     yield return new SourceFile(game.ExePath, Plain, GameFiles.Rel(dir, game.ExePath), GameFiles.Rel(dir, game.ExePath));
                 break;
             case Stingray:
-            {
                 var data = GameFiles.Find(dir, "data");
                 foreach (var f in Order(Files(data, "bundles.*.nxa")))
-                {
-                    var rel = GameFiles.Rel(dir, f.FullName, data, "data");
-                    yield return new SourceFile(f.FullName, Whole, rel, rel);
-                }
+                    if (GameFiles.Rel(dir, f.FullName, data, "data") is var rel) yield return new SourceFile(f.FullName, Whole, rel, rel);
                 break;
-            }
         }
     }
 

@@ -2,10 +2,7 @@
 using System.IO.Compression;
 using System.Numerics;
 using System.Text.Json;
-using SCSKiller.Core.App;
 using SCSKiller.Core.Carved;
-using SCSKiller.Core.Games;
-using SCSKiller.Core.Vulkan;
 using static SCSKiller.Core.Planning.PsoDb;
 
 namespace SCSKiller.Core.Planning;
@@ -87,11 +84,12 @@ public sealed class Planner(string? packDir = null, string? sharedPackDir = null
     /// ray tracing state object, recorded ('R', 'A') or a planned collection ('Y', 'H'). A PSO that traces rays inline (RayQuery) stays.</summary>
     public static bool LeftOutWithoutRt(Rec r) => IsStateObject(r.Tag) || r.Tag is 'Y' or 'H';
 
-    /// <summary>The game runs on DirectX 11 for sure: the user chose it, or a recording showed it (<see cref="EngineInfo.GraphicsApi"/>).</summary>
-    public static bool D3D11Decided(EngineInfo engine) => engine.GraphicsApi is "D3D11 (your choice)" or "D3D11 (recording)";
+    /// <summary>DirectX 11 alone is the user's choice or what this PC's recording shows: <see cref="LeftOutOnD3D11"/> applies.
+    /// Not for DirectX 11 by detection alone: D3D12 records in a community recording show players run it on DirectX 12.</summary>
+    public static bool D3D11Decided(EngineInfo engine) => engine.GraphicsApi is "D3D11" + App.ScsKiller.ChoiceSuffix or "D3D11" + App.ScsKiller.RecordingSuffix;
 
-    /// <summary>A record a game decided on DirectX 11 leaves out of the plan, the warm and the count of new pipelines: all
-    /// but blobs and D3D11 draws.</summary>
+    /// <summary>A recorded record a DirectX 11 compile leaves out of the plan, the warm and the count of new pipelines: all but
+    /// blobs and D3D11 draws are D3D12's, which the D3D11 driver cache never takes.</summary>
     public static bool LeftOutOnD3D11(Rec r) => r.Tag is not ('B' or 'D');
 
     /// <summary>A shader D3D11 takes: VS/PS/DS/HS/GS/CS in DXBC up to SM 5.0 (5.1 and DXIL are D3D12 only).</summary>
@@ -104,15 +102,35 @@ public sealed class Planner(string? packDir = null, string? sharedPackDir = null
     /// <summary><see cref="Untested"/> without the recording hint: what an anti-cheat game, which can't be recorded, is told.</summary>
     public const string UntestedNote = "not tested on this engine version yet";
     public const string Record = "turn on recording and play for about 5 minutes";
-    public const string PackagedVulkan = "runs on Vulkan from the Xbox app, which isn't supported yet";
-    /// <summary>Ends "runs on {the API}" for a Vulkan game when the vendor's Vulkan cache isn't supported (<see cref="VendorCaps.VulkanKey"/>).</summary>
+    /// <summary>Ends the reason of a Vulkan game on a vendor without a Vulkan warm (<see cref="VendorCaps.VulkanKey"/>).</summary>
     public const string VulkanNotOnGpu = ", which isn't supported on this GPU yet";
     /// <summary>Ends the reason of a game that may run on DirectX 11, where the recorder never loads.</summary>
     public const string Dx12Only = "helps only when played on DirectX 12 (the game may run on DirectX 11)";
+    public const string RecordedOnly = "plans only the recorded pipelines";
 
     public PlanCheck Check(Game game, EngineInfo engine, Recording? recording, VendorCaps caps)
     {
-        if (VulkanPlan.IsVulkan(engine)) return CheckVulkan(game, engine, recording, caps);
+        // the recording is the whole plan: nothing of the game files is read, so whether a reader can index them doesn't matter
+        if (Vulkan.VulkanPlan.IsVulkan(engine))
+        {
+            if (caps.VulkanKey == null) return new(Readiness.Unsupported, $"runs on {engine.GraphicsApi}{VulkanNotOnGpu}");
+            var check = Vulkan.VulkanPlan.Check(recording);
+            // a device-keyed cache: the launch that unlocks Steam's download must also record the device
+            if (check.Reason == Vulkan.VulkanPlan.StartOnce && caps.VulkanKey == Vulkan.VulkanPlan.DeviceKey && recording!.VulkanDevice == null)
+                check = new(Readiness.NeedsRecording, Vulkan.VulkanPlan.DeviceNeeded);
+            // the warm reaches the game's cache only with its device (VulkanPlan.DeviceKey): a Steam game's in the file Steam's
+            // variables name, any other's in the driver's own cache, which the replayer staged as the game's exe reaches
+            if (check.Readiness == Readiness.Ready && caps.VulkanKey == Vulkan.VulkanPlan.DeviceKey)
+                check = recording!.VulkanDevice == null ? new(Readiness.NeedsRecording, Vulkan.VulkanPlan.DeviceNeeded)
+                    : !recording.VulkanSteamCache && game.Store == Store.Steam ? new(Readiness.NeedsRecording, Vulkan.VulkanPlan.SteamCacheNeeded) : check;
+            // a game without a layer key (off Windows, not Steam's) can't be recorded: a recording can't be asked for
+            return check.Readiness == Readiness.NeedsRecording && Vulkan.VulkanLayer.Key(game) == null ? new(Readiness.Unsupported, App.ScsKiller.SkipVulkanSteamOnly) : check;
+        }
+        // shaders in no readable file: a DirectX 12 recording's own bytes are the whole plan, nothing is generated
+        if (CarvedReader.RecordedOnly(engine))
+            return !caps.CacheKeyedByExeName ? new(Readiness.Unsupported, "not supported on this GPU yet")
+                : recording != null && File.Exists(recording.DbPath) && new FileInfo(recording.DbPath).Length > 0 ? new(Readiness.Ready, RecordedOnly)
+                : new(Readiness.NeedsRecording, Record);
         if (engine.Unsupported != null) return new(Readiness.Unsupported, engine.Unsupported);
         if (engine.Encrypted) return new(Readiness.Unsupported, "encrypted game files");
         // GraphicsApi: "D3D12[ (why)]", "D3D11[ (why)]", "Vulkan…", or "D3D11 or D3D12" when the game offers both (UnrealRhi)
@@ -122,42 +140,71 @@ public sealed class Planner(string? packDir = null, string? sharedPackDir = null
         var noVs = !D3D11CoversVs(caps) && !(dx11 && recording != null && HasDraws11(recording));
         var all11 = "compiles every DirectX 11 shader" + (noVs ? " but the vertex shaders" : "");
         if (!api.Contains("D3D12"))
-            return dx11 ? new(Readiness.Ready, Format.Then(all11 + api[5..], noVs ? D3D11VsRecord : null))
+            return dx11 ? new(Readiness.Ready, App.Format.Then(all11 + api[5..], noVs ? D3D11VsRecord : null))
+                : SteamOnly(recording, null) is { } steam ? steam
                 : new(Readiness.Unsupported, $"runs on {(api.StartsWith("D3D11") ? "DirectX 11" + api[5..] : api)}");
         var dx12 = CheckD3D12(engine, recording, caps, api.StartsWith("D3D12") || dx11 ? null : Dx12Only);
         if (!dx11) return dx12;
         // may run on either: DX11 shaders help whatever DX12 still needs (a recording can come later)
-        return new(Readiness.Ready, dx12.Readiness == Readiness.Ready ? Format.Then(dx12.Reason, $"also {all11} (the game may run on either)")
-            : Format.Then($"{all11} (the game may run on either)", $"for DirectX 12, {dx12.Reason}"));
-    }
-
-    /// <summary>A Vulkan game plans from its recording (<see cref="VulkanPlan.Check"/>), on a vendor whose Vulkan cache is
-    /// supported. A cache keyed on the device ("device") also needs the device the layer recorded on, and the game's driver
-    /// cache in Steam's shader cache folder; recording needs the layer, which loads only for Steam games.</summary>
-    static PlanCheck CheckVulkan(Game game, EngineInfo engine, Recording? recording, VendorCaps caps)
-    {
-        if (caps.VulkanKey == null) return new(Readiness.Unsupported, "runs on " + engine.GraphicsApi + VulkanNotOnGpu);
-        if (XboxSource.AppUserModelId(game) != null) return new(Readiness.Unsupported, PackagedVulkan);
-        var check = VulkanPlan.Check(recording);
-        if (check.Readiness == Readiness.Ready && caps.VulkanKey == "device")
-            check = recording!.VulkanDevice == null ? new(Readiness.NeedsRecording, "turn on recording and start the game once, so the compile uses its Vulkan device")
-                : !recording.VulkanSteamCache ? new(Readiness.NeedsRecording, "start the game once from Steam with Shader Pre-Caching on") : check;
-        return check.Readiness != Readiness.NeedsRecording || VulkanLayer.AppId(game) != null ? check
-            : new(Readiness.Unsupported, "Vulkan games are recorded only from Steam for now");
+        return new(Readiness.Ready, dx12.Readiness == Readiness.Ready ? App.Format.Then(dx12.Reason, $"also {all11} (the game may run on either)")
+            : App.Format.Then($"{all11} (the game may run on either)", $"for DirectX 12, {dx12.Reason}"));
     }
 
     static PlanCheck CheckD3D12(EngineInfo engine, Recording? recording, VendorCaps caps, string? maybe)
     {
         if (!caps.CacheKeyedByExeName) return new(Readiness.Unsupported, "not supported on this GPU yet");
-        // EmbeddedRootSignatures: any reader of shaders that carry them (carved, FromSoftware) or of records that name them (Dawn).
-        // BlackSpace's are, yet no game has confirmed its plan: a recording improves it
+        // EmbeddedRootSignatures: any reader of shaders that carry them (carved, FromSoftware) or of records that name them (Dawn)
         if (caps.StateIndependentCache && (RootSig.Verified(engine) || engine.Version.EndsWith(CarvedReader.EmbeddedRootSignatures)))
-            return new(Readiness.Ready, Format.Then(engine.Family == BlackSpace.BlackSpaceReader.Family ? Untested : NoRecording, maybe));
+            return new(Readiness.Ready, App.Format.Then(engine.Family == BlackSpace.BlackSpaceReader.Family ? Untested : NoRecording, maybe));
         if (recording != null && File.Exists(recording.DbPath) && new FileInfo(recording.DbPath).Length > 0)
-            return caps.StateIndependentCache || HasDraws(recording) ? new(Readiness.Ready, Format.Then("planned from a recording", maybe))
-                : new(Readiness.NeedsRecording, Format.Then("the recording has no draws: play into the game world", maybe)); // no vertex layouts to learn
-        if (caps.StateIndependentCache && RootSig.RuleFor(engine) != null) return new(Readiness.Ready, Format.Then(Untested, maybe));
-        return new(Readiness.NeedsRecording, Format.Then(Record, maybe));
+            return caps.StateIndependentCache || HasDraws(recording) ? new(Readiness.Ready, App.Format.Then("planned from a recording", maybe))
+                : FromSteam(recording) is { } drawless ? new(Readiness.Ready, App.Format.Then(drawless, maybe))
+                : new(Readiness.NeedsRecording, App.Format.Then("the recording has no draws: play into the game world", maybe)); // no vertex layouts to learn
+        if (caps.StateIndependentCache && RootSig.RuleFor(engine) != null) return new(Readiness.Ready, App.Format.Then(Untested, maybe));
+        return SteamOnly(recording, maybe) ?? new(Readiness.NeedsRecording, App.Format.Then(Record, maybe));
+    }
+
+    public const string SteamDownload = "planned from Steam's shader download", SteamRecorded = "planned from Steam's shader cache of your play";
+
+    /// <summary>A DirectX game under Proton whose Steam archives (<see cref="Recording.VulkanSources"/>) hold a pipeline to
+    /// plan: why it's ready without a recording of its own. Null: they hold none.</summary>
+    static string? FromSteam(Recording? recording) =>
+        recording?.VulkanSources is { } sources && Vulkan.VulkanPlan.Check(recording).Readiness == Readiness.Ready
+            ? sources.Any(s => s.Origin == Vulkan.FozOrigin.SteamDownload) ? SteamDownload : SteamRecorded : null;
+
+    /// <summary>A DirectX game without a recording, planned from Steam's archives alone: ready once this PC's vkd3d-proton
+    /// or DXVK recorded into the bucket, so the game has its Proton prefix and the bucket is this PC's version of theirs, else
+    /// started once from Steam first. Null: nothing to plan from Steam's.</summary>
+    static PlanCheck? SteamOnly(Recording? recording, string? maybe) =>
+        FromSteam(recording) is not { } why ? null
+        : recording!.VulkanSources!.Any(s => s.Origin == Vulkan.FozOrigin.SteamLocal) ? new(Readiness.Ready, App.Format.Then(why, maybe))
+        : new(Readiness.NeedsRecording, Vulkan.VulkanPlan.StartOnce);
+
+    /// <summary>A plan of Steam's archives alone (<see cref="Vulkan.VulkanPlan.Build"/>): a Vulkan game's, or a DirectX game's
+    /// under Proton whose DirectX plan isn't ready without them. Otherwise that plan wins and takes them in (<see cref="WithSteam"/>).</summary>
+    bool VulkanOnly(Game game, EngineInfo engine, Recording? recording, VendorCaps caps) =>
+        Vulkan.VulkanPlan.IsVulkan(engine) || recording is { VulkanSources: not null }
+            && Check(game, engine, File.Exists(recording.DbPath) ? recording with { VulkanSources = null } : null, caps).Readiness != Readiness.Ready;
+
+    /// <summary>The plan with the pipelines of Steam's archives (<see cref="Recording.VulkanSources"/>) added as 'V' items,
+    /// which the warm replays natively before the DirectX ones, and counted with the recorded ones
+    /// (<see cref="PlanStats.FromDownload"/>: Valve's download's). A DirectX pipeline and a Vulkan one live in different
+    /// hashes, so what both hold is compiled by each.</summary>
+    static Plan WithSteam(Plan plan, IReadOnlyList<Vulkan.FozSource> sources, VendorCaps caps, bool rayTracing)
+    {
+        var (names, vk) = Vulkan.VulkanPlan.Select(sources, caps, rayTracing);
+        if (names.Count == 0) return plan;
+        var s = plan.Stats;
+        plan = plan with
+        {
+            Stats = s with
+            {
+                Recorded = s.Recorded + vk.Recorded, FromDownload = vk.FromDownload, LeftOut = s.LeftOut + vk.LeftOut, DescriptorHeap = vk.DescriptorHeap,
+                CacheBudgetLeftOut = s.CacheBudgetLeftOut is null && vk.CacheBudgetLeftOut is null ? null : (s.CacheBudgetLeftOut ?? 0) + (vk.CacheBudgetLeftOut ?? 0),
+            },
+        };
+        PlanFile.Write(plan, PlanFile.Read(plan.FilePath).Records.Concat(names.Select(Vulkan.VulkanPlan.Item)));
+        return plan;
     }
 
     /// <summary>The recording has a graphics PSO with a vertex shader (a menu-only session may have none): a state-dependent
@@ -213,19 +260,23 @@ public sealed class Planner(string? packDir = null, string? sharedPackDir = null
     public Plan Build(Game game, EngineInfo engine, ShaderIndex index, Recording? recording, VendorCaps caps, string outDir,
         IProgress<string>? log, CancellationToken ct, bool maximum = false, bool rayTracing = true)
     {
-        if (VulkanPlan.IsVulkan(engine))
-            return VulkanPlan.Build(game, recording ?? throw new InvalidOperationException("a Vulkan game plans only from a recording"), caps, outDir, rayTracing);
-        try { return Build(game, engine, index, recording, caps, outDir, log, ct, maximum, rayTracing, pairs: true); }
+        if (VulkanOnly(game, engine, recording, caps))
+            return Vulkan.VulkanPlan.Build(game, recording ?? throw new InvalidOperationException("a Vulkan game plans only from a recording"), caps, outDir, rayTracing, index.ContentHash);
+        Plan plan;
+        try { plan = Build(game, engine, index, recording, caps, outDir, log, ct, maximum, rayTracing, pairs: !CarvedReader.RecordedOnly(engine)); }
         catch (PlanTooBigException e)
         {
             ForgetMemos();
             log?.Report($"warning: {e.Message}: planning only the recorded pipelines");
-            var plan = Build(game, engine, index, recording, caps, outDir, log, ct, maximum, rayTracing, pairs: false);
-            if (plan.Stats.Recorded + plan.Stats.MiddlewareItems > 0) return plan;
-            File.Delete(plan.FilePath);
-            throw;
+            plan = Build(game, engine, index, recording, caps, outDir, log, ct, maximum, rayTracing, pairs: false);
+            if (plan.Stats.Recorded + plan.Stats.MiddlewareItems == 0)
+            {
+                File.Delete(plan.FilePath);
+                throw;
+            }
         }
         finally { ForgetMemos(); }
+        return recording?.VulkanSources is { } steam ? WithSteam(plan, steam, caps, rayTracing) : plan;
     }
 
     Plan Build(Game game, EngineInfo engine, ShaderIndex index, Recording? recording, VendorCaps caps, string outDir,
@@ -310,9 +361,9 @@ public sealed class Planner(string? packDir = null, string? sharedPackDir = null
 
     public void Materialize(Plan plan, Game game, EngineInfo engine, IEngineReader reader, Recording? recording, string workDir, CancellationToken ct)
     {
-        if (plan.Platform == "vulkan")
+        if (plan.Platform == Vulkan.VulkanPlan.Platform)
         {
-            VulkanPlan.Materialize(plan, recording ?? throw new InvalidOperationException("a Vulkan plan replays only from a recording"), workDir);
+            Vulkan.VulkanPlan.Materialize(plan, recording ?? throw new InvalidOperationException("a Vulkan plan replays only from a recording"), workDir);
             return;
         }
         Directory.CreateDirectory(workDir);
@@ -329,6 +380,14 @@ public sealed class Planner(string? packDir = null, string? sharedPackDir = null
         }
 
         var body = PlanFile.Read(plan.FilePath).Records.ToList();
+        // Steam's pipelines of a DirectX plan (WithSteam): their own work file, their skips counted with the rest
+        long skipped = 0;
+        if (recording?.VulkanSources is { } steam && body.Any(r => r.Tag == Vulkan.VulkanPlan.Tag))
+        {
+            Vulkan.VulkanPlan.Materialize(plan, steam, workDir);
+            skipped = SkippedIn(workDir);
+        }
+        else foreach (var f in new[] { Vulkan.VulkanPlan.WorkFile, Vulkan.VulkanPlan.ValidatedFile }) File.Delete(Path.Combine(workDir, f));
         var templates = body.Where(r => r.Tag is 'G' or 'C' or 'S' && !inMain.Contains(r.Key)).ToList();
         var rt = body.Where(r => r.Tag == 'Y').Select(r => RtCollections.ParseItem(r.Payload)).ToList(); // ray tracing collections: need their library's exports
         var hitGroups = body.Where(r => r.Tag == 'H').Select(r => RedEngine.RedRayTracing.ParseItem(r.Payload)).ToList(); // REDengine 3's and FromSoftware's: need both libraries' exports
@@ -352,15 +411,14 @@ public sealed class Planner(string? packDir = null, string? sharedPackDir = null
         reader.ReadShaders(game, engine, shaders, (h, b) => { lock (gen) { WriteBlob(gen, h, b); written.Add(h); if (rtLibs.Contains(h)) rtBytes[h] = b; } }, ct); // missing ones: skipped below
         // middleware pack entries: shader bytes from this install's copy of the DLL, entries it lacks a shader of are skipped
         var packed = body.Where(r => r.Tag == 'M').ToList();
-        long skipped = 0;
         if (packed.Count > 0)
         {
             MiddlewarePacks.MaterializeResult m;
             try { m = MiddlewarePacks.Materialize(packed, game, planBlobs, written, inMain, gen); }
-            catch (IOException) // a DLL it can't read right now: no work folder left, so the next compile starts over
+            catch (IOException)   // a DLL it couldn't read: no partial work folder is left for a warm to start on
             {
                 try { gen.Dispose(); }
-                finally { foreach (var f in new[] { mainDb, Path.Combine(workDir, "scskiller_gen.db"), Path.Combine(workDir, SkippedFile) }) File.Delete(f); }
+                finally { foreach (var file in new[] { mainDb, Path.Combine(workDir, "scskiller_gen.db"), Path.Combine(workDir, SkippedFile) }) File.Delete(file); }
                 throw;
             }
             Log?.Report($"middleware packs: {m.Written} of {m.Entries} entries written, {m.AlreadyRecorded} already in the recording"
@@ -489,14 +547,15 @@ public sealed class Planner(string? packDir = null, string? sharedPackDir = null
     internal static bool Positioned(IReadOnlyDictionary<Stage, ShaderInfo> st) =>
         new[] { Stage.Geometry, Stage.Domain, Stage.Mesh, Stage.Vertex }.Where(st.ContainsKey).Select(x => st[x]).FirstOrDefault() is not { } last || Rasterizable(last);
 
-    const int ShadingRate = 24; // D3D_NAME_SHADINGRATE
-
-    /// <summary>The last geometry stage writes SV_ShadingRate and the PS doesn't read it: such a stage set is planned only
-    /// without view instancing (PlanBuilder's "vi_shading_rate_unread").</summary>
+    /// <summary>The last stage before the rasterizer writes SV_ShadingRate and the PS doesn't declare it. Legal D3D12 linkage, but
+    /// with view instancing AMD rejects the pipeline (E_INVALIDARG; Crimson Desert: 1,338 shadow pairs, the same pairs without
+    /// view instancing create, and the game never draws them).</summary>
     internal static bool ShadingRateUnread(IReadOnlyDictionary<Stage, ShaderInfo> st) =>
         st.TryGetValue(Stage.Pixel, out var ps) && ps.Inputs.All(i => i.SysValue != ShadingRate)
         && new[] { Stage.Geometry, Stage.Domain, Stage.Mesh, Stage.Vertex }.Where(st.ContainsKey).Select(x => st[x]).FirstOrDefault() is { } last
         && last.Outputs.Any(o => o.SysValue == ShadingRate);
+
+    const int ShadingRate = 24;   // D3D_NAME_SHADINGRATE
 
     /// <summary>A pipeline's stages share one root signature: shaders that carry theirs (RTS0) must carry the same.
     /// Exo Shaders: without allocating, as it runs for every candidate pairing (was Select.OfType.Distinct.Count).</summary>
@@ -680,11 +739,10 @@ public sealed class Planner(string? packDir = null, string? sharedPackDir = null
 /// is written. A library whose shaders all link pairs N x N (a carved archive is one pool): no plan of it would fit.</summary>
 public sealed class PlanBudget(long memoryBytes, TimeSpan time)
 {
-    /// <summary>The memory the user lets a compile take (Settings.MaxCompileMemoryGB); 0: none set.</summary>
-    public static long UserMemory { get; set; }
-
-    /// <summary>Half the RAM, at least 4 GiB, at most 32 GiB; or <see cref="UserMemory"/> when that is more.</summary>
+    /// <summary>Half the RAM, at least 4 GiB, at most 32 GiB; <see cref="UserMemory"/> when that is more.</summary>
     public static long DefaultMemory(long ram) => Math.Max(Math.Clamp(ram / 2, 4L << 30, 32L << 30), UserMemory);
+    /// <summary>Bytes of "Maximum memory for compiling" (Settings.MaxCompileMemoryGB); 0 = Auto.</summary>
+    public static long UserMemory { get; set; }
     /// <summary>Planning runs at below-normal priority, often while the PC is in use.</summary>
     public static readonly TimeSpan DefaultTime = TimeSpan.FromMinutes(30);
 

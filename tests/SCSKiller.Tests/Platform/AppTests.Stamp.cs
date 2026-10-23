@@ -434,8 +434,8 @@ public partial class AppTests
     }
 
     [Theory]
-    [InlineData(@"C:\g\ACValhalla.exe", true)]
-    [InlineData(@"C:\g\ACValhalla_Plus.exe", true)]
+    [InlineData(@"C:\g\ACValhalla.exe", false)]        // alpha.3 takes Valhalla off the list
+    [InlineData(@"C:\g\ACShadows_Plus.exe", true)]     // the Ubisoft+ build
     [InlineData(@"C:\g\acmirage.exe", true)]
     [InlineData(@"C:\g\ACOrigins.exe", false)]
     public void Assassins_Creed_exes_that_dont_start_with_it_get_no_recorder(string exe, bool refused) =>

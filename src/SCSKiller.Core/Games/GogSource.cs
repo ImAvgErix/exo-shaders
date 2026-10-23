@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using System.Text.Json;
 using Microsoft.Win32;
 
@@ -14,7 +15,10 @@ public sealed class GogSource(IEnumerable<(string Id, string? Name, string Dir, 
 {
     public Store Store => Store.Other;
 
-    public IReadOnlyList<Game> Discover()
+    public IReadOnlyList<Game> Discover() => OperatingSystem.IsWindows() ? Installed() : [];
+
+    [SupportedOSPlatform("windows")]
+    List<Game> Installed()
     {
         var games = new List<Game>();
         var dirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -140,7 +144,7 @@ public sealed class GogSource(IEnumerable<(string Id, string? Name, string Dir, 
 
     static string? Str(JsonElement e, string name) => Prop(e, name) is { ValueKind: JsonValueKind.String } v ? v.GetString() : null;
 
-    static (string Name, string? Exe, string? Version) ParseInfo(string json, string install, string fallbackName)
+    internal static (string Name, string? Exe, string? Version) ParseInfo(string json, string install, string fallbackName)
     {
         using var doc = JsonDocument.Parse(json);
         var r = doc.RootElement;
@@ -152,7 +156,7 @@ public sealed class GogSource(IEnumerable<(string Id, string? Name, string Dir, 
                 if (t.TryGetProperty("category", out var cat) && cat.ValueKind == JsonValueKind.String && cat.GetString() == "game"
                     && t.TryGetProperty("path", out var p) && p.ValueKind == JsonValueKind.String)
                 {
-                    exe = Path.GetFullPath(Path.Combine(install, p.GetString()!));
+                    exe = Path.GetFullPath(GameFiles.Find(install, p.GetString()!));
                     break;
                 }
         return (name, exe, version);

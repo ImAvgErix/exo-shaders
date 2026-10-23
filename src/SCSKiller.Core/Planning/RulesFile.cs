@@ -24,13 +24,15 @@ public sealed class RulesFile
     /// rs.re.v2: its <see cref="ReRule.DenyMesh"/>, <see cref="ReRule.CbvUavAbove"/> and <see cref="ReRule.BindlessSpaces"/>;
     /// rs.samplers.v1: static samplers as raw descriptions; rs.stock.v2: <see cref="StockRule.DenyMesh"/>; rt.nv.v1: <see cref="RtRule.Nv"/>;
     /// amd.ags.v1: <see cref="PlanRule.Ags"/>; nv.aftermath.v1: <see cref="PlanRule.Aftermath"/>; vi.v1: <see cref="PlanRule.ViewInstancing"/>;
-    /// passnames.v1: <see cref="PlanRule.PassNames"/>.</summary>
-    public static readonly IReadOnlySet<string> Capabilities = new HashSet<string> { "rs.desc.v1", "rs.desc.v2", "rs.stock.v1", "rs.select.v1", "stagesets.v1", "rt.collection.v1", "rt.noconfig.v1", "rs.re.v1", "rs.re.v2", "rs.samplers.v1", "rs.stock.v2", "rt.nv.v1", "amd.ags.v1", "nv.aftermath.v1", "vi.v1", "passnames.v1" };
+    /// passnames.v1: <see cref="PlanRule.PassNames"/>; d3ds.identity.v1: an <see cref="IdentityRule"/>, alone.</summary>
+    public static readonly IReadOnlySet<string> Capabilities = new HashSet<string> { "rs.desc.v1", "rs.desc.v2", "rs.stock.v1", "rs.select.v1", "stagesets.v1", "rt.collection.v1", "rt.noconfig.v1", "rs.re.v1", "rs.re.v2", "rs.samplers.v1", "rs.stock.v2", "rt.nv.v1", "amd.ags.v1", "nv.aftermath.v1", "vi.v1", "passnames.v1", IdentityCap };
+
+    public const string IdentityCap = "d3ds.identity.v1";
 
     /// <summary>ff7: <see cref="RootSig.BuildUe"/>; bindless / spaceBindless: the UE 4 forks' bindless tables; avalancheSrvs:
     /// SRV tables of 128 when a shader carries Avalanche's bindless marker (<see cref="RootSig.MaxSrvsFor"/>); dagor /
     /// dagorCbvRanges: built from each shader's header (<see cref="Dagor.DagorRootSig"/>), constant buffers as root CBVs or in
-    /// tables; snowdrop: Snowdrop's, one per kind of pipeline (<see cref="Snowdrop.SnowdropRootSig"/>).</summary>
+    /// tables.</summary>
     public static readonly IReadOnlySet<string> RsShapes = new HashSet<string> { "ff7", "bindless", "spaceBindless", "avalancheSrvs", "dagor", "dagorCbvRanges", "snowdrop" };
 
     /// <summary>avalancheGlobal: Avalanche's fork's global root signature when the libraries carry its marker
@@ -50,27 +52,66 @@ public sealed class RulesFile
     sealed record Doc(JsonElement[] Rules, string? About = null);
 
     public IReadOnlyList<PlanRule> Rules { get; }
+    public IReadOnlyList<IdentityRule> Identities { get; }
     /// <summary>The rules left out, as "id: why".</summary>
     public IReadOnlyList<string> Dropped { get; }
 
-    RulesFile(IReadOnlyList<PlanRule> rules, IReadOnlyList<string> dropped) => (Rules, Dropped) = (rules, dropped);
+    RulesFile(IReadOnlyList<PlanRule> rules, IReadOnlyList<string> dropped, IReadOnlyList<IdentityRule>? identities = null) =>
+        (Rules, Dropped, Identities) = (rules, dropped, identities ?? []);
 
     /// <summary>The rules of a document within <see cref="ContentFile.MaxBytes"/> of the right shape; null when it isn't one.</summary>
     public static RulesFile? TryParse(string json)
     {
         if (ContentFile.Read<Doc>(json) is not { } doc || doc.About != null && !ContentFile.Text(doc.About, 2000)) return null;
-        var (rules, dropped) = (new List<PlanRule>(), new List<string>());
+        var (rules, dropped, identities) = (new List<PlanRule>(), new List<string>(), new List<IdentityRule>());
+        bool Taken(string id) => rules.Any(x => x.Id == id) || identities.Any(x => x.Id == id);
         foreach (var e in doc.Rules)
         {
             var id = e.ValueKind == JsonValueKind.Object && e.TryGetProperty("id", out var i) && i.ValueKind == JsonValueKind.String ? i.GetString() : "?";
             var why = Unusable(e);
+            if (why == null && e.GetProperty("requires").EnumerateArray().Any(c => c.GetString() == IdentityCap))
+            {
+                var ir = ContentFile.Read<IdentityRule>(e);
+                why = ir == null ? "malformed" : InvalidIdentity(ir) ?? (Taken(ir.Id) ? "a second rule with this id" : null);
+                if (why == null) identities.Add(ir!);
+                else dropped.Add($"{id}: {why}");
+                continue;
+            }
             var r = why == null ? ContentFile.Read<PlanRule>(e) : null;
-            why ??= r == null ? "malformed" : Invalid(r) ?? (rules.Any(x => x.Id == r.Id) ? "a second rule with this id" : null);
+            why ??= r == null ? "malformed" : Invalid(r) ?? (Taken(r.Id) ? "a second rule with this id" : null);
             if (why == null) rules.Add(r!);
             else dropped.Add($"{id}: {why}");
         }
-        return new(rules, dropped);
+        return new(rules, dropped, identities);
     }
+
+    static bool BadId(string? id) => id is not { Length: > 0 and <= 64 } || !id.All(c => char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c) || c is '-' or '.');
+
+    /// <summary>Why an identity rule can't be used; null when it can. Its values reach a game's db, so every one is checked.</summary>
+    static string? InvalidIdentity(IdentityRule r)
+    {
+        if (BadId(r.Id)) return "bad id";
+        if (r.Requires is not [IdentityCap]) return "an identity rule requires only " + IdentityCap;
+        if (r.Note != null && !ContentFile.Text(r.Note, 300)) return "bad note";
+        var w = r.When;
+        if (w.Exe == null && w.Package == null || w.Exe != null && !ExeSuffix(w.Exe) || w.Package != null && !PackageFamily(w.Package)) return "bad when";
+        var n = w.Registered?.Length ?? 0;
+        if (w.Registered != null && (!w.Registered.All(a => a is { Valid: true }) || w.Registered.Distinct().Count() != n)
+            || !(w.Read == RegistryRead.None && n == 0 || w.Read == RegistryRead.One && n == 1 || w.Read == RegistryRead.Differ && n is >= 2 and <= 8))
+            return "bad when: read";
+        // measured: without a registration the runtime writes no identity, and any other value empties the db
+        if (w.Read == RegistryRead.None && r.Writes != AppIdentity.None) return "bad writes: without a registration only no identity";
+        return r.Writes is { Valid: true } ? null : "bad writes";
+    }
+
+    // a path inside the install, from a folder of it down to the exe
+    static bool ExeSuffix(string s) => s.Length is > 5 and <= 260 && s[0] == '\\' && s.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+        && !s.Any(c => char.IsControl(c) || c is '/' or ':' or '*' or '?' or '"' or '<' or '>' or '|')
+        && s.Split('\\')[1..] is { Length: >= 2 } parts && parts.All(p => p.Trim('.', ' ').Length > 0);
+
+    // Name_PublisherId, the publisher id 13 lowercase base32 characters
+    static bool PackageFamily(string s) => s.Split('_') is [var name, var pub] && name.Length is >= 3 and <= 50
+        && name.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '-') && pub.Length == 13 && pub.All(c => char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c));
 
     static string? Unusable(JsonElement e)
     {
@@ -83,7 +124,7 @@ public sealed class RulesFile
     /// <summary>Why a rule can't be used; null when it can. Every description is serialized by the runtime here.</summary>
     static string? Invalid(PlanRule r)
     {
-        if (r.Id is not { Length: > 0 and <= 64 } || !r.Id.All(c => char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c) || c is '-' or '.')) return "bad id";
+        if (BadId(r.Id)) return "bad id";
         bool Needs(string cap) => r.Requires.Contains(cap);
         var m = r.Match;
         if (!ContentFile.Text(m.Family, 64) || (m.From == null) != (m.To == null)
@@ -92,14 +133,12 @@ public sealed class RulesFile
             || m.Games != null && (!Needs("rs.desc.v2") || m.Games.Length is 0 or > 16 || !m.Games.All(g => ContentFile.Text(g, 64) && g.Contains(':'))))
             return "bad match";
         if (r.RootSignature == null && r.Rt == null && r.Ags == null && r.Aftermath == null && r.ViewInstancing == null && r.PassNames == null) return "no rule";
-        if (r.PassNames is { } names && (!Needs("passnames.v1") || r.RootSignature != null || r.Rt != null || r.Ags != null || r.Aftermath != null
-                || r.ViewInstancing != null || names.Count is 0 or > 4096
-                || !names.All(p => p.Key is { Length: 8 } && p.Key.All(char.IsAsciiHexDigitLower)
-                    && p.Value is { Length: > 0 and <= 64 } && p.Value.All(c => char.IsAsciiLetterOrDigit(c) || c == '_'))))
+        if (r.PassNames is { } pn && (!Needs("passnames.v1") || r.RootSignature != null || r.Rt != null || r.Ags != null || r.Aftermath != null || r.ViewInstancing != null
+                || pn.Count is 0 or > 4096 || !pn.All(p => p.Key is { Length: 8 } && p.Key.All(char.IsAsciiHexDigitLower) && p.Value is { Length: > 0 and <= 64 } && p.Value.All(c => char.IsAsciiLetterOrDigit(c) || c == '_'))))
             return "bad passNames";
-        if (r.ViewInstancing is { } vi && (!Needs("vi.v1") || r.RootSignature != null || r.Rt != null || r.Ags != null || r.Aftermath != null
-                || !ContentFile.Text(vi.Note, 300) || vi.Views is not { Length: >= 1 and <= 4 } || vi.Views.Any(v => v is not { Length: 2 } || v[0] >= 16 || v[1] >= 2048)
-                || vi.Flags > 1 || vi.Libraries is { } libs && (libs.Length is 0 or > 256 || !libs.All(l => ContentFile.Text(l, 64)))))
+        if (r.ViewInstancing is { } vi && (!Needs("vi.v1") || r.RootSignature != null || r.Rt != null || r.Ags != null || r.Aftermath != null || !ContentFile.Text(vi.Note, 300)
+                || vi.Views is not { Length: >= 1 and <= 4 } || vi.Views.Any(v => v is not [< 16, < 2048]) || vi.Flags > 1
+                || vi.Libraries is { } libs && (libs.Length is 0 or > 256 || !libs.All(l => ContentFile.Text(l, 64)))))
             return "bad viewInstancing";
         if (r.Ags is { } ags && (!Needs("amd.ags.v1") || r.RootSignature != null || r.Rt != null
                 || ags.Profiles?.All(p => ContentFile.Text(p.Key, 64) && p.Value is { Length: 8 } && p.Value.All(char.IsAsciiHexDigit)) == false
@@ -189,7 +228,18 @@ public sealed class RulesFile
 
     /// <summary>The server's rules, then each embedded rule whose id none of them has: where ranges overlap, the server's match first.</summary>
     public static RulesFile WithServer(RulesFile server) =>
-        new([.. server.Rules, .. Embedded.Rules.Where(e => server.Rules.All(s => s.Id != e.Id))], server.Dropped);
+        new([.. server.Rules, .. Embedded.Rules.Where(e => server.Rules.All(s => s.Id != e.Id))], server.Dropped,
+            [.. server.Identities, .. Embedded.Identities.Where(e => server.Identities.All(s => s.Id != e.Id))]);
+
+    /// <summary>The identity rule for <paramref name="exe"/> (the path its D3DSCache dbs name) and an Xbox game's
+    /// <paramref name="package"/> family, made for exactly this <paramref name="read"/>; null when none, or when the rules that
+    /// match write different identities.</summary>
+    public IdentityRule? IdentityFor(string exe, string? package, RegistryRead read)
+    {
+        var m = Identities.Where(r => (r.When.Exe == null || exe.EndsWith(r.When.Exe, StringComparison.OrdinalIgnoreCase))
+            && (r.When.Package == null || string.Equals(r.When.Package, package, StringComparison.OrdinalIgnoreCase)) && read.Is(r.When.Read, r.When.Registered)).ToList();
+        return m.Select(r => r.Writes).Distinct().Count() == 1 ? m[0] : null;
+    }
 
     /// <summary>The root-signature rule matching the engine: one naming its fork first, then file order.</summary>
     public PlanRule? RuleFor(EngineInfo e) => First(e, r => r.RootSignature != null);
@@ -197,10 +247,10 @@ public sealed class RulesFile
     /// <summary>The ray tracing collection rule matching the engine (a plan without recorded collections uses it).</summary>
     public PlanRule? RtFor(EngineInfo e) => First(e, r => r.Rt != null);
 
-    /// <summary>The view-instancing rule matching the engine (the PSOs it builds for the rule's shaders declare its views).</summary>
+    /// <summary>The view instancing rule matching the engine (a shader reading SV_ViewID that no recorded PSO shows uses it).</summary>
     public PlanRule? ViFor(EngineInfo e) => First(e, r => r.ViewInstancing != null);
 
-    /// <summary>The rule naming the engine's render passes by their hash (those its exe doesn't name).</summary>
+    /// <summary>The render pass name rule matching the engine (a BlackSpace pass the exe doesn't name uses it).</summary>
     public PlanRule? PassNamesFor(EngineInfo e) => First(e, r => r.PassNames != null);
 
     PlanRule? First(EngineInfo e, Func<PlanRule, bool> kind) =>
@@ -242,18 +292,36 @@ public sealed class RulesFile
         trust.FetchAsync(Name, TryParse, cacheFile, channels, token, routes, budget);
 }
 
+/// <summary>A D3DSCache identity rule of plan-rules.json (<see cref="RulesFile.IdentityCap"/>), for a game whose runtime writes
+/// another identity than the registry read gives: what it writes (<paramref name="Writes"/>, <see cref="AppIdentity.None"/>
+/// included), measured per game, where <paramref name="When"/> holds.</summary>
+public sealed record IdentityRule(string Id, string[] Requires, IdentityWhen When, AppIdentity Writes, string? Note = null);
+
+/// <summary>The exe whose dbs a rule stamps, by the end of its path (from a folder of the install down, "\Win64\Game.exe"), an
+/// Xbox package family, or both; and the registry read it was measured with (<see cref="RegistryRead"/>: none, one
+/// registration with its identity, or registrations that differ with all of theirs), so a changed registration leaves it.</summary>
+public sealed record IdentityWhen(string Read, string? Exe = null, string? Package = null, AppIdentity[]? Registered = null);
+
 /// <summary>A rule of plan-rules.json: what it matches, its root-signature rule and stage-set allow-list, its ray tracing
 /// collection rule. <paramref name="Verified"/>: confirmed by a real game whatever confirmed-engines.json says.
 /// <paramref name="Ags"/>: AMD AGS app names for every game, whatever the match (<see cref="Vendors.AmdAppCache.AgsKey"/>); unset, it is
 /// left out of <see cref="RulesFile.Hash"/>'s serialization. <paramref name="Aftermath"/>: how each game (by id) starts NVIDIA
 /// Aftermath, whatever the match (<see cref="Vendors.NvAftermath.Of"/>), left out the same way. <paramref name="ViewInstancing"/>:
-/// the views of the engine's view-instanced PSOs (<see cref="ViRule"/>); <paramref name="PassNames"/>: render pass names by
-/// their hash, 8 lowercase hex digits (BlackSpace). Both, unset, are left out the same way.</summary>
+/// the view instancing the engine creates its SV_ViewID shaders with, left out the same way. <paramref name="PassNames"/>: render
+/// pass hash (8 lowercase hex digits) -> the name as the exe spells it, for passes whose name the exe holds in no readable form
+/// (<see cref="BlackSpace.BlackSpaceReader"/>), left out the same way.</summary>
 public sealed record PlanRule(string Id, string[] Requires, RuleMatch Match, RootSigRule? RootSignature = null, string[][]? StageSets = null,
     RtRule? Rt = null, bool Verified = false, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] AgsRule? Ags = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] Dictionary<string, Vendors.AftermathInit>? Aftermath = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] ViRule? ViewInstancing = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] Dictionary<string, string>? PassNames = null);
+
+/// <summary>A D3D12_VIEW_INSTANCING_DESC: per view its viewport and render target array index, and its flags; for the
+/// shaders of these libraries (<see cref="ShaderMap.Library"/>; none: every library).</summary>
+public sealed record ViRule(string Note, uint[][] Views, uint Flags = 0, string[]? Libraries = null)
+{
+    public byte[] Bytes() => PsoDb.ViewInstancingBytes([.. Views.Select(v => (v[0], v[1]))], Flags);
+}
 
 /// <summary>Driver app profiles matched on the AGS app name, exact case: app name -> DxcCache key, 8 hex digits. Proven: app
 /// names whose game's own process was seen holding the key they give, registered before the game has been seen.</summary>

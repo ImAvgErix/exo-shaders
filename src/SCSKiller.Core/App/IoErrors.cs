@@ -1,16 +1,10 @@
 namespace SCSKiller.Core.App;
 
-/// <summary>What an I/O error says about the file.</summary>
-internal static class IoErrors
+static partial class IoErrors
 {
-    /// <summary>Another process has the file open (a sharing or lock violation).</summary>
-    internal static bool HeldElsewhere(IOException e) => (e.HResult & 0xFFFF) is 32 or 33;
+    /// <summary>Another holder has the file open without sharing it.</summary>
+    internal static partial bool HeldElsewhere(IOException e);
 
-    /// <summary>The file can't be taken now: held elsewhere, or access denied.</summary>
-    internal static bool Busy(Exception e) => e switch
-    {
-        UnauthorizedAccessException => true,
-        IOException io => HeldElsewhere(io),
-        _ => false,
-    };
+    /// <summary>The file is held by another program or access to it is refused: a later read may succeed.</summary>
+    internal static bool Busy(Exception e) => e is UnauthorizedAccessException || e is IOException io && HeldElsewhere(io);
 }

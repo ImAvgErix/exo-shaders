@@ -40,7 +40,7 @@ public static class WarmInputs
 
         /// <param name="leaveOut">records that are no input: another texture filtering setting's (<see cref="Planning.SamplerVariants.Foreign"/>)</param>
         /// <param name="rayTracing">false: ray tracing state objects are no input (<see cref="Planner.LeftOutWithoutRt"/>)</param>
-        /// <param name="d3d11Only">a game that runs only on DirectX 11: what it can't create there is no input (<see cref="Planner.LeftOutOnD3D11"/>)</param>
+        /// <param name="d3d11Only">DirectX 11 is decided (<see cref="Planner.D3D11Decided"/>): D3D12 records are no input (<see cref="Planner.LeftOutOnD3D11"/>)</param>
         public static Recorded Read(IReadOnlyList<string> recordings, Func<string, bool> elsewhere, bool nvidia = false, IReadOnlySet<string>? leaveOut = null,
             bool rayTracing = true, bool d3d11Only = false)
         {

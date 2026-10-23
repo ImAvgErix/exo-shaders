@@ -25,7 +25,7 @@ public partial class AppTests
 
         CacheFile("0002a91d11111111.nvph", 4096);
         CacheFile("32e6a91d11111111.nvph", 8192);
-        File.SetLastWriteTimeUtc(CacheFile("fc52a91d11111111.nvph", 1024), installedAt.AddDays(-30));   // an older driver's, under the game's key
+        File.SetLastWriteTimeUtc(CacheFile("fc52a91d11111111.nvph", 1024), installedAt.AddDays(-30));   // an older driver's type, under a key the current driver uses: the game's
         File.SetLastWriteTimeUtc(CacheFile("fc52a91d55555555.nvph", 512), installedAt.AddDays(-30));
         CacheFile("0002a91d22222222.nvph", 16384);
         CacheFile("0002a91d44444444.nvph", 2048);
@@ -52,9 +52,9 @@ public partial class AppTests
 
         var gone = "Gone-Win64-Shipping.exe (steam_42)";
         var items = Items(inv);
-        Assert.Equal(12288, items[(CacheGroupKind.Installed, $"Fake Game, {gone}")]);   // installed wins a shared key, both named
+        Assert.Equal(13312, items[(CacheGroupKind.Installed, $"Fake Game, {gone}")]);   // installed wins a shared key, both named
         Assert.Equal(16384, items[(CacheGroupKind.Uninstalled, gone)]);
-        Assert.Equal(1024, items[(CacheGroupKind.OldDriver, $"Fake Game, {gone}")]);
+        Assert.False(items.ContainsKey((CacheGroupKind.OldDriver, $"Fake Game, {gone}")));   // alpha.3: Old driver takes whole keys the current driver doesn't use
         Assert.Equal(512, items[(CacheGroupKind.OldDriver, ScsKiller.OtherApps)]);
         Assert.Equal(2048, items[(CacheGroupKind.OldBuild, "Fake Game")]);
         Assert.True(items[(CacheGroupKind.OldBuild, ScsKiller.CompileLeftovers)] > 0);

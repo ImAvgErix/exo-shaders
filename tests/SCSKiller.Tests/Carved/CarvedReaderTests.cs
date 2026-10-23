@@ -226,8 +226,9 @@ public class CarvedReaderTests
         var psos = body.Where(r => r.Tag == 'S').Select(r => (PsoDb.Parse(r).Rs, PsoDb.Parse(r).Stages))
             .Concat(body.Where(r => r.Tag == 'P').Select(r => PsoDb.ParseItem(r.Payload)).Select(i => (i.Rs, i.Stages))).ToList();
         foreach (var (rs, st) in psos) Assert.All(st.Values, h => Assert.Equal(index.Shaders[h].RootSignature, rs));
-        // every VS alone, every VS with every PS of its root signature (same signatures), nothing across root signatures
-        Assert.Equal(Pairs + 2 * (Pairs / 2) * (Pairs / 2), psos.Count);
+        // every VS alone and every PS once with a VS of its root signature, nothing across root signatures: a pool that pairs
+        // every VS with every PS gets each shader planned once (alpha.3), not every pair
+        Assert.Equal(2 * Pairs, psos.Count);
         Assert.Equal(2, plan.Stats.RootSignatures);
         Assert.True(plan.Stats.RootSigRuleVerified);
 
@@ -265,7 +266,7 @@ public class CarvedReaderTests
 
         var work = Path.Combine(dir, "work");
         planner.Materialize(plan, d.Game, engine, reader, null, work, CancellationToken.None);
-        Assert.Equal("605500aca5e115987aa01fcdb37aa13377bd700f18275629ed9535cdb3ffe18c", MaterializeOutputTests.Digest(work));
+        Assert.Equal("9477f5a162b4e0441b40ee887bb8188000341959b40c0db4061c7f9c599d5342", MaterializeOutputTests.Digest(work));   // alpha.3's smaller plan
         Ff7.CheckWarmReady(work);
     }
 

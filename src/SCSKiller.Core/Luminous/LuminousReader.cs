@@ -79,8 +79,7 @@ public sealed class LuminousReader : IEngineReader
             return list;
         }
 
-        var datas = GameFiles.Find(game.InstallDir, Datas);
-        var hair = GameFiles.Find(game.InstallDir, HairWorks);
+        string datas = GameFiles.Find(game.InstallDir, Datas), hair = GameFiles.Find(game.InstallDir, HairWorks);
         foreach (var f in Listed(() => Archives(datas), Datas))
         {
             ct.ThrowIfCancellationRequested();

@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
@@ -21,7 +22,7 @@ public sealed class HoYoPlaySource(IEnumerable<(string Biz, string InstallDir)>?
     public IReadOnlyList<Game> Discover()
     {
         var games = new List<Game>();
-        foreach (var (biz, install) in entries ?? Entries())
+        foreach (var (biz, install) in entries ?? (OperatingSystem.IsWindows() ? Entries() : []))
         {
             if (!Directory.Exists(install)) continue;
             string text;
@@ -35,6 +36,7 @@ public sealed class HoYoPlaySource(IEnumerable<(string Biz, string InstallDir)>?
         return games;
     }
 
+    [SupportedOSPlatform("windows")]
     static IEnumerable<(string, string)> Entries()
     {
         foreach (var path in new[] { @"Software\Cognosphere\HYP", @"Software\miHoYo\HYP" })

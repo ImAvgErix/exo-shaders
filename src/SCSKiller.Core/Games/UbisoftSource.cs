@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using System.Security;
 using Microsoft.Win32;
 
@@ -11,7 +12,10 @@ public sealed class UbisoftSource : IGameSource
 {
     public Store Store => Store.Other;
 
-    public IReadOnlyList<Game> Discover()
+    public IReadOnlyList<Game> Discover() => OperatingSystem.IsWindows() ? Installed() : [];
+
+    [SupportedOSPlatform("windows")]
+    static List<Game> Installed()
     {
         var games = new List<Game>();
         var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

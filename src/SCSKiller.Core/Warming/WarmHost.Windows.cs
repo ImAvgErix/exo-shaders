@@ -2,48 +2,37 @@ using System.Diagnostics;
 
 namespace SCSKiller.Core.Warming;
 
-/// <summary>The warm's processes run here, in <see cref="WarmJob.Current"/>, stopped by a named event every one of them
-/// waits on (scskiller_warm --stop-event). Paths are the same on both sides.</summary>
+static partial class WarmHost
+{
+    public static partial IWarmHost For(Game game, string workDir, GpuInfo gpu, IProgress<string>? log, string? steamRoot, bool vulkan, long? cacheCap, bool mesa) => new WindowsWarmHost(workDir);
+
+    public static partial string? Refusal(Game game, string? steamRoot, bool vulkan, bool mesa) => null;
+}
+
+/// <summary>scskiller_warm as Core's child, its stdout and stderr on pipes, in <see cref="WarmJob.Current"/>. Stop is a named
+/// event every process of the run polls.</summary>
 sealed class WindowsWarmHost : IWarmHost
 {
-    sealed class Child(Process p) : IWarmProcess
-    {
-        public int Id => p.Id;
-        public TextReader Output => p.StandardOutput;
-        public Task<int?> Exited { get; } = Exit(p);
-        public bool HasExited => p.HasExited;
-        public void Suspend(bool suspend) => ProcessTree.Suspend(p.Id, suspend);
-
-        public void Kill()
-        {
-            try { p.Kill(entireProcessTree: true); }
-            catch (InvalidOperationException) { }   // exited meanwhile
-        }
-
-        static async Task<int?> Exit(Process p)
-        {
-            await p.WaitForExitAsync();
-            return p.ExitCode;
-        }
-    }
-
     readonly string _workDir;
     readonly EventWaitHandle _stop;
     bool _disposed;
 
-    public IReadOnlyList<string> StopArgs { get; }
-
     public WindowsWarmHost(string workDir)
     {
         _workDir = workDir;
-        var name = $"Local\\SCSKiller.Stop.{Guid.NewGuid():N}";
-        _stop = new EventWaitHandle(false, EventResetMode.ManualReset, name);
-        StopArgs = ["--stop-event", name];
+        var stopName = $"Local\\SCSKiller.Stop.{Guid.NewGuid():N}";
+        _stop = new EventWaitHandle(false, EventResetMode.ManualReset, stopName);
+        StopArgs = ["--stop-event", stopName];
     }
 
     public string WarmPath(string host) => host;
+
     public string HostPath(string warm) => warm;
+
+    public IReadOnlyList<string> StopArgs { get; }
+
     public IReadOnlyList<string> AdapterArgs(GpuInfo gpu) => ["--adapter-luid", gpu.AdapterLuid.ToString("X16")];
+
     public void Stop() => _stop.Set();
 
     public void Dispose()
@@ -68,5 +57,30 @@ sealed class WindowsWarmHost : IWarmHost
         p.ErrorDataReceived += (_, e) => { if (e.Data is { Length: > 0 } l) errorLine(l); };
         p.BeginErrorReadLine();
         return new Child(p);
+    }
+
+    sealed class Child(Process p) : IWarmProcess
+    {
+        public int Id => p.Id;
+
+        public TextReader Output => p.StandardOutput;
+
+        public Task<int?> Exited { get; } = Exit(p);
+
+        public bool HasExited => p.HasExited;
+
+        public void Suspend(bool suspend) => ProcessTree.Suspend(p.Id, suspend);
+
+        public void Kill()
+        {
+            try { p.Kill(entireProcessTree: true); }
+            catch (InvalidOperationException) { }   // exited meanwhile
+        }
+
+        static async Task<int?> Exit(Process p)
+        {
+            await p.WaitForExitAsync();
+            return p.ExitCode;
+        }
     }
 }

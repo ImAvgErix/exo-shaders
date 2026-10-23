@@ -13,6 +13,8 @@ public sealed partial class ScsKiller
     {
         if (!OperatingSystem.IsWindows() || Vendor.Vendor != GpuVendor.Nvidia || r.WarmedAt is not { } warmed) return false;
         if (r.D3DSCacheEmptiedAt > warmed) return true;
+        // the warm's dbs wait for their fold (D3DSCachePending): the folder fills at the game's exit or the next start
+        if (D3DSCachePending(g.Id, r)) return false;
         var root = Path.Combine(LocalAppData, "D3DSCache");
         if (!D3DSCacheEmptied(root, r)) return false;
         if (D3DSCache.GameFolder(root, g) is { } found)   // the exe's folder is another now: remembered, so the next look reads that one

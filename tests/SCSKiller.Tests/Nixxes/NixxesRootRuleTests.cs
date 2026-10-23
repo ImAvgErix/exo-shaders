@@ -209,8 +209,10 @@ public class NixxesRootRuleTests
         Assert.All(small, p => Assert.Contains(p, all));
         var added = small.Count(p => !cover.Contains(p));
         Assert.Equal(120 + added, all.Count(p => inMaterial.Contains(p.Vs)));
-        Assert.Contains(maximum, l => l.Contains($"{14400 - 120 - added} more left out from 1 pools whose signatures pair nearly every VS with every PS (largest 14400 pairs of 120 VS and 120 PS)"));
-        Assert.DoesNotContain(standard, l => l.Contains("pair nearly every VS"));
+        // alpha.3 leaves them out before the per-stage cover, maximum or not: each of their shaders is in a planned PSO already
+        const string LeftOut = "14280 stage sets left out from 1 pools whose signatures pair nearly every VS with every PS (largest 14400 pairs of 120 VS and 120 PS)";   // 14400 - 120
+        Assert.Contains(maximum, l => l.StartsWith(LeftOut));
+        Assert.Contains(standard, l => l.StartsWith(LeftOut));
     }
 
     /// <summary>Builds the plan on both NVIDIA paths and checks each planned pipeline's root against <paramref name="want"/>

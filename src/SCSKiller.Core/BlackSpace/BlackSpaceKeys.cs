@@ -2,38 +2,39 @@ using SCSKiller.Core.App;
 
 namespace SCSKiller.Core.BlackSpace;
 
-/// <summary>The 32-byte key base a BlackSpace game's encrypted .paz entries open with (<see cref="PazCrypto.Decrypt"/>), per
-/// game: the user enters it, it is kept only once it opens one of the game's root signatures. Stored as hex in the game's
-/// folder (paz.key). No key ships with SCSKiller.</summary>
+/// <summary>The archive key of a BlackSpace game (<see cref="PazCrypto"/>), given by the user: kept only in
+/// %LOCALAPPDATA%\SCSKiller\games\&lt;id&gt;\paz.key (hex), never in plans, logs or anything meant to be shared, like
+/// <see cref="Unreal.UnrealKeys"/>' aes.key. Stored only once it opens the game's files.</summary>
 public sealed class BlackSpaceKeys(string dataDir)
 {
     public const int Size = 32;
 
+    /// <summary>A scan reads the key while the user sets it: one at a time.</summary>
     static readonly Lock Gate = new();
 
     string KeyFile(Game g) => Path.Combine(new AppStore(dataDir).GameDir(g.Id), "paz.key");
 
-    /// <summary>The key file's write time: a stored or changed key redoes Detect.</summary>
+    /// <summary>The stored key file's write time, "" if none: a key added or changed re-runs detection.</summary>
     public string KeyStamp(Game game) => File.Exists(KeyFile(game)) ? File.GetLastWriteTimeUtc(KeyFile(game)).Ticks.ToString() : "";
 
+    /// <summary>The stored key, unchecked (the reader checks it against the game's files).</summary>
     public byte[]? Stored(Game game)
     {
         lock (Gate)
-        {
             try { return File.Exists(KeyFile(game)) ? Parse(File.ReadAllText(KeyFile(game))) : null; }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
-        }
     }
 
-    /// <summary>Stores <paramref name="key"/> (64 hex digits, "0x" allowed) when <paramref name="opens"/> takes it; false if not.</summary>
+    /// <summary>A key the user supplies (64 hex digits, one leading "0x" optional): stored if it <paramref name="opens"/>
+    /// the game's files.</summary>
     public bool Set(Game game, string key, Func<byte[], bool> opens)
     {
-        if (Parse(key) is not { } bytes || !opens(bytes)) return false;
+        if (Parse(key) is not { } k || !opens(k)) return false;
         var file = KeyFile(game);
         lock (Gate)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(file)!);
-            File.WriteAllText(file + ".tmp", Convert.ToHexString(bytes));
+            File.WriteAllText(file + ".tmp", Convert.ToHexString(k));
             File.Move(file + ".tmp", file, overwrite: true);
         }
         return true;

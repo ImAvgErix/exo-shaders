@@ -1,6 +1,4 @@
-using Microsoft.Win32.SafeHandles;
 using SCSKiller.Core.Carved;
-using SCSKiller.Core.Games;
 using SCSKiller.Core.Planning;
 using static SCSKiller.Core.Planning.PsoDb;
 
@@ -31,7 +29,7 @@ public static class Recordings
     /// proxy's rec_tuple does. What the materialize skipped isn't in the dbs; an item one of <paramref name="failed"/>
     /// (<see cref="FailedFile"/>s) names, by its record's key, wasn't created and counts for nothing. <paramref name="previous"/>:
     /// an earlier warm's file whose keys and tuples still hold (a warm that left out what it created, CompiledItems).
-    /// <paramref name="created"/>: more keys the warm created that no db lists.</summary>
+    /// <paramref name="created"/>: keys a warm created that no db holds (a Vulkan warm's, VulkanPlan.Created), no tuples.</summary>
     public static byte[] Warmed(IEnumerable<string> dbs, IEnumerable<string> failed, byte[]? previous = null, IEnumerable<string>? created = null)
     {
         var notCreated = new HashSet<string>(StringComparer.Ordinal);
@@ -207,10 +205,10 @@ public static class Recordings
         bool Kept(Rec r) => r.Tag == 'N' || Rehydrate.References([r]).All(h => blobs.Contains(h) || shipped?.Contains(h) == true);
         if (publish?.Invoke() == false) return Records().Count(r => !Kept(r));   // nothing created or deleted
         var (kept, left) = (0, 0);
-        var (temp, tmp) = ScsKiller.CreateTemp(path, ".tmp");
+        var (file, tmp) = ScsKiller.CreateTemp(path, ".tmp");
         try
         {
-            using (var f = new BufferedStream(temp, 1 << 16))
+            using (var f = new BufferedStream(file, 1 << 16))
             {
                 f.Write(KeysMagic);
                 foreach (var h in blobs) f.Write(Convert.FromHexString(h));
@@ -231,7 +229,7 @@ public static class Recordings
                 BeforeKeysPublished?.Invoke();
                 if (publish?.Invoke() != false)
                 {
-                    ScsKiller.RefuseLink(path);   // a link put there would send the keys elsewhere
+                    ScsKiller.RefuseLink(path);
                     File.Move(tmp, path, true);
                 }
             }
@@ -365,9 +363,9 @@ public static class Recordings
     {
         try
         {
-            using SafeFileHandle f = GameFiles.OpenUnlinked(inbox);   // never through a link: it would empty another file
-            if (RandomAccess.GetLength(f) != imported) return false;
-            RandomAccess.SetLength(f, 0);
+            using var h = Games.GameFiles.OpenUnlinked(inbox);   // a link planted at its name would empty what it points to
+            if (RandomAccess.GetLength(h) != imported) return false;
+            RandomAccess.SetLength(h, 0);
             return true;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return false; }

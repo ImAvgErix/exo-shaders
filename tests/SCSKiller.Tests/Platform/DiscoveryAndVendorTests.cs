@@ -224,8 +224,8 @@ public class DiscoveryAndVendorTests(ITestOutputHelper output)
         Assert.Equal(("intel-1", true, false, true, RtCacheGranularity.WholeObject, (long?)(512L << 20)),
             (intel.Caps.Profile, intel.Caps.CacheKeyedByExeName, intel.Caps.StateIndependentCache, intel.Caps.PerStageCache, intel.Caps.RtCacheGranularity,
              intel.Caps.PerGameCacheCap));
-        Assert.Null(((IGpuVendorBackend)intel).AppCache);
-        Assert.Null(intel.GetCacheLimit());
+        Assert.Equal(IntelBackend.CacheDir, Assert.IsType<IntelAppCache>(((IGpuVendorBackend)intel).AppCache).Dir);   // alpha.3: the driver's cache, per game
+        Assert.Equal(new CacheLimit(512L << 20, IsDriverDefault: false), intel.GetCacheLimit());
         Assert.Throws<NotSupportedException>(() => intel.SetCacheLimit(new(1L << 30, false)));
         Assert.True(intel.Refresh(intel.Gpu with { DriverVersion = "32.0.101.7026" }));
         Assert.Equal("32.0.101.7026", intel.Gpu.DriverVersion);
@@ -249,7 +249,8 @@ public class DiscoveryAndVendorTests(ITestOutputHelper output)
         var nv = Assert.IsType<NvidiaBackend>(v);
         Assert.Matches(@"^\d{3}\.\d{2}$", nv.Gpu.DriverVersion);
         Assert.True(nv.Gpu.DedicatedVideoMemory > 1UL << 30);
-        Assert.Equal(new VendorCaps("nvidia-1", true, true, true, PerStageCache: true, RtCacheGranularity: RtCacheGranularity.Collection, PackageKeyed: true), nv.Caps);
+        Assert.Equal(new VendorCaps("nvidia-1", true, true, true, PerStageCache: true, RtCacheGranularity: RtCacheGranularity.Collection, PackageKeyed: true,
+            VulkanKey: "exe-name"), nv.Caps);   // alpha.3 warms Vulkan games too
         var dxgi = GpuBackends.PrimaryAdapter()!;
         Assert.Equal(NvidiaBackend.ReadDriverVersion(), nv.Gpu.DriverVersion);   // earlier builds stored NvAPI's: the same string
         Assert.Equal(nv.Gpu.DriverVersion, NvidiaBackend.FromUserModeVersion(dxgi.DriverVersion));

@@ -122,8 +122,22 @@ public static class NewShaders
         return (due, compile, keep);
     }
 
+    /// <summary>The never-compiled games Add all ready would take (<see cref="ScsKiller.InAddAllReady"/>), to compile when idle
+    /// while <see cref="Settings.CompileNewGames"/> is on: none running or queued, none while <paramref name="compiling"/>, each
+    /// once per session (<paramref name="tried"/>, the caller's): a compile that failed is queued again after a restart.</summary>
+    public static IReadOnlyList<GameState> NewGames(IEnumerable<GameState> games, IEnumerable<QueueItem> queue, Settings settings, bool compiling,
+        ISet<string> tried)
+    {
+        if (!settings.CompileNewGames || compiling) return [];
+        var queued = queue.Select(q => q.GameId).ToHashSet();
+        var picked = games.Where(s => s is { Status: GameStatus.Ready, WarmedAt: null, Playing: false } && ScsKiller.InAddAllReady(s)
+            && !queued.Contains(s.Game.Id) && !tried.Contains(s.Game.Id)).ToList();
+        foreach (var s in picked) tried.Add(s.Game.Id);
+        return picked;
+    }
+
     /// <summary>Of the automatic compiles queued (<paramref name="queued"/>), the ones to take out of the queue: still waiting
-    /// for idle while the game's setting no longer compiles automatically. <paramref name="forget"/>: the ones no longer
+    /// for idle while the game's setting no longer compiles automatically, nor <see cref="NewGames"/> takes it. <paramref name="forget"/>: the ones no longer
     /// waiting for idle (started, finished, or made a normal item by the user), left alone from now on.</summary>
     public static (IReadOnlyList<string> Withdraw, IReadOnlyList<string> Forget) Withdrawn(IEnumerable<string> queued,
         IEnumerable<QueueItem> queue, IEnumerable<GameState> games, Settings settings)
@@ -133,7 +147,9 @@ public static class NewShaders
         {
             if (queue.FirstOrDefault(q => q.GameId == id) is not { Stage: QueueStage.Waiting, Note: ScsKiller.WhenIdleNote }) forget.Add(id);
             else if (games.FirstOrDefault(s => s.Game.Id == id) is not { } s
-                     || ModeOf(s, settings) is not (NewShadersMode.CompileAndNotify or NewShadersMode.CompileSilently)) withdraw.Add(id);
+                     // a never-compiled game is only ever NewGames': the new-shaders mode never queues one
+                     || (s.WarmedAt == null ? !(settings.CompileNewGames && ScsKiller.InAddAllReady(s))
+                         : ModeOf(s, settings) is not (NewShadersMode.CompileAndNotify or NewShadersMode.CompileSilently))) withdraw.Add(id);
         }
         return (withdraw, forget);
     }

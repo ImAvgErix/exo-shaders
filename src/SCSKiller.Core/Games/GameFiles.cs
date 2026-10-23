@@ -1,4 +1,3 @@
-using Microsoft.Win32;
 using System.Diagnostics;
 using System.Text.Json;
 using SCSKiller.Core.Carved;
@@ -6,7 +5,7 @@ using SCSKiller.Core.Carved;
 namespace SCSKiller.Core.Games;
 
 /// <summary>Install-folder heuristics shared by the game sources.</summary>
-public static class GameFiles
+public static partial class GameFiles
 {
     static readonly EnumerationOptions Deep = new() { RecurseSubdirectories = true, MaxRecursionDepth = 3, IgnoreInaccessible = true, AttributesToSkip = 0 };
     static readonly EnumerationOptions Flat = new() { IgnoreInaccessible = true, AttributesToSkip = 0 };
@@ -22,7 +21,7 @@ public static class GameFiles
     public static string? FindExe(string installDir, string? launcherExe = null)
     {
         if (!Directory.Exists(installDir)) return null;
-        if (ShippingExe(installDir, launcherExe) is { } shipping) return shipping;
+        if (ShippingExe(installDir, launcherExe == null ? null : Path.GetFileName(Under("", launcherExe))) is { } shipping) return shipping;
         var excluded = XboxSource.NotTheGame(installDir);
         var unreal = UnrealFolders(installDir)
             .SelectMany(d => EnumerateFiles(d, "*.exe", Flat))
@@ -317,8 +316,7 @@ public static class GameFiles
         catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException) { return null; }
     }
 
-    // Streamline's interposer stands in for dxgi and d3d12 in games that ship it: witcher3.exe imports neither. A Vulkan
-    // game imports vulkan-1.dll
+    // Streamline's interposer stands in for dxgi and d3d12 in games that ship it: witcher3.exe imports neither
     static readonly string[] GraphicsDlls = ["d3d12.dll", "d3d11.dll", "dxgi.dll", "sl.interposer.dll", "vulkan-1.dll"];
 
     /// <summary>Null when the file isn't a readable PE. A modular Unreal build's exe (Returnal) imports its RHI module
@@ -336,11 +334,10 @@ public static class GameFiles
     /// <summary>Streamline's interposer is beside the exe and nothing the exe imports statically, itself or through the DLLs of
     /// its folder, imports d3d12.dll: the first d3d12.dll comes with Streamline's plugins. NVIDIA's downloaded plugins load
     /// System32's, so the recorder never loads. An import found in neither the exe's folder nor <paramref name="system"/>
-    /// (the game's System32, <see cref="SystemFolder"/>; null = none to look in; API sets aside) is resolved somewhere this
-    /// can't follow: null, as for a module that can't be read. A DLL of the exe's folder that forwards an export to d3d12
-    /// counts as importing it. <paramref name="files"/> gets the files the answer depends on: sl.interposer.dll and each
-    /// import's path in the exe's folder, found or not, and the system folder when an import was in neither
-    /// (<see cref="Stamp"/>).</summary>
+    /// (<see cref="SystemFolder"/>), API sets aside, is resolved somewhere this can't follow: null, as for a module that can't
+    /// be read. A DLL of the exe's folder that forwards an export to d3d12 counts as importing it. <paramref name="files"/>
+    /// gets the files the answer depends on: sl.interposer.dll and each import's path in the exe's folder, found or not, and
+    /// for a null answer the system folder (<see cref="Stamp"/>).</summary>
     internal static bool? StreamlineFirst(string exe, string? system, List<string> files)
     {
         var dir = Path.GetDirectoryName(exe)!;
@@ -362,10 +359,10 @@ public static class GameFiles
                     var local = Find(dir, dll);
                     files.Add(local);
                     if (File.Exists(local)) todo.Push((local, true));
-                    else if (system != null && Find(system, dll) is var inSystem && File.Exists(inSystem)) todo.Push((inSystem, false));
+                    else if (system != null && Find(system, dll) is var shipped && File.Exists(shipped)) todo.Push((shipped, false));
                     else
                     {
-                        if (system != null) files.Add(system);   // a DLL put there later changes the answer
+                        if (system != null) files.Add(system);   // a DLL put there later, or a prefix Proton makes at the game's first start
                         return null;
                     }
                 }
@@ -375,32 +372,67 @@ public static class GameFiles
         return true;
     }
 
-    /// <summary>The System32 the game's process loads system DLLs from (<see cref="StreamlineFirst"/>).</summary>
-    internal static string? SystemFolder(Game game) => Environment.SystemDirectory;
+    /// <summary>The folder of the system DLLs the game's exe loads: System32, or under Proton its prefix's system32; null when
+    /// that isn't known (a game Steam doesn't run).</summary>
+    internal static partial string? SystemFolder(Game game);
 
-    /// <summary>SHA-256 of each AMD AGS build the recorder's AGS wrapper (proxy/ags_exports.txt) has every export of: the game
-    /// links AGS by name, so a build with other exports can't be stood in for. Cyberpunk 2077's AGS 5.4.</summary>
+    /// <summary>SHA-256 of each AMD AGS build whose version is known to fit the recorder's AGS wrapper (its exports are still
+    /// matched): Cyberpunk 2077's AGS 5.4.</summary>
     internal static HashSet<string> WrappableAgs { get; set; } = new(["C1F0BD493B470FA369D681C370BBD46E019A7196DBE03D91272EA0BE214B3384"], StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The exe has AGS make its DirectX 12 device (agsDriverExtensionsDX12_CreateDevice, which can reach System32's
-    /// d3d12.dll without a d3d12.dll beside the exe seeing it), with an AGS the wrapper fits: the one beside the exe, or the
-    /// game's own once the wrapper stands in for it (amd_ags_real.dll).</summary>
-    internal static bool AgsMakesTheDevice(string exe)
+    /// d3d12.dll without a d3d12.dll beside the exe seeing it), with an AGS the wrapper fits (<see cref="AgsUnfit"/>): the one
+    /// beside the exe, or the game's own once the wrapper stands in for it (amd_ags_real.dll). <paramref name="unfit"/>: why
+    /// the wrapper doesn't fit an AGS that makes the device, null otherwise.</summary>
+    internal static bool AgsMakesTheDevice(string exe, string? wrapper, out string? unfit)
     {
+        unfit = null;
         var dir = Path.GetDirectoryName(exe)!;
         var ags = Find(dir, "amd_ags_x64.dll");
         try
         {
             if (App.ScsKiller.IsOurProxy(ags)) ags = Path.Combine(dir, "amd_ags_real.dll");
-            if (!File.Exists(ags) || !WrappableAgs.Contains(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(ags))))) return false;
-            using var pe = PeFile.Open(exe);
-            return PeFile.ImportedFunctions(pe, "amd_ags_x64.dll").Contains("agsDriverExtensionsDX12_CreateDevice");
+            if (!File.Exists(ags)) return false;
+            using (var pe = PeFile.Open(exe))
+                if (!PeFile.ImportedFunctions(pe, "amd_ags_x64.dll").Contains("agsDriverExtensionsDX12_CreateDevice")) return false;
+            unfit = AgsUnfit(ags, exe, wrapper);
+            return unfit == null;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidOperationException) { return false; }
     }
 
-    /// <summary>Each file's size and write time, a folder's write time ("d:"), "-" when missing, to tell when a cached answer
-    /// about them is stale.</summary>
+    /// <summary>Why the AGS wrapper (<paramref name="wrapper"/>) can't stand in for <paramref name="ags"/> in front of
+    /// <paramref name="exe"/>, null when it can: a build in <see cref="WrappableAgs"/> or an AGS 5.2 to 5.4, that exports
+    /// every name the exe, the DLLs beside it and the wrapper link it by, while the wrapper exports every name the game links.</summary>
+    internal static string? AgsUnfit(string ags, string exe, string? wrapper)
+    {
+        var known = WrappableAgs.Contains(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(ags))));
+        var v = known ? null : PeVersionInfo.GetVersionInfo(ags);
+        var version = v == null ? "a known build" : v.FileMajorPart == 0 ? "no version" : $"version {v.FileMajorPart}.{v.FileMinorPart}.{v.FileBuildPart}";
+        // amd_ags.h 5.2-5.4: CreateDevice's extension params start {app, engine, app version, engine version} and its returned
+        // params with the device, all the wrapper reads. AGS 6 renamed exports the wrapper forwards (agsInit, agsDeInit).
+        if (v != null && (v.FileMajorPart != 5 || v.FileMinorPart is < 2 or > 4)) return version;
+        if (wrapper == null || !File.Exists(wrapper)) return version + ", the recorder's AGS wrapper is missing";
+        try
+        {
+            using var a = PeFile.Open(ags);
+            using var e = PeFile.Open(exe);
+            using var w = PeFile.Open(wrapper);
+            var has = PeFile.ExportNames(a).ToHashSet(StringComparer.Ordinal);
+            var wraps = PeFile.ExportNames(w).ToHashSet(StringComparer.Ordinal);
+            // the exe's DLLs beside it link AGS too, by ordinal as well: each name must reach the same function
+            var linked = PeFile.ImportedFunctions(e, "amd_ags_x64.dll").Concat(Directory.EnumerateFiles(Path.GetDirectoryName(exe)!, "*.dll")
+                .Where(d => !Path.GetFileName(d).StartsWith("amd_ags_", StringComparison.OrdinalIgnoreCase))
+                .SelectMany(d => { using var m = PeFile.Open(d); return PeFile.ImportedFunctions(m, "amd_ags_x64.dll").ToList(); })).Distinct().ToList();
+            var missing = linked.Concat(PeFile.ImportedFunctions(w, "amd_ags_real.dll")).FirstOrDefault(n => !has.Contains(n))
+                ?? linked.FirstOrDefault(n => !wraps.Contains(n));
+            return missing != null ? $"{version}, {missing} not matched" : null;
+        }
+        catch (Exception x) when (x is BadImageFormatException or InvalidOperationException) { return version + ", a library's imports or exports unreadable"; }
+    }
+
+    /// <summary>Each file's size and write time, a folder's write time, "-" when missing: to tell when a cached answer about
+    /// them is stale.</summary>
     internal static string Stamp(IEnumerable<string> files) =>
         string.Join('|', files.Select(f => new FileInfo(f) is { Exists: true } i ? $"{i.Length}:{i.LastWriteTimeUtc.Ticks}"
             : new DirectoryInfo(f) is { Exists: true } d ? $"d:{d.LastWriteTimeUtc.Ticks}" : "-"));
@@ -410,111 +442,76 @@ public static class GameFiles
         .Where(f => !NotTheGame.Any(s => Path.GetRelativePath(installDir, f).Contains(s, StringComparison.OrdinalIgnoreCase)) && !IsEngineFolder(installDir, f) && !InStaging(installDir, f) && !IsHelper(f))
         .Where(f => ImportsGraphics(f) == true);
 
-    /// <summary><paramref name="path"/> is inside the folder <paramref name="dir"/> (case-insensitive, full paths).</summary>
-    public static bool Inside(string dir, string path) => Inside(dir, path, Names);
+    /// <summary><paramref name="path"/> (below <paramref name="dir"/>) is in a Wine prefix, a folder holding
+    /// drive_c/windows/system32, whose DLLs are Wine's, not the game's. A prefix that holds <paramref name="exe"/> (dir itself
+    /// as one) keeps its files outside drive_c/windows.</summary>
+    internal static bool InWinePrefix(string dir, string exe, string path)
+    {
+        var parts = Path.GetRelativePath(dir, path).Split(Path.DirectorySeparatorChar);
+        for (var i = 0; i < parts.Length - 1; i++)
+        {
+            if (!parts[i].Equals("drive_c", StringComparison.OrdinalIgnoreCase)) continue;
+            var prefix = Path.Combine(dir, Path.Combine(parts[..i]));
+            if (Directory.Exists(Path.Combine(prefix, parts[i], "windows", "system32")))
+                return !Inside(prefix, exe) || parts[i + 1].Equals("windows", StringComparison.OrdinalIgnoreCase);
+        }
+        return false;
+    }
 
-    /// <summary><see cref="Inside(string, string)"/> with names compared as <paramref name="names"/> says.</summary>
+    /// <summary><paramref name="path"/> is inside the folder <paramref name="dir"/> (case-insensitive, full paths).</summary>
+    public static bool Inside(string dir, string path) => Inside(dir, path, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The drive or mount point <paramref name="dir"/> is on: the longest drive root holding it, else its path root
+    /// (a network share); null for a path that can't be read. <paramref name="roots"/>: <see cref="DriveRoots"/>, read once for many.</summary>
+    public static string? DriveOf(string dir, IReadOnlyList<string>? roots = null)
+    {
+        try
+        {
+            var full = Path.GetFullPath(dir);
+            var names = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            return (roots ?? DriveRoots())
+                .Where(r => full.StartsWith(r, names) && (full.Length == r.Length || Path.EndsInDirectorySeparator(r) || full[r.Length] == Path.DirectorySeparatorChar))
+                .MaxBy(r => r.Length) ?? Path.GetPathRoot(full);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { return null; }
+    }
+
+    public static IReadOnlyList<string> DriveRoots()
+    {
+        try { return [.. DriveInfo.GetDrives().Select(d => d.RootDirectory.FullName)]; }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return []; }
+    }
+
+    /// <summary><see cref="Inside(string, string)"/>, the names compared as <paramref name="names"/> says.</summary>
     internal static bool Inside(string dir, string path, StringComparison names) =>
         dir.Length > 0 && Path.GetFullPath(path).StartsWith(DirKey(dir) + Path.DirectorySeparatorChar, names);
 
-    /// <summary>How file names compare on this file system.</summary>
-    internal const StringComparison Names = StringComparison.OrdinalIgnoreCase;
-
-    /// <summary>The order paths are listed in, the same on every file system.</summary>
-    public static readonly IComparer<string> PathOrder = StringComparer.OrdinalIgnoreCase;
-
-    /// <summary><paramref name="path"/> relative to <paramref name="root"/>, "\"-separated as plans and logs keep it.</summary>
-    public static string Rel(string root, string path) => Path.GetRelativePath(root, path);
-
-    /// <summary><see cref="Rel(string, string)"/> of a file <see cref="Find"/> found as <paramref name="found"/> for
-    /// <paramref name="rel"/>.</summary>
-    public static string Rel(string root, string path, string found, string rel) => Rel(root, path);
-
-    public static string ChangeExtension(string path, string extension) => Path.ChangeExtension(path, extension);
-
-    /// <summary><paramref name="rel"/> ("\"-separated, as games and plans name their files) under <paramref name="root"/>.</summary>
-    public static string Under(string root, string rel) => Path.Combine(root, rel);
-
-    /// <summary>The file or folder <paramref name="rel"/> names under <paramref name="root"/>, spelled as on disk where the
-    /// file system tells names apart by case; else <see cref="Under"/>.</summary>
-    public static string Find(string root, string rel) => Under(root, rel);
-
-    /// <summary>Every file or folder <paramref name="rel"/> may name under <paramref name="root"/> (<see cref="Find"/>).</summary>
-    public static IEnumerable<string> FindAll(string root, string rel) => [Under(root, rel)];
-
-    // the listings a game's files are read through, one place for every file system
-    public static IEnumerable<string> EnumerateFiles(string dir, string pattern = "*", SearchOption option = SearchOption.TopDirectoryOnly) =>
-        Directory.EnumerateFiles(dir, pattern, option);
-    public static IEnumerable<string> EnumerateFiles(string dir, string pattern, EnumerationOptions options) => Directory.EnumerateFiles(dir, pattern, options);
-    public static IEnumerable<string> EnumerateDirectories(string dir, string pattern = "*", SearchOption option = SearchOption.TopDirectoryOnly) =>
-        Directory.EnumerateDirectories(dir, pattern, option);
-    public static IEnumerable<string> EnumerateDirectories(string dir, string pattern, EnumerationOptions options) => Directory.EnumerateDirectories(dir, pattern, options);
-    public static IEnumerable<FileInfo> EnumerateFiles(DirectoryInfo dir, string pattern = "*", SearchOption option = SearchOption.TopDirectoryOnly) =>
-        dir.EnumerateFiles(pattern, option);
-    public static IEnumerable<FileInfo> EnumerateFiles(DirectoryInfo dir, string pattern, EnumerationOptions options) => dir.EnumerateFiles(pattern, options);
-    public static IEnumerable<DirectoryInfo> EnumerateDirectories(DirectoryInfo dir, string pattern, EnumerationOptions options) => dir.EnumerateDirectories(pattern, options);
-
-    /// <summary>Opens the file to read, sharing it with writers and deleters.</summary>
-    internal static FileStream? OpenRegular(string path) => new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-
-    /// <summary>Opens an existing file to read and write, shared with no one, refusing a symlink, junction or hard-linked file
-    /// (IOException): what is written lands in that file alone.</summary>
-    internal static Microsoft.Win32.SafeHandles.SafeFileHandle OpenUnlinked(string path)
-    {
-        var h = CreateFileW(path, 0xC0000000 /* GENERIC_READ | GENERIC_WRITE */, 0, 0, 3 /* OPEN_EXISTING */, 0x00200000 /* FILE_FLAG_OPEN_REPARSE_POINT */, 0);
-        if (h.IsInvalid)
-        {
-            var hr = System.Runtime.InteropServices.Marshal.GetHRForLastWin32Error();
-            h.Dispose();
-            throw new IOException($"couldn't open {path}", hr);
-        }
-        var tag = new byte[8];        // FILE_ATTRIBUTE_TAG_INFO: attributes, reparse tag
-        var standard = new byte[24];  // FILE_STANDARD_INFO: NumberOfLinks at 16
-        if (!GetFileInformationByHandleEx(h, 9 /* FileAttributeTagInfo */, tag, tag.Length) || !GetFileInformationByHandleEx(h, 1 /* FileStandardInfo */, standard, standard.Length)
-            || ((BitConverter.ToUInt32(tag, 0) & 0x400 /* REPARSE_POINT */) != 0 && (BitConverter.ToUInt32(tag, 4) & 0x20000000 /* name surrogate */) != 0)
-            || BitConverter.ToUInt32(standard, 16) != 1)
-        {
-            h.Dispose();
-            throw new IOException($"{path} is a link: not written");
-        }
-        return h;
-    }
-
     /// <summary>The folder's path with every junction and symlink on the way resolved, as a process's image path names
     /// it; null when it can't be opened.</summary>
-    public static string? FinalPath(string dir)
-    {
-        using var h = CreateFileW(dir, 0, 7 /* FILE_SHARE_READ | WRITE | DELETE */, 0, 3 /* OPEN_EXISTING */, 0x02000000 /* FILE_FLAG_BACKUP_SEMANTICS */, 0);
-        return h.IsInvalid ? null : FinalPath(h);
-    }
+    public static partial string? FinalPath(string dir);
+
+    /// <summary>Where the file system holding <paramref name="path"/> (or its nearest folder that exists) is mounted: a
+    /// drive's root on Windows, a mount point on Linux. Null when none can be read.</summary>
+    public static partial string? VolumeOf(string path);
 
     /// <summary>A file's identity (FILE_ID_INFO's 24 bytes: the volume serial and the 128-bit file id, the same through any
-    /// link or junction) and its <see cref="FinalPath(string)"/>, each null when it can't be read; null when the file can't
-    /// be opened. As the proxy reads its exe's (proxy.cpp ledger_path).</summary>
-    public static (byte[]? Id, string? Final)? Identity(string path)
+    /// link or junction; under Wine <see cref="WineFileId"/>) and its <see cref="FinalPath(string)"/>, each null when it can't
+    /// be read; null when the file can't be opened. As the proxy keys its exe (recorder_key.h file_key).</summary>
+    public static partial (byte[]? Id, string? Final)? Identity(string path);
+
+    /// <summary>What the proxy under Wine puts in place of FILE_ID_INFO's volume serial, which is that of the drive letter the
+    /// file was opened through (recorder_key.h kWineVolume).</summary>
+    internal static ReadOnlySpan<byte> WineVolume => "wine-ino"u8;
+
+    /// <summary>The proxy's identity of a file under Wine (recorder_key.h id_key): <see cref="WineVolume"/>, then Wine's file
+    /// id, the inode.</summary>
+    internal static byte[] WineFileId(ulong inode)
     {
-        using var h = CreateFileW(path, 0x80 /* FILE_READ_ATTRIBUTES */, 7, 0, 3, 0x02000000, 0);
-        if (h.IsInvalid) return null;
         var id = new byte[24];
-        return (GetFileInformationByHandleEx(h, 0x12 /* FileIdInfo */, id, id.Length) ? id : null, FinalPath(h));
+        WineVolume.CopyTo(id);
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt64LittleEndian(id.AsSpan(8), inode);
+        return id;
     }
-
-    static string? FinalPath(Microsoft.Win32.SafeHandles.SafeFileHandle h)
-    {
-        var name = new char[32768];
-        var n = GetFinalPathNameByHandleW(h, name, name.Length, 0);
-        if (n == 0 || n >= name.Length) return null;
-        var path = new string(name, 0, (int)n);
-        return path.StartsWith(@"\\?\UNC\", StringComparison.Ordinal) ? @"\\" + path[8..]
-             : path.StartsWith(@"\\?\", StringComparison.Ordinal) ? path[4..] : path;
-    }
-
-    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
-    static extern Microsoft.Win32.SafeHandles.SafeFileHandle CreateFileW(string name, uint access, uint share, nint security, uint disposition, uint flags, nint template);
-    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
-    static extern uint GetFinalPathNameByHandleW(Microsoft.Win32.SafeHandles.SafeFileHandle h, [System.Runtime.InteropServices.Out] char[] name, int size, uint flags);
-    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
-    static extern bool GetFileInformationByHandleEx(Microsoft.Win32.SafeHandles.SafeFileHandle h, int infoClass, byte[] info, int size);
 
     /// <summary>The folder's own name, also from a path ending in a separator (Ubisoft Connect's end in "/").</summary>
     public static string FolderName(string dir) => Path.GetFileName(Path.TrimEndingDirectorySeparator(dir));
@@ -522,12 +519,88 @@ public static class GameFiles
     /// <summary>An install folder compared across sources: full path, no trailing separator (a drive root keeps its own).</summary>
     public static string DirKey(string dir) => dir.Length == 0 ? dir : Path.TrimEndingDirectorySeparator(Path.GetFullPath(dir));
 
+    /// <summary><paramref name="path"/> relative to <paramref name="root"/> with '\' separators on every system: the form of a
+    /// game-relative id, library name, content stamp or shared key, the same for an install read on Windows or Linux.</summary>
+    public static string Rel(string root, string path) =>
+        Path.DirectorySeparatorChar == '\\' ? Path.GetRelativePath(root, path) : Path.GetRelativePath(root, path).Replace('/', '\\');
+
+    /// <summary>The file Path.ChangeExtension names, as Windows finds it: on Windows that path, elsewhere <see cref="Find"/>'s
+    /// path for its name in <paramref name="path"/>'s folder.</summary>
+    public static partial string ChangeExtension(string path, string extension);
+
+    /// <summary><see cref="Rel(string, string)"/> of <paramref name="path"/>, which is <paramref name="found"/> or under it, with
+    /// <paramref name="found"/>'s last segments spelled as <paramref name="rel"/> (the path <see cref="Find"/> gave
+    /// <paramref name="found"/> for) spells them: the id or stamp Windows makes of the same file.</summary>
+    public static partial string Rel(string root, string path, string found, string rel);
+
+    /// <summary>The Windows-form relative path <paramref name="rel"/> ('\' separators: a reader's constant, a path read from a
+    /// game's or launcher's files) as a native path under <paramref name="root"/>.</summary>
+    public static string Under(string root, string rel) =>
+        Path.Combine(root, Path.DirectorySeparatorChar == '\\' ? rel : rel.Replace('\\', '/'));
+
+    /// <summary>The file or folder <see cref="Under"/> names, as Windows' case-insensitive lookup finds it: on Windows that path,
+    /// with no IO. Elsewhere, when it doesn't exist, each segment of <paramref name="rel"/> matched to its folder's entries
+    /// ignoring case (an entry spelled as given first, else the first in ordinal order), and <see cref="Under"/>'s path when
+    /// a segment matches none. For IO only: an id, a map name or a stamp keeps <paramref name="rel"/>'s own spelling.</summary>
+    public static partial string Find(string root, string rel);
+
+    /// <summary>Every file or folder <see cref="Under"/> names but for case: on Windows that path, with no IO. Elsewhere each
+    /// segment matched to all of its folder's entries ignoring case, those spelled as given first: where <see cref="Find"/>
+    /// gives one of names alike, a check that one exists sees each.</summary>
+    public static partial IEnumerable<string> FindAll(string root, string rel);
+
+    /// <summary>Directory.EnumerateFiles as Windows gives a game's files: on Windows that call. Elsewhere the pattern matches
+    /// ignoring case, each folder's entries come in NTFS's order (<see cref="StringComparer.OrdinalIgnoreCase"/> of the name)
+    /// and a recursive enumeration lists folder by folder, breadth first, as .NET's enumerator does on Windows, but never
+    /// walks into a link to a folder (a Wine prefix's dosdevices links name the whole system).</summary>
+    public static partial IEnumerable<string> EnumerateFiles(string dir, string pattern = "*", SearchOption option = SearchOption.TopDirectoryOnly);
+
+    /// <inheritdoc cref="EnumerateFiles(string, string, SearchOption)"/>
+    public static partial IEnumerable<string> EnumerateFiles(string dir, string pattern, EnumerationOptions options);
+
+    /// <inheritdoc cref="EnumerateFiles(string, string, SearchOption)"/>
+    public static partial IEnumerable<string> EnumerateDirectories(string dir, string pattern = "*", SearchOption option = SearchOption.TopDirectoryOnly);
+
+    /// <inheritdoc cref="EnumerateFiles(string, string, SearchOption)"/>
+    public static partial IEnumerable<string> EnumerateDirectories(string dir, string pattern, EnumerationOptions options);
+
+    /// <inheritdoc cref="EnumerateFiles(string, string, SearchOption)"/>
+    public static partial IEnumerable<FileInfo> EnumerateFiles(DirectoryInfo dir, string pattern = "*", SearchOption option = SearchOption.TopDirectoryOnly);
+
+    /// <inheritdoc cref="EnumerateFiles(string, string, SearchOption)"/>
+    public static partial IEnumerable<FileInfo> EnumerateFiles(DirectoryInfo dir, string pattern, EnumerationOptions options);
+
+    /// <inheritdoc cref="EnumerateFiles(string, string, SearchOption)"/>
+    public static partial IEnumerable<DirectoryInfo> EnumerateDirectories(DirectoryInfo dir, string pattern, EnumerationOptions options);
+
+    /// <summary>The order of a game's file paths where it feeds a content stamp, a dedupe or a map's name: ordinal and
+    /// case-insensitive, '/' read as '\', so files under one root sort as their <see cref="Rel"/> paths do on Windows.</summary>
+    public static readonly IComparer<string> PathOrder = Path.DirectorySeparatorChar == '\\' ? StringComparer.OrdinalIgnoreCase : new SlashAsBackslash();
+
+    sealed class SlashAsBackslash : IComparer<string>
+    {
+        public int Compare(string? x, string? y)
+        {
+            if (x == null || y == null) return x == null ? y == null ? 0 : -1 : 1;
+            char[]? rented = null;
+            var n = x.Length + y.Length;
+            Span<char> buf = n <= 1024 ? stackalloc char[n] : rented = System.Buffers.ArrayPool<char>.Shared.Rent(n);
+            Span<char> a = buf[..x.Length], b = buf.Slice(x.Length, y.Length);
+            x.AsSpan().Replace(a, '/', '\\');
+            y.AsSpan().Replace(b, '/', '\\');
+            var order = MemoryExtensions.CompareTo(a, b, StringComparison.OrdinalIgnoreCase);
+            if (rented != null) System.Buffers.ArrayPool<char>.Shared.Return(rented);
+            return order;
+        }
+    }
+
     static readonly string[] NotTheGame = ["redist", "directx", "crash", "unins", "setup", "vconsole"];   // vconsole2.exe: Source 2's developer console
 
     // the Epic Online Services installer is 64-bit and can be the largest exe in an Unreal game's Binaries\Win64
     static readonly string[] Helpers = ["EpicOnlineServices", "EOSBootstrapper", "EpicWebHelper", "CrashReport", "UnrealCEFSubProcess",
         "Prereq", "setup", "redist", "installer", "unins",
         "ffmpeg",   // Once Human's ffmpeg.exe is larger than ONCE_HUMAN.exe beside it
+        "HD2Arsenal",   // a HELLDIVERS 2 mod manager kept in the game's root, where the guess looks before bin\helldivers2.exe
         "crs-handler", "crs-uploader", "crs-video"];   // Sony's PC crash reporter, beside the exe of its ports and still running after a crash
 
     /// <summary>An installer, redistributable or engine helper shipped beside a game's exe, by its file name.</summary>
@@ -588,6 +661,8 @@ public static class GameFiles
         ("Warframe.x64.exe", AntiCheat.Other),   // Digital Extremes' own client-side detection: no driver or folder of its own
         ("ONCE_HUMAN.exe", AntiCheat.Other),   // NetEase's anti-cheat installs outside the game folder (also AntiCheatIds)
         ("forzahorizon5.exe", AntiCheat.Other), ("forzahorizon6.exe", AntiCheat.Other),   // Playground's own detection leaves no file of its own (also AntiCheatIds)
+        ("RobloxPlayerBeta.exe", AntiCheat.Other), ("RobloxPlayerBeta.dll", AntiCheat.Other), ("RobloxPlayerLauncher.exe", AntiCheat.Other),
+        ("RobloxPlayerInstaller.exe", AntiCheat.Other),   // Hyperion is built into the player, no file of its own
         ("arbiter.dll", AntiCheat.Other),   // Arbiter, Halo Infinite's own anti-cheat, in the game's root
         ("gameguard.des", AntiCheat.Other),
         ("DenuvoAC", AntiCheat.Other), ("denuvo-anti-cheat.sys", AntiCheat.Other), ("denuvo-anti-cheat-runtime.dll", AntiCheat.Other),
@@ -615,9 +690,11 @@ public static class GameFiles
     /// (a folder it may not list, the root included; more than <see cref="MaxEntries"/> entries; longer than <see cref="Budget"/>) is <see cref="AntiCheat.Other"/>:
     /// not known to be clean. A junction or symlink is a name, not followed: a folder it points into inside the tree is
     /// read where it is, and one outside is another folder's; one on the way from the install root to the exe is Other. <paramref name="quick"/>: the install root's and the exe
-    /// folder's own entries only, for a recheck right after a full one. A game added by hand (<see cref="Store.Manual"/>) also has
+    /// folder's own entries only, for a recheck right after a full one. A game added by hand (<see cref="Store.Manual"/>), or to
+    /// Steam as a non-Steam game (<see cref="SteamShortcuts"/>), also has
     /// the entries of each folder above its install read, one level each, up to a drive root or a store's folder of games
-    /// (<see cref="ManualSource.IsLibrary"/>), not included: the folder the user confirmed may be a subfolder of the game's. Battle.net titles are marked conservatively:
+    /// (<see cref="ManualSource.IsLibrary"/>), not included: the folder the user confirmed, or the one found from the exe they
+    /// picked, may be a subfolder of the game's. Battle.net titles are marked conservatively:
     /// Blizzard's Warden is server-side, not a file the install carries. HoYoPlay titles too: every HoYoverse game ships a kernel anti-cheat. So are the truck simulators on a PC with TruckersMP (<see cref="TruckersMpExes"/>), and anything under a "Riot Games" folder or listed by the Riot Client. The only anti-cheat detector: engine readers and
     /// middleware detection call it to skip their own work, exe discovery to read no other binary; the app's evaluation acts on its verdict.
     /// <see cref="RootMarkers"/> count only under the install root, the exe's folder and a hand-added game's folders above.
@@ -628,7 +705,7 @@ public static class GameFiles
     /// tree that can't be read whole, TruckersMP, a Riot Games path, a launch option).
     /// <paramref name="steamRoot"/>: Steam's folder (default: Steam's own).
     /// <paramref name="late"/>: called when the time ran out, an Other that isn't a finding.
-    /// <paramref name="unreadable"/>: given the error that left the tree unread, an Other that isn't a finding either.</summary>
+    /// <paramref name="unreadable"/>: given the error when a read failed, also an Other that isn't a finding.</summary>
     public static AntiCheat DetectAntiCheat(Game game, bool quick = false, TimeSpan? budget = null, AntiCheat ignore = AntiCheat.None, Action<string>? at = null,
         string? steamRoot = null, Action? late = null, Action<Exception>? unreadable = null)
     {
@@ -638,8 +715,10 @@ public static class GameFiles
         if (AntiCheatIds.Contains(game.Id, StringComparer.OrdinalIgnoreCase)) return AntiCheat.Other;
         var install =Path.TrimEndingDirectorySeparator(Path.GetFullPath(game.InstallDir));
         var exeDir = Path.GetDirectoryName(Path.GetFullPath(game.ExePath))!;
-        bool Inside(string d) => d.Equals(install, Names) || d.StartsWith(install + Path.DirectorySeparatorChar, Names);
-        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // off Windows a folder spelled otherwise is another folder, and one reached twice has one real path
+        var named = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        bool Inside(string d) => d.Equals(install, named) || d.StartsWith(install + Path.DirectorySeparatorChar, named);
+        var visited = new HashSet<string>(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
         var seen = 0;
         var clock = Stopwatch.StartNew();
         bool Late()
@@ -654,11 +733,12 @@ public static class GameFiles
             var dirs = new Stack<string>([root]);
             while (dirs.TryPop(out var dir))
             {
-                if (!visited.Add(dir)) continue;
+                if (!visited.Add(OperatingSystem.IsWindows() ? dir : FinalPath(dir) ?? dir)) continue;
                 if (Late()) return AntiCheat.Other;   // also between folders: empty ones queued, a slow open
-                IEnumerator<FileSystemInfo> entries;   // streamed: the cap bounds memory too
+                IEnumerator<FileSystemInfo> entries;   // the cap bounds memory too
                 try
                 {
+                    // null: the folder's read stopped at the cap or the budget
                     if (MarkerEntries(new DirectoryInfo(dir), MaxEntries - seen, Late) is not { } listed) return AntiCheat.Other;
                     entries = listed.GetEnumerator();
                 }
@@ -702,7 +782,7 @@ public static class GameFiles
                     at?.Invoke(d);
                     return kind;
                 }
-            if (game.Store == Store.Manual)
+            if (game.Store == Store.Manual || SteamShortcuts.Is(game.Id) || LutrisSource.Is(game.Id))
                 for (var d = Path.GetDirectoryName(install); d != null && Path.GetPathRoot(d) != d && !ManualSource.IsLibrary(d); d = Path.GetDirectoryName(d))
                 {
                     if (ignore != AntiCheat.Other && RootMarker(d) is { } marker)
@@ -722,16 +802,17 @@ public static class GameFiles
         return AntiCheat.None;
     }
 
-    /// <summary>A folder's entries as the anti-cheat check reads them, hidden and system ones too; null = they can't be read
-    /// within <paramref name="left"/> entries before <paramref name="over"/> (not known to be clean).</summary>
-    internal static IEnumerable<FileSystemInfo>? MarkerEntries(DirectoryInfo dir, int left, Func<bool> over) => dir.EnumerateFileSystemInfos("*", AllNames);
-
     /// <summary>The path has a "Riot Games" folder: the Riot Client installs every Riot title under one.</summary>
     internal static bool RiotGames(string path) =>
         Path.GetFullPath(path).Split(Path.DirectorySeparatorChar).Contains("Riot Games", StringComparer.OrdinalIgnoreCase);
 
     // AttributesToSkip defaults to Hidden | System: a hidden EasyAntiCheat folder or a system randgrid.sys still counts
     static readonly EnumerationOptions AllNames = new() { IgnoreInaccessible = false, AttributesToSkip = 0 };
+
+    /// <summary>A folder's entries for the anti-cheat walk in the order Windows lists them: on Windows streamed, never null.
+    /// Elsewhere in NTFS's order once read whole, and null when the read reaches <paramref name="left"/> + 1 entries or
+    /// <paramref name="over"/>: a folder not read whole, which the walk counts as anti-cheat.</summary>
+    internal static partial IEnumerable<FileSystemInfo>? MarkerEntries(DirectoryInfo dir, int left, Func<bool> over);
 
     /// <summary>Entries one detection reads at most (names only: an install of 170,000 entries reads in about 0.1 s warm).</summary>
     public const int MaxEntries = 2_000_000;
@@ -746,40 +827,27 @@ public static class GameFiles
 
     /// <summary>Games whose anti-cheat leaves no file in the install. NetEase's: Once Human, Marvel Rivals, FragPunk, Sword of
     /// Justice, NARAKA: BLADEPOINT. Elytra's, whose service installs under Program Files: THE FINALS. Playground's own (online
-    /// checks, hardware bans): Forza Horizon 6 and Forza Horizon 5 on Steam and the Xbox app. Ironmace's IronShield, no marker
-    /// for it yet: Dark and Darker.</summary>
+    /// checks, hardware bans): Forza Horizon 5 and 6 on Steam and the Xbox app. Ironmace's IronShield, no marker for it yet: Dark and Darker.
+    /// Activision's Ricochet, no randgrid.sys in that install: Call of Duty: Modern Warfare (2019) on Steam.</summary>
     internal static readonly string[] AntiCheatIds = ["steam:2139460", "steam:2767030", "steam:2943650", "steam:2782500", "steam:1203220",
         "steam:2483190", "steam:2073850", "steam:2016590", "xbox:Microsoft.ForteBaseGame_8wekyb3d8bbwe",
-        "steam:1551360", "xbox:Microsoft.624F8B84B80_8wekyb3d8bbwe"];
+        "steam:1551360", "xbox:Microsoft.624F8B84B80_8wekyb3d8bbwe", "steam:2000950"];
 
     /// <summary>A TruckersMP folder (any leftover counts) or an installed program named like it.</summary>
     internal static bool TruckersMp(IEnumerable<string> folders, IEnumerable<string> programs) =>
         folders.Any(Directory.Exists) || programs.Any(p => p.Contains("TruckersMP", StringComparison.OrdinalIgnoreCase));
 
-    internal static bool TruckersMpHere() => TruckersMp(TruckersMpFolders(), InstalledPrograms());
+    /// <summary>TruckersMP is where the game would meet it (<see cref="TruckersMp"/>): on Windows the user's and the machine's
+    /// folders and uninstall list. Elsewhere always: under Proton it can run from any prefix.</summary>
+    internal static partial bool TruckersMpHere();
 
-    // the launcher's mod files (Roaming\TruckersMP\installation; the older launcher's under ProgramData), its own data, and
-    // the multiplayer profiles in Documents
-    static IEnumerable<string> TruckersMpFolders() =>
-        new (Environment.SpecialFolder Root, string Name)[] { (Environment.SpecialFolder.ApplicationData, "TruckersMP"), (Environment.SpecialFolder.LocalApplicationData, "TruckersMP"),
-            (Environment.SpecialFolder.CommonApplicationData, "TruckersMP"), (Environment.SpecialFolder.MyDocuments, "ETS2MP"), (Environment.SpecialFolder.MyDocuments, "ATSMP") }
-        .Select(f => (Root: Environment.GetFolderPath(f.Root), f.Name)).Where(f => f.Root.Length > 0).Select(f => Path.Combine(f.Root, f.Name));
+    /// <summary>A read stream on <paramref name="path"/> when it is a regular file; null for a FIFO, socket or device, whose open
+    /// would wait for a writer or which has no end. Throws what opening the file throws.</summary>
+    internal static partial FileStream? OpenRegular(string path);
 
-    /// <summary>The display names of the programs in Windows' uninstall list, per user and per machine, both registry views.</summary>
-    static IEnumerable<string> InstalledPrograms()
-    {
-        foreach (var hive in new[] { RegistryHive.CurrentUser, RegistryHive.LocalMachine })
-        foreach (var view in new[] { RegistryView.Registry64, RegistryView.Registry32 })
-        {
-            using var b = RegistryKey.OpenBaseKey(hive, view);
-            using var root = b.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall");
-            foreach (var sub in root?.GetSubKeyNames() ?? [])
-            {
-                using var key = root!.OpenSubKey(sub);
-                if (key?.GetValue("DisplayName") is string { Length: > 0 } name) yield return name;
-            }
-        }
-    }
+    /// <summary>A read-write handle on <paramref name="path"/> that no other handle shares; throws for a symlink or junction
+    /// (opened as itself, never followed) and for a file with more than one name.</summary>
+    internal static partial Microsoft.Win32.SafeHandles.SafeFileHandle OpenUnlinked(string path);
 
     internal static AntiCheat Marker(string name)
     {

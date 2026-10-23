@@ -31,24 +31,41 @@ public sealed class GameRecord
     public PendingCount? Pending { get; set; }               // the last count of pipelines new since the warm (ScsKiller.PendingOf)
     public bool PlanPerStage { get; set; }                  // the plan has each stage unit once, not every pairing (per-stage cache, not Maximum)
     public bool? PlanMaximumCapped { get; set; }            // the plan was built with Maximum's per-game cap (PlanBuilder.MaximumExtras); null = before it
+    public long? PlanCacheBudget { get; set; }              // VendorCaps.WarmCacheBudget the plan was built with (ScsKiller.PlanCaps); null = none, or before it was kept
     public bool WarmedPerStage { get; set; }                // PlanPerStage of the plan the last complete warm replayed
     public string? PlanMiddleware { get; set; }             // MiddlewarePacks.Fingerprint when the plan was built (DLL versions + pack sizes)
     public string? PlanCommunity { get; set; }              // the community recording (object id) the plan was built with; null = none
     public string? PlanOfficial { get; set; }               // the official recording (object id) the plan was built with; null = none
+    public string? PlanSteam { get; set; }                  // ScsKiller.SteamDownloads when the plan was built; null = none
     public string? PlanMaps { get; set; }                   // ScsKiller.MapsFingerprint of the index the plan was built from
     public string? D3DSCacheFolder { get; set; }            // the game's own D3DSCache folder (named by its exe path), found again once emptied
     public string? D3DSCacheExe { get; set; }               // the exe path that folder's dbs name
     public bool WarmedD3DSCache { get; set; }               // the last complete warm's D3DSCache dbs were kept, not deleted
+    public Dictionary<string, long>? WarmedD3DSCacheBytes { get; set; }   // NVIDIA: the game's D3DSCache dbs and their lengths after that warm's fold; null = not recorded
+    public DateTimeOffset? WarmedD3DSCacheAt { get; set; }  // ...when they were read: a db made after it holds none of the warm's
     public string? D3DSCacheMade { get; set; }              // the D3DSCache folder SCSKiller made before the game's first run
     public DateTimeOffset? D3DSCacheEmptiedAt { get; set; } // that folder was found emptied after the warm (ScsKiller.D3DSCacheGone): compile again
+    public DateTime? D3DSCacheSince { get; set; }           // staged warms' runtime cache folders made since then aren't folded yet
+    public bool D3DSCacheDamaged { get; set; }              // a staged db failed SQLite's check at the fold: compile again
+    public IdentityStamp? D3DSCacheStamp { get; set; }      // the identity the last fold that put dbs in stamped, and why (outcome reports)
+    public DateTimeOffset? D3DSCacheStampAt { get; set; }   // ...when
+    public string? D3DSCacheStampFolder { get; set; }       // ...in which D3DSCache folder (a made one before the game named it)
+    public IdentityReport? D3DSCacheLaunch { get; set; }    // that stamp and the game's adapter db identity at the exit of the first run after the warm's fold
+    public DateTimeOffset? D3DSCacheLaunchAt { get; set; }  // ...the D3DSCacheStampAt it was read for
+    public FoldKeys? D3DSCacheFoldKeys { get; set; }       // NVIDIA: the game's adapter db right after the fold that put the last complete warm's dbs in
+    public HitCheck? HitCheck { get; set; }                 // the first run after that fold, read at its exit (outcome reports)
+    public DateTimeOffset? HitCheckAt { get; set; }         // ...the D3DSCacheFoldKeys.At it was read for
+    public PlayWindow? HitCheckRun { get; set; }           // ...the run it was read at the exit of: a csv report carries it only for that launch
     public long ResumeAt { get; set; }                       // Done of a stopped warm of the current plan
     public long ResumeItems { get; set; }                    // items the stopped segments of that warm created...
     public double ResumeSeconds { get; set; }                // ...and their time: a complete warm's time and rate include them
     public long ResumeFailed { get; set; }                   // ...and their failures: a resumed warm counts only its own
     public long ResumeDriverSkipped { get; set; }            // ...and their skips (WarmResult.DriverSkipped)
+    public long ResumeInvalid { get; set; }                  // ...and their Vulkan pipelines never created (WarmResult.Invalid)
+    public long ResumeUnsupported { get; set; }              // ...and those needing a feature the GPU lacks (WarmResult.Unsupported)
     public string? ResumeGpu { get; set; }                   // ...on this driver (ScsKiller.DriverId): another one's cache lacks them; null = unknown, as another
     public string? ResumeLayer { get; set; }                 // ...through this ReShade layer (ReShadeInstall.Fingerprint); null = none
-    public string? ResumeWork { get; set; }                  // ...of this work order (the plan's items in order): another order's item numbers aren't these; null = unknown
+    public string? ResumeWork { get; set; }                  // ...in this work folder (ScsKiller.WorkOrder); null = not taken, the plan's rebuild starts over
     public string? ResumeExe { get; set; }                   // ...staged as this exe name (another name's cache lacks them); null = unknown, as another
     public string? ResumeAgs { get; set; }                   // ...registering this AGS app name ("" = none; another name's cache lacks them); null = an earlier build's
     public bool ResumeAftermath { get; set; }                // ...starting NVIDIA Aftermath as the game does (its shader debug info is another key)
@@ -64,8 +81,11 @@ public sealed class GameRecord
     public long? LastWarmCrashed { get; set; }               // ...and items skipped because they crash the GPU driver
     public long? LastWarmDriverSkipped { get; set; }         // ...and items skipped for that compile (WarmResult.DriverSkipped)
     public long? LastWarmUnbuilt { get; set; }               // ...and D3D11 items SCSKiller can't build a draw for yet (ScsKiller.Unbuilt11)
+    public long? LastWarmInvalid { get; set; }               // ...and Vulkan pipelines whose shaders fail SPIR-V validation (WarmResult.Invalid)
+    public long? LastWarmUnsupported { get; set; }           // ...and Vulkan pipelines needing a feature the GPU lacks (WarmResult.Unsupported)
+    public long? WarmedRoomLeft { get; set; }                // ...and it ended where the compile's cache held no more (WarmResult.Full): the items it didn't reach, 0 = not known; null = it reached the end
     public HashSet<string> CrashKeys { get; set; } = [];     // record keys of items whose create removed the D3D12 device or faulted in the driver: every warm skips them
-    public string? CrashKeysDriver { get; set; }             // the driver they crashed (ScsKiller.DriverId): a warm on another driver clears them (one retry each)
+    public string? CrashKeysDriver { get; set; }             // the driver they crashed (ScsKiller.DriverId): a warm on another driver creates each alone first, the first that still crashes keeps them all
     public string? WarmedIndexHash { get; set; }
     public string? WarmedExeStamp { get; set; }             // exe size + write time at the warm: a game patch changes it
     public string? WarmedGameVersion { get; set; }          // Game.Version (store build id) at the warm; preferred over the exe stamp
@@ -73,6 +93,7 @@ public sealed class GameRecord
     public string? WarmedIndexStamp { get; set; }           // IEngineReader.IndexStamp when the warm's index was taken; null = ""
     public double? BytesPerPso { get; set; }                // measured by the last complete warm onto a cold cache (ScsKiller.ColdWarm)
     public double? PsoPerSecond { get; set; }               // ...and this
+    public string? PsoPerSecondDriver { get; set; }         // the driver it was measured on (GpuSnapshot.Id); null = WarmedDriverId
     public DateTimeOffset? RecordingImportedAt { get; set; }  // when an import last added records
     public string? RecordingInbox { get; set; }             // the game folder's scskiller.db (size:write ticks) when last imported
     public string? RecordingIndexHash { get; set; }         // the index build whose shaders the recording names by hash only; null: not checked since an import
@@ -80,17 +101,19 @@ public sealed class GameRecord
     public bool IniIsUsers { get; set; }                     // an earlier build's: the scskiller.ini there is the user's (now its folder's IniOwner)
     public string? RecorderExe { get; set; }                 // the game's exe while a recorder is installed: uninstall finds it without a scan
     public string? RecorderInstallDir { get; set; }          // and its install root, for the running check
-    public string? VulkanLayer { get; set; }                 // the Vulkan recorder's layer manifest we registered for this game; null = none
-    public string? VulkanLayerSha { get; set; }              // ...and the SHA-256 of the layer DLL placed beside it
-    public List<string> VulkanInboxes { get; set; } = [];   // folders the Vulkan recorder wrote recordings to, imported from
-    public Dictionary<string, string>? VulkanCacheEnv { get; set; }   // the driver-cache environment the game's last Vulkan launch ran with (VulkanLayer.CacheEnv)
-    public string? VulkanDevice { get; set; }                // ...and the Vulkan device it ran on (VulkanLayer.Device)
+    public string? VulkanLayer { get; set; }                 // the Vulkan recorder's manifest registered for this game (VulkanLayer); null = none
+    public string? VulkanLayerSha { get; set; }              // ...and the SHA-256 of the layer's copy beside it
+    public List<string> VulkanInboxes { get; set; } = [];   // the layer's inboxes the exe had while it recorded (its file key changes when Steam replaces it)
+    public Dictionary<string, string>? VulkanCacheEnv { get; set; }   // the last session's driver-cache variables (VulkanLayer.CacheEnv); null = none
+    public string? VulkanDevice { get; set; }   // the last session's Vulkan device (VulkanLayer.Device); null = none recorded
+    public DateTimeOffset? RanElevated { get; set; }   // the last launch seen ran as administrator, which loads no Vulkan recorder; null = not seen so
     public string? RecorderMoveFrom { get; set; }            // a recorder moving next to the game's exe: the old exe, until SCSKiller's files are out of its folder
     public string? RunsExe { get; set; }                    // the exe of its install the game was seen running when discovery named another: used instead (ScsKiller.Following)
     public string? RunsExeFrom { get; set; }                // ...discovery's exe then, and the build (store version, else RunsExe's size and write time):
     public string? RunsExeBuild { get; set; }               // either changed, RunsExe is dropped
     public DateTimeOffset? RunsExeAt { get; set; }          // when the watcher last followed it: the launch it ran in wasn't recorded,
     public string? RunsExeWas { get; set; }                 // ...the recorder was stamped for this exe then
+    public bool RunsExeProven { get; set; }                 // ...an Unreal game's exe beside its Shipping exe that ran alone and made a device (ScsKiller.FollowUnrealOther)
     public string? RecorderMoveTo { get; set; }              // ...and the game's exe it moves next to: the uninstall hook's running check covers both
     public DateTimeOffset? RecorderGoneSince { get; set; }   // the scan that first saw the game uninstalled with the recorder still in its folder (ScsKiller.CleanUninstalled)
     // null = not migrated: the first reconcile makes an installed recorder of ours On (the user put it there), else Default
@@ -117,6 +140,9 @@ public sealed class GameRecord
     public DateTimeOffset? LaunchedExeSeenAt { get; set; }  // when LaunchedExeName was seen: a later sighting replaces it
     public string? WarmedExeName { get; set; }              // the name the last complete warm staged; null = the install's file name
     public bool WarmedAftermath { get; set; }               // NVIDIA: the last complete warm started Aftermath as the game does (NvAftermath.Of)
+    public string? AftermathRetry { get; set; }             // NVIDIA: "<driver id>|<exe>" of the last complete warm that tried Aftermath after a miss (NvAftermath.Retry): once per driver and exe, a guessed one (0xa) "<build>|<exe>": once per build
+    public long? AftermathPlainHits { get; set; }           // ...a guessed one: the hits of the plain compile's first launch, which its own first launch must beat; null once judged
+    public bool AftermathLost { get; set; }                 // ...it didn't: the next compile is plain (until a complete one)
     public string? WarmedAgsApp { get; set; }               // AMD: the AGS app name the last complete warm registered; null = a plain device
     public bool AgsMissed { get; set; }                     // a launch after such a warm showed it missed the game: warms stay plain until the game is seen holding the AGS key
     public string? AgsSeenApp { get; set; }                 // AMD: the AGS app name the game's own process registered (the recorder's #ags line); null = none seen
@@ -127,6 +153,8 @@ public sealed class GameRecord
     public bool? Maximum { get; set; }                      // Maximum mode for this game alone (ScsKiller.SetGameMaximum); null = Settings.MaximumPlans
     public bool? RayTracing { get; set; }                   // ray tracing state objects and collections for this game (ScsKiller.SetGameRayTracing); null = Settings.CompileRayTracing
     public bool LeftOutOfAddAll { get; set; }               // "Add all ready" skips the game (ScsKiller.SetGameLeftOutOfAddAll)
+    public int? PlanCacheCapGB { get; set; }                // CacheCapGB the plan was built with
+    public int? CacheCapGB { get; set; }                    // what a compile's plan may add to the game's shader cache (ScsKiller.SetGameCacheCap); null = no cap of the user's
     public bool Hidden { get; set; }                        // removed from the library by the user: never listed again until shown (ScsKiller.HideGame)
     public bool PlanRayTracing { get; set; } = true;        // the plan was built with them (ScsKiller.RayTracing); true for a record from before the setting
     public bool WarmedRayTracing { get; set; } = true;      // PlanRayTracing of the plan the last complete warm replayed
@@ -167,6 +195,7 @@ public sealed class BeforeAfterRecord
     public long? After { get; set; }
     public string? Problem { get; set; }
     public bool ClearPending { get; set; }
+    public bool Max { get; set; }   // the after run's compile is Max compile's (ScsKiller.CompileMax)
     public bool Overlay { get; set; } = true;   // the in-game countdown, for both runs: a pair never mixes its cost in one run only
     public HashSet<string>? Survivors { get; set; }
     public bool? ClearGap { get; set; }
@@ -251,9 +280,18 @@ public sealed class AppStore(string dataDir)
     /// in current\ and the CLI in current\cli\. Null for an installed or a dev build.</summary>
     public static bool IsPortable => PortableRoot(AppContext.BaseDirectory) != null;
 
-    internal static string? PortableRoot(string baseDir) =>
-        new[] { "..", Path.Combine("..", "..") }.Select(up => Path.GetFullPath(Path.Combine(baseDir, up)))
-            .FirstOrDefault(d => File.Exists(Path.Combine(d, ".portable")));
+    static IEnumerable<string> InstallRoots(string baseDir) =>
+        new[] { "..", Path.Combine("..", "..") }.Select(up => Path.GetFullPath(Path.Combine(baseDir, up)));
+
+    internal static string? PortableRoot(string baseDir) => InstallRoots(baseDir).FirstOrDefault(d => File.Exists(Path.Combine(d, ".portable")));
+
+    public const string DevBuildRefusal = "This is a development build: set SCSKILLER_DATA_DIR to a test folder, or SCSKILLER_ALLOW_LIVE_DATA=1 to use your real data.";
+
+    /// <summary>True for a build that would open the real %LOCALAPPDATA%\SCSKiller without being a Velopack install or portable
+    /// package (a repo build, raw publish output). Windows only: the other platforms package without Update.exe.</summary>
+    public static bool RefusesLiveData() => OperatingSystem.IsWindows() && Moved == null
+        && Environment.GetEnvironmentVariable("SCSKILLER_ALLOW_LIVE_DATA") != "1"
+        && !InstallRoots(AppContext.BaseDirectory).Any(d => File.Exists(Path.Combine(d, "Update.exe")) || File.Exists(Path.Combine(d, ".portable")));
 
     /// <summary>The portable build's data\. Its first start copies what an earlier portable build kept in <paramref name="local"/>
     /// and leaves that folder as it was, since an installed SCSKiller may share it. data\ counts once it holds
@@ -442,8 +480,9 @@ public sealed class AppStore(string dataDir)
     public void SaveNotified(Dictionary<string, string> notified) => Save(Path.Combine(DataDir, "notified.json"), notified);
 
     /// <summary>Vendor -> warm rate (PSO/s) of the first complete warm measured on this PC, for games not warmed yet.</summary>
-    public Dictionary<GpuVendor, double> LoadWarmRates() => Load<Dictionary<GpuVendor, double>>(Path.Combine(DataDir, "warmrates.json")) ?? [];
-    public void SaveWarmRates(Dictionary<GpuVendor, double> rates) => Save(Path.Combine(DataDir, "warmrates.json"), rates);
+    // keyed "<vendor>|<driver id>"; an earlier build's vendor-only keys are never read
+    public Dictionary<string, double> LoadWarmRates() => Load<Dictionary<string, double>>(Path.Combine(DataDir, "warmrates.json")) ?? [];
+    public void SaveWarmRates(Dictionary<string, double> rates) => Save(Path.Combine(DataDir, "warmrates.json"), rates);
 
     /// <summary>Update channel -> signed_at of the newest signed feed accepted (FeedTrust: no replay of an older feed).</summary>
     public Dictionary<string, DateTimeOffset> LoadFeedTimes() => Load<Dictionary<string, DateTimeOffset>>(Path.Combine(DataDir, "feeds.json")) ?? [];
@@ -472,7 +511,7 @@ public sealed class AppStore(string dataDir)
     // the escape character of Segment: an id from a store ("steam:", "epic:", ...) never starts with it
     const char EncodedPrefix = '%';
 
-    /// <summary>A folder name that stays itself: not empty, no character a file name can't hold, no trailing dot or space
+    /// <summary>A folder name that stays itself: not empty, no character a Windows file name can't hold, no trailing dot or space
     /// (Windows trims them, so "." and ".." too), and not starting with <see cref="EncodedPrefix"/>.</summary>
     static bool IsPlainName(string name) =>
         name.Length > 0 && name[0] != EncodedPrefix && name.IndexOfAny(BadNameChars) < 0 && name[^1] is not ('.' or ' ');
@@ -482,7 +521,7 @@ public sealed class AppStore(string dataDir)
     public static string GameId(string folderName) =>
         folderName.StartsWith(EncodedPrefix) ? Uri.UnescapeDataString(folderName[1..]) : folderName;
 
-    /// <summary><paramref name="name"/> as one file name, reversibly: '%', what a file name can't hold and the dots and spaces
+    /// <summary><paramref name="name"/> as one file name, reversibly: '%', what a Windows file name can't hold and the dots and spaces
     /// Windows trims off the end (all of "." and "..") become %XX. A valid name without them is left as it is.</summary>
     public static string Segment(string name)
     {
@@ -497,7 +536,7 @@ public sealed class AppStore(string dataDir)
         return s.ToString();
     }
 
-    // Windows' invalid file name characters, spelled out: the same names on every system
+    // Windows' set on Linux too: Wine reaches a game's folder by its Windows path, where '\' separates
     static readonly char[] BadNameChars = [.. Enumerable.Range(0, 32).Select(c => (char)c), '"', '<', '>', '|', ':', '*', '?', '\\', '/'];
 
     // What each record handed out held when it was loaded or last saved: a save writes only what its holder changed since.
@@ -563,7 +602,7 @@ public sealed class AppStore(string dataDir)
         public PathGate(string path, TimeSpan? wait = null, CancellationToken ct = default)
         {
             _file = Path.GetFullPath(path) + ".lock";
-            _held ??= new(StringComparer.OrdinalIgnoreCase);
+            _held ??= new(StringComparer.FromComparison(Games.GameFiles.Names));   // Linux: a name in another case is another lock file
             if (_held.TryGetValue(_file, out var h))
             {
                 h.Count++;
@@ -579,7 +618,6 @@ public sealed class AppStore(string dataDir)
                     _held[_file] = new(new FileStream(_file, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None));
                     return;
                 }
-                // ERROR_SHARING_VIOLATION, ERROR_LOCK_VIOLATION: another holder has it
                 catch (IOException e) when (IoErrors.HeldElsewhere(e) && clock.Elapsed < limit)
                 {
                     if (!waiting) Waits?.Invoke(_file);
@@ -637,12 +675,23 @@ public sealed class AppStore(string dataDir)
     static void Save<T>(string path, T value) => WriteAtomic(path, JsonSerializer.SerializeToUtf8Bytes(value, Json));
 
     /// <summary>Replaces the file through a temp file next to it: a reader in another process (the app, the CLI, the
-    /// sign-in task) sees the old file or the new one, never half of one.</summary>
-    internal static void WriteAtomic(string path, byte[] bytes)
+    /// sign-in task) sees the old file or the new one, never half of one. <paramref name="ownerOnly"/> (off Windows): the
+    /// temp file is created with mode 0600 and synced before it replaces the file, so no other user can ever read it.</summary>
+    internal static void WriteAtomic(string path, byte[] bytes, bool ownerOnly = false)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var tmp = $"{path}.{Environment.ProcessId}.{Environment.CurrentManagedThreadId}.tmp";   // per writer: two processes may save at once
-        File.WriteAllBytes(tmp, bytes);
+        if (ownerOnly && !OperatingSystem.IsWindows())
+        {
+            File.Delete(tmp);   // a crashed writer's: O_EXCL below never writes into a file someone else made
+            using var f = new FileStream(tmp, new FileStreamOptions
+            {
+                Mode = FileMode.CreateNew, Access = FileAccess.Write, UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite,
+            });
+            f.Write(bytes);
+            f.Flush(flushToDisk: true);
+        }
+        else File.WriteAllBytes(tmp, bytes);
         try { Retry(() => { File.Move(tmp, path, overwrite: true); return 0; }); }
         finally { if (File.Exists(tmp)) File.Delete(tmp); }
         KeyFiles.Forget(path);

@@ -25,7 +25,7 @@ public static class Collections
     // Parse requires every entry to name an exe
     static bool InOwnFolders(IReadOnlyList<CollectionGame> c) => !IsName(c[0].Exes[0]);
 
-    /// <summary>A bare file name, no folder.</summary>
+    // the file's paths are Windows-form
     static bool IsName(string exe) => Path.GetFileName(GameFiles.Under("", exe)) == exe;
 
     internal static List<IReadOnlyList<CollectionGame>> Parse(string json)

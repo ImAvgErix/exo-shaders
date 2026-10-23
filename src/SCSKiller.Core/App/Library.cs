@@ -39,7 +39,7 @@ public static class Library
     };
 
     /// <summary>What the Cache column shows: the measured driver cache, else the estimate.</summary>
-    public static long? CacheBytes(GameState s) => s.CacheOnDisk ?? s.EstimatedCacheBytes;
+    public static long? CacheBytes(GameState s) => s.DiskBytes ?? s.EstimatedCacheBytes;
 
     static IEnumerable<GameState> By(IEnumerable<GameState> games, Func<GameState, long?> size, bool descending)
     {

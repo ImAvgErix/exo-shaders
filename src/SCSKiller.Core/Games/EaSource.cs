@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
@@ -21,7 +22,7 @@ public sealed class EaSource(IEnumerable<string>? installDirs = null, Func<strin
     public IReadOnlyList<Game> Discover()
     {
         var games = new List<Game>();
-        foreach (var dir in (installDirs ?? InstallDirs()).Select(GameFiles.DirKey).Distinct(StringComparer.OrdinalIgnoreCase))
+        foreach (var dir in (installDirs ?? (OperatingSystem.IsWindows() ? InstallDirs() : [])).Select(GameFiles.DirKey).Distinct(StringComparer.OrdinalIgnoreCase))
         {
             var xml = Path.Combine(dir, "__Installer", "installerdata.xml");
             if (!File.Exists(xml)) continue;
@@ -46,10 +47,11 @@ public sealed class EaSource(IEnumerable<string>? installDirs = null, Func<strin
             (string?)x.Descendants("gameVersion").FirstOrDefault()?.Attribute("version"));
     }
 
-    string? Read(string path) => (registry ?? ReadRegistry)(path);
+    string? Read(string path) => registry != null ? registry(path) : OperatingSystem.IsWindows() ? ReadRegistry(path) : null;
 
     /// <summary>"HKEY_LOCAL_MACHINE\Key\Value Name" from the 64-bit view, else the 32-bit one (the installer may be 32-bit
     /// and land under WOW6432Node).</summary>
+    [SupportedOSPlatform("windows")]
     public static string? ReadRegistry(string path)
     {
         var parts = path.Split('\\', 2);
@@ -72,6 +74,7 @@ public sealed class EaSource(IEnumerable<string>? installDirs = null, Func<strin
 
     /// <summary>Folders that may hold an EA install: every subfolder of the EA app's install locations, and every
     /// uninstall entry's InstallLocation (Discover keeps those with an installerdata.xml).</summary>
+    [SupportedOSPlatform("windows")]
     public static IEnumerable<string> InstallDirs()
     {
         var dirs = new List<string>();

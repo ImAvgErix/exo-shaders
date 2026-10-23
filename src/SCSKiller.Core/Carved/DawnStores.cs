@@ -18,6 +18,8 @@ public static class DawnStores
     const long MaxPsoFile = 256L << 20;   // the game's: 8.3 MB
     static readonly int[] OtherStages = [56, 72, 88, 104];   // where a GS, HS or DS id would sit: none in the game's records
 
+    public const string ShaderRel = @"bin\rawshader.store2", RootRel = @"bin\rawroot.store2", PsoRel = @"bin\rawpso.store2";
+
     public sealed record Root(long Offset, int Size, string Sha, byte[] Blob);
 
     /// <param name="Shaders">entry id -> the container's offset in <paramref name="ShaderFile"/></param>
@@ -25,9 +27,6 @@ public static class DawnStores
     /// <param name="Skipped">records naming a shader where a GS, HS or DS would be: their stages aren't known whole</param>
     public sealed record Stores(string ShaderFile, string RootFile, string PsoFile, IReadOnlyDictionary<uint, long> Shaders,
         IReadOnlyDictionary<uint, Root> Roots, IReadOnlyList<(uint Root, uint[] Stages)> Pipelines, int Skipped);
-
-    /// <summary>The three stores, relative to the install.</summary>
-    public const string ShaderRel = @"bin\rawshader.store2", RootRel = @"bin\rawroot.store2", PsoRel = @"bin\rawpso.store2";
 
     public static Stores? Read(string installDir)
     {

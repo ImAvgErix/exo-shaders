@@ -912,7 +912,7 @@ public class WarmerTests : IDisposable
         Assert.EndsWith($"--skip-keys {bb} --isolate 600,610,611", runs[1].TrimEnd());
         Assert.Contains("--start 601", runs[2]);
         Assert.EndsWith($"--skip-keys {new string('0', 38)}aa,{bb} --isolate 611", runs[2].TrimEnd());
-        Assert.Contains("recovering from a GPU driver crash", notes);
+        Assert.Contains(notes, n => n.StartsWith("recovering from a GPU driver crash", StringComparison.Ordinal));   // alpha.3 adds ", N skipped so far"
         var e = WarmEvent.Parse("""{"event":"retry","from":7,"rtThreads":0,"failedItem":-1,"done":7,"total":9,"failed":0,"seconds":0.1,"reason":"removed","crashed":["ab"],"isolate":[7,8]}""")!;
         Assert.Equal(("removed", "ab", 8L), (e.Reason, Assert.Single(e.Crashed!), e.Isolate![1]));
     }
@@ -967,7 +967,7 @@ public class WarmerTests : IDisposable
     // Stand-in for scskiller_warm.exe in cmd alone (PowerShell is seconds per process): process n is a removal with nothing
     // blamed when odd and blames item n/2's key when even, up to <crashers> keys, then "done" or removals that blame none.
     // Every retry lists the given key bb, as scskiller_warm lists the known keys it skipped. reason.txt: each retry's reason,
-    // or "mix": a removal when n/2 is even, a fault when odd.
+    // or "mix": a removal when n/2 is even, a fault when odd. total.txt: the items the events report.
     const string CrashScript = """
         @echo off
         setlocal enabledelayedexpansion
@@ -975,6 +975,7 @@ public class WarmerTests : IDisposable
         set /p c=<"%~1\crashers.txt"
         set /p tail=<"%~1\end.txt"
         set /p reason=<"%~1\reason.txt"
+        set /p total=<"%~1\total.txt"
         set /a n+=1, k=n/2, odd=n%%2, last=2*c, m=k%%2
         if "!reason!"=="mix" if !m!==0 (set reason=removed) else (set reason=fault)
         >"%~1\count.txt" echo !n!
@@ -982,22 +983,23 @@ public class WarmerTests : IDisposable
         set key=!key:~-40!
         set bb=00000000000000000000000000000000000000bb
         if !n! GTR !last! if "!tail!"=="done" (
-          echo {"event":"done","done":1000,"total":1000,"failed":0,"seconds":0.1,"stopped":false,"crashed":["!bb!"]}
+          echo {"event":"done","done":1000,"total":!total!,"failed":0,"seconds":0.1,"stopped":false,"crashed":["!bb!"]}
           exit /b 0
         )
         if !n! GTR !last! set odd=1
         if !odd!==1 (
-          echo {"event":"retry","from":!n!,"rtThreads":0,"failedItem":-1,"done":!n!,"total":1000,"failed":0,"seconds":0.1,"reason":"!reason!","crashed":["!bb!"],"isolate":[!n!]}
+          echo {"event":"retry","from":!n!,"rtThreads":0,"failedItem":-1,"done":!n!,"total":!total!,"failed":0,"seconds":0.1,"reason":"!reason!","crashed":["!bb!"],"isolate":[!n!]}
           exit /b 3
         )
-        echo {"event":"retry","from":!n!,"rtThreads":0,"failedItem":-1,"done":!n!,"total":1000,"failed":0,"seconds":0.1,"reason":"!reason!","crashed":["!bb!","!key!"],"isolate":[!n!]}
+        echo {"event":"retry","from":!n!,"rtThreads":0,"failedItem":-1,"done":!n!,"total":!total!,"failed":0,"seconds":0.1,"reason":"!reason!","crashed":["!bb!","!key!"],"isolate":[!n!]}
         exit /b 3
         """;
 
-    async Task<(WarmResult Result, int Processes)> Crashers(string name, int crashers, string tail, int maxRecoveries, string reason = "removed")
+    async Task<(WarmResult Result, int Processes)> Crashers(string name, int crashers, string tail, int maxRecoveries, string reason = "removed", int total = 1000)
     {
         var work = Work(name);
         File.WriteAllText(Path.Combine(work, "count.txt"), "0");
+        File.WriteAllText(Path.Combine(work, "total.txt"), total.ToString());
         File.WriteAllText(Path.Combine(work, "reason.txt"), reason);
         File.WriteAllText(Path.Combine(work, "crashers.txt"), crashers.ToString());
         File.WriteAllText(Path.Combine(work, "end.txt"), tail);
@@ -1057,10 +1059,11 @@ public class WarmerTests : IDisposable
     [Fact]
     public async Task Removals_that_keep_blaming_new_items_stop_at_the_process_ceiling()
     {
-        var (r, processes) = await Crashers("crashersmax", 200, "done", 20);
+        // alpha.3's ceiling: two processes per item and the recoveries (2 x 100 + 20), not a fixed 256
+        var (r, processes) = await Crashers("crashersmax", 200, "done", 20, total: 100);
         Assert.Equal(WarmOutcome.Failed, r.Outcome);
-        Assert.Equal("129 pipelines that crash the GPU driver were skipped. Compiling again continues where it stopped", r.Error);
-        Assert.Equal(256, processes);
+        Assert.Equal("111 pipelines that crash the GPU driver were skipped. Compiling again continues where it stopped", r.Error);
+        Assert.Equal(221, processes);
     }
 
     /// <summary>An exception while the warm is watched (the cache folder reset under a progress sample) ends its process

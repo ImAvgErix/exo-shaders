@@ -72,21 +72,18 @@ public sealed class UnityReader : IEngineReader
         var api = Api(apis, lastRun, launch);
         return new EngineInfo(Family, version, null, api, false,
             probed > 0 && readable == 0 ? $"Unity {version}: none of {probed} built-in shaders has DirectX (d3d11) code this reader can read" : null,
-            ApiGuessed: ApiGuessed(apis, LaunchApi(launch) ?? lastRun),
-            OffersVulkan: apis?.Contains(VulkanApi) == true || api.StartsWith("Vulkan", StringComparison.Ordinal));
+            ApiGuessed: ApiGuessed(apis, LaunchApi(launch) ?? lastRun), OffersVulkan: apis?.Contains(VulkanApi) == true || api.StartsWith("Vulkan", StringComparison.Ordinal));
     }
 
-    /// <summary>The build's graphics API id for Vulkan (BuildSettings' list).</summary>
-    const int VulkanApi = 21;
+    const int VulkanApi = 21;   // GraphicsDeviceType.Vulkan in the build's list
 
-    /// <summary>The API a Steam launch option forces (-force-d3d11, -force-d3d12, -force-vulkan); null when none does.</summary>
+    /// <summary>The player's -force-d3d11 / -force-d3d12 / -force-vulkan in the Steam launch options; null = none.</summary>
     static string? LaunchApi(string launch) =>
         Regex.Match(launch, @"(?:^|\s)-force-(d3d11|d3d12|vulkan)\b", RegexOptions.IgnoreCase) is { Success: true } m
-            ? m.Groups[1].Value.ToLowerInvariant() switch { "d3d11" => "D3D11", "d3d12" => "D3D12", _ => "Vulkan" }
-            : null;
+            ? m.Groups[1].Value.ToLowerInvariant() switch { "d3d11" => "D3D11", "d3d12" => "D3D12", _ => "Vulkan" } : null;
 
-    /// <summary>The API a launch option forces, else the one the last run used (Player.log), else the first of the build's
-    /// list; "D3D11 or D3D12" when none is readable.</summary>
+    /// <summary>A launch option the player takes (Steam's launch options), else the API the last run used (Player.log), else
+    /// the first of the build's list; "D3D11 or D3D12" when none is readable.</summary>
     public static string Api(int[]? apis, string? lastRun, string launch = "") =>
         LaunchApi(launch) is { } forced ? $"{forced} (launch option)"
         : lastRun != null ? $"{lastRun} (last run)"
@@ -106,8 +103,7 @@ public sealed class UnityReader : IEngineReader
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
     }
 
-    /// <summary>The Player.log <see cref="Detect"/> reads the last run's API from, by size and write time, and the game's
-    /// launch options: a new run or a changed option redoes it.</summary>
+    /// <summary>The Player.log <see cref="Detect"/> reads the last run's API from, by size and write time: a new run redoes it.</summary>
     public string DetectStamp(Game game, EngineInfo? engine)
     {
         if (engine != null && engine.Family != Family) return "";
@@ -118,6 +114,11 @@ public sealed class UnityReader : IEngineReader
     }
 
     readonly ConcurrentDictionary<string, string> dataDirs = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The API of the game's run its Player.log shows when written at or after <paramref name="sinceUtc"/>: "D3D11",
+    /// "D3D12" or "Vulkan". Null: no such log, or it doesn't say.</summary>
+    public string? RanSince(Game game, DateTime sinceUtc) =>
+        Find(game) is var (_, data) && PlayerLog(data) is { } log && File.GetLastWriteTimeUtc(log) >= sinceUtc ? LastRun(log) : null;
 
     static string? LastRun(string? log)
     {

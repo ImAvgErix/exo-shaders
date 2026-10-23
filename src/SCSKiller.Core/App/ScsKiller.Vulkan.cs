@@ -1,172 +1,233 @@
-using System.Security;
 using SCSKiller.Core.Games;
-using SCSKiller.Core.Vendors;
+using SCSKiller.Core.Unity;
 using SCSKiller.Core.Vulkan;
+using SCSKiller.Core.Warming;
 
 namespace SCSKiller.Core.App;
 
-// Vulkan games (Steam only for now): the recorder is a Vulkan layer (VkLayer_scskiller.dll) in the data folder, registered
-// for the game's app id alone (VulkanLayer), with the same signed scskiller.ini next to the exe as the DirectX recorder's.
-// What it records lands in the recorder folder's inbox for the exe (VulkanInboxDir) and is imported into the game's
-// scskiller.foz; a plan replays it with fossilize-replay. Steam's own Fossilize pre-caching of the game is a source too.
+// The Vulkan recorder of a game (VulkanLayer): its registration in the data folder and HKCU (on Linux the loader's
+// implicit_layer.d), the signed scskiller.ini beside the exe, and the layer's inbox in the recorder folder. Nothing else of
+// it is in the game's folder, but a risk session's copy of the layer (StartRisk).
 public sealed partial class ScsKiller
 {
-    /// <summary>The Vulkan recorder's file name, next to the app's proxy and in each game's layer folder.</summary>
-    public const string DllVulkan = "VkLayer_scskiller.dll";
-    public const string VulkanRecorderMissing = "this version of SCSKiller can't record Vulkan games yet";
-    /// <summary>The recorder skip of a Vulkan game outside Steam: the layer is registered for a Steam app id.</summary>
     public const string SkipVulkanSteamOnly = "Vulkan games are recorded only from Steam for now";
-    /// <summary>The game page's recorder line for a Vulkan game.</summary>
+
+    /// <summary>The game page's recorder line for a game the layer records: nothing goes in its folder but the ini.</summary>
     public const string VulkanRecorderNote = "Adds a Vulkan layer for this game and a small scskiller.ini next to it to catch anything the plan missed.";
-    /// <summary>A Vulkan compile's pause while Steam's fossilize-replay runs (<see cref="SteamReplaying"/>).</summary>
+
     public const string SteamPrecachingNote = "stopped while Steam processes this game's shaders: it goes on after";
+
     public const string VulkanOtherNote = "another SCSKiller copy's Vulkan recorder is registered for this game, so this one isn't installed";
 
-    /// <summary>The app's Vulkan layer, next to its proxy; null without one.</summary>
-    string? VulkanLayerSource => _proxyDll is { } proxy ? Path.Combine(Path.GetDirectoryName(proxy)!, DllVulkan) : null;
+    public const string ElevatedSessionNote = "The game ran as administrator, where the Vulkan recorder can't load. Start it without admin rights.";
 
-    /// <summary>Steam's folder (<see cref="SteamSource.Root"/>), for its Fossilize filters; null: no Steam.</summary>
-    internal string? SteamRoot { get; set; }
+    /// <summary>A Vulkan session's note when the game ran on DirectX (<paramref name="api"/>, as <see cref="ApiName(string)"/>
+    /// reads it); where the user's pick sent it to the layer, back to Auto.</summary>
+    public static string RanOnNote(string api, bool picked) => $"The game ran on {ApiName(api)} in this session." + (picked ? " Set the API to Auto." : "");
 
-    /// <summary>The game's recorder is the Vulkan layer: a Steam game on Vulkan, on a driver whose Vulkan cache is known.</summary>
-    bool VulkanRoute(Game g, EngineInfo? e) => VulkanLayer.AppId(g) != null && e != null && VulkanPlan.IsVulkan(e) && Vendor.Caps.VulkanKey != null;
+    /// <summary>The risk confirmation's line where the user picked Vulkan and detection, the last Player.log included, found
+    /// DirectX: the layer only sees a Vulkan device. Null: nothing goes against the pick.</summary>
+    public static string? VulkanPickWarning(GameState s)
+    {
+        if (s is not { ApiOverride: DxApi.Vulkan, ApiDetected: { } detected } || ApiKey(detected) is not { } key || key == "vk") return null;
+        var dx = key switch { "11" => "DirectX 11", "12" => "DirectX 12", _ => "DirectX" };
+        return (detected.EndsWith("(last run)", StringComparison.Ordinal) ? $"The game last ran on {dx}." : $"SCSKiller detected {dx} for this game.")
+            + " The recorder only loads if the game runs on Vulkan.";
+    }
 
-    /// <summary>The record's Vulkan layer was installed for the game's exe folder.</summary>
-    static bool VulkanIn(Game g, GameRecord rec) =>
-        rec.VulkanLayer != null && rec.RecorderExe is { } exe && SameDir(Path.GetDirectoryName(exe)!, Path.GetDirectoryName(g.ExePath)!);
+    /// <summary>What a Vulkan session's game ran on since <paramref name="since"/> (Windows): its Unity Player.log's API, else
+    /// Vulkan when Steam's cache folder of its app (<see cref="SteamGlCache"/>, where Steam points the driver's Vulkan cache)
+    /// got a file. Null: neither tells.</summary>
+    string? RanApi(Game g, EngineInfo? e, DateTime since) =>
+        (e?.Family == UnityReader.Family ? new UnityReader().RanSince(g, since) : null)
+        ?? (SteamGlCache(g) is { } dir && WrittenSince(dir, since) ? "Vulkan" : null);
 
-    /// <summary>This copy's layer manifest for a Steam app id, under the data folder.</summary>
-    string VulkanManifest(string appId) => Path.Combine(Store.DataDir, "vulkan-layer", appId, VulkanLayer.ManifestName(appId));
+    internal static bool WrittenSince(string dir, DateTime since)
+    {
+        try
+        {
+            return Directory.Exists(dir) && new DirectoryInfo(dir).EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint })
+                .Any(f => f.LastWriteTimeUtc >= since);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return false; }
+    }
 
-    /// <summary>The recorder folder's inbox the layer writes the exe's recordings to; null when the exe's key can't be read.</summary>
+    public const string VulkanSettingsNote = "another program's Vulkan loader settings (vk_loader_settings.json) are in use, so the Vulkan recorder isn't installed";
+
+    /// <summary>A game on Vulkan with a layer key (<see cref="VulkanLayer.Key"/>), on a vendor with a Vulkan warm: its recorder is the layer.</summary>
+    bool VulkanRoute(Game g, EngineInfo? e) => VulkanLayer.Key(g) != null && e != null && VulkanPlan.IsVulkan(e) && Vendor.Caps.VulkanKey != null;
+
+    /// <summary>Why this copy's layer can't be registered for the game: another copy's registration for it, another
+    /// program's loader settings file, or a loader too old for one. Null: it can.</summary>
+    static string? VulkanBlocked(Game g, string key, string manifest) =>
+        VulkanLayer.Others(key, manifest).Count > 0 ? VulkanLayer.AppId(g) != null ? VulkanOtherNote : VulkanSettingsNote
+        : VulkanLayer.AppId(g) == null ? VulkanLayer.LoaderProblem(g.ExePath) : null;
+
+    /// <summary>The game's Vulkan recorder is registered for its exe's folder: its scskiller.ini is the recorder's.</summary>
+    static bool VulkanIn(Game g, GameRecord rec) => rec.VulkanLayer != null && rec.RecorderExe is { } exe
+        && SameDir(Path.GetDirectoryName(exe)!, Path.GetDirectoryName(g.ExePath)!);
+
+    string VulkanManifest(string key) => Path.Combine(Store.DataDir, VulkanLayer.Folder, key, VulkanLayer.ManifestName(key));
+
+    /// <summary>The layer the app ships, beside its proxy (native\ next to the app; on Linux native/ too, found alone when
+    /// there's no proxy).</summary>
+    string? VulkanLayerSource => _proxyDll is { } p ? Path.Combine(Path.GetDirectoryName(p)!, VulkanLayer.Dll) : OperatingSystem.IsWindows() ? null : NativeTools.Find(VulkanLayer.Dll);
+
+    /// <summary>The layer's inbox for the game's exe as it is now; null when its path can't be used.</summary>
     static string? VulkanInboxDir(Game g)
     {
         try { return VulkanLayer.Inbox(RecorderDir, FileKey(g.ExePath)); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { return null; }
     }
 
-    /// <summary>Every inbox the game's layer wrote to: the ones on record (an earlier exe) and the current one.</summary>
+    /// <summary>Every inbox the game's layer may have written: its exe's now and the ones the exe had while it recorded
+    /// (Steam replacing the exe gives it another file key).</summary>
     static List<string> VulkanInboxDirs(Game g, GameRecord rec) =>
-        rec.VulkanInboxes.Append(VulkanInboxDir(g)).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        [.. rec.VulkanInboxes.Append(VulkanInboxDir(g)).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase)];
 
     static IEnumerable<string> VulkanInboxes(Game g, GameRecord rec) =>
-        VulkanInboxDirs(g, rec).Where(Directory.Exists).SelectMany(d => Directory.EnumerateFiles(d, "scskiller.*.foz"));
+        VulkanInboxDirs(g, rec).Where(Directory.Exists).SelectMany(d => Directory.EnumerateFiles(d, VulkanPlan.InboxPattern));
 
-    /// <summary>The layer's recordings not imported yet and its session files: what a recording reset deletes too.</summary>
+    /// <summary>The layer's output for the game: its inboxes' archives and session files.</summary>
     IEnumerable<string> VulkanFiles(Game g)
     {
         var rec = Store.LoadGame(g.Id);
         return [.. VulkanInboxes(g, rec), .. VulkanInboxDirs(g, rec).SelectMany(d => SessionFiles.Select(f => Path.Combine(d, f))).Where(File.Exists)];
     }
 
-    /// <summary>Takes the layer's recordings into the game's scskiller.foz and the last launch's cache redirection and device
-    /// into its record; an inbox of an earlier exe that is empty goes. True when pipelines were recorded.</summary>
+    /// <summary>Merges the layer's archives into the game's <see cref="FozPath"/> (<see cref="VulkanPlan.Import"/>), keeps the
+    /// last session's driver-cache variables for the warm (<see cref="VulkanLayer.CacheEnv"/>) and drops an earlier exe's
+    /// inbox once it is imported. True when it added pipelines.</summary>
     bool ImportVulkan(Game g, GameRecord rec, CancellationToken ct)
     {
         if (Collections.RecordedBy(g.Id) != null || Foreign(g)) return false;
         var now = VulkanInboxDir(g);
         var dirs = VulkanInboxDirs(g, rec);
+        // the newest session's, also when it is an earlier exe's inbox (Steam replaced the exe since): read before it goes
         var csv = dirs.Select(d => Path.Combine(d, "scskiller_creates.csv")).Where(File.Exists).OrderByDescending(File.GetLastWriteTimeUtc).FirstOrDefault();
         Dictionary<string, string>? env = null;
         string? device = null;
-        try
-        {
-            if (csv != null) (env, device) = (VulkanLayer.CacheEnv(csv), VulkanLayer.Device(csv) ?? rec.VulkanDevice);
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { csv = null; }
+        try { (env, device) = csv == null ? (null, null) : (VulkanLayer.CacheEnv(csv), VulkanLayer.Device(csv) ?? rec.VulkanDevice); }   // a launch that made no device keeps the last one
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { csv = null; }   // unread says nothing: the record's stays
         if (csv != null && (!SameEnv(env, rec.VulkanCacheEnv) || device != rec.VulkanDevice))
         {
             var moved = !SameEnv(env, rec.VulkanCacheEnv);
             (rec.VulkanCacheEnv, rec.VulkanDevice) = (env, device);
-            if (Vendor.Caps.VulkanKey == "device") rec.RecordingImportedAt = DateTimeOffset.Now;   // the plan is for the device: checked again
-            Store.SaveGame(g.Id, rec);
-            if (moved)
-                Log?.Report($"{g.Name}: " + (env == null ? "the last launch's Vulkan cache isn't redirected" : "the last launch's Vulkan cache is redirected (Steam's shader pre-caching)"));
+            if (Vendor.Caps.VulkanKey == VulkanPlan.DeviceKey) rec.RecordingImportedAt = DateTimeOffset.Now;   // its plan's check reads both
+            Store.SaveGame(g.Id, rec);   // also when no pipeline is new, and before the inbox it came from goes
+            if (moved) Log?.Report($"{g.Name}: " + (env == null ? "the last launch's Vulkan cache isn't redirected" : "the last launch's Vulkan cache is redirected (Steam's shader pre-caching)"));
         }
         var added = new List<string>();
-        if (dirs.Any(d => Directory.Exists(d) && Directory.EnumerateFiles(d, "scskiller.*.foz").Any()))
-            using (Recordings.Lock(RecordingPath(g.Id), null, ct))
-                foreach (var d in dirs) added.AddRange(VulkanPlan.Import(d, FozPath(g.Id), Log));
-        foreach (var d in dirs.Where(d => !d.Equals(now, StringComparison.OrdinalIgnoreCase)))
+        if (dirs.Any(d => Directory.Exists(d) && Directory.EnumerateFiles(d, VulkanPlan.InboxPattern).Any()))
+            using (Recordings.Lock(RecordingPath(g.Id), ct: ct))
+                foreach (var d in dirs)
+                    added.AddRange(VulkanPlan.Import(d, FozPath(g.Id), Log));
+        foreach (var old in dirs.Where(d => !d.Equals(now, StringComparison.OrdinalIgnoreCase)))
             try
             {
-                if (Directory.Exists(d) && Directory.EnumerateFiles(d, "scskiller.*.foz").Any()) continue;
-                if (Directory.Exists(d)) Directory.Delete(d, true);
-                rec.VulkanInboxes.Remove(d);
+                if (Directory.Exists(old) && Directory.EnumerateFiles(old, VulkanPlan.InboxPattern).Any()) continue;   // still held: next time
+                if (!OperatingSystem.IsWindows() && VulkanPlan.Held(Path.Combine(old, "scskiller_creates.csv"))) continue;   // a recording that made no archive yet
+                if (Directory.Exists(old)) Directory.Delete(old, true);
+                rec.VulkanInboxes.Remove(old);
             }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }   // tried again at the next import
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
         if (added.Count == 0) return false;
         rec.RecordingImportedAt = DateTimeOffset.Now;
         Log?.Report($"{g.Name}: {added.Count:N0} Vulkan pipelines recorded");
         return true;
     }
 
+    /// <summary>A started game with the Vulkan recorder in: whether its process runs as administrator, which skips HKCU's
+    /// layers and settings (the loader's is_high_integrity), kept on the record until a launch is seen without it. Its own
+    /// process alone is opened (<see cref="RunningExe"/>), never an anti-cheat game's.</summary>
+    void CheckElevated(GameState s)
+    {
+        if (!OperatingSystem.IsWindows() || s.AntiCheat != AntiCheat.None || IsUnchecked(s) || !VulkanRoute(s.Game, s.Engine)) return;
+        var rec = Store.LoadGame(s.Game.Id);
+        if (rec.VulkanLayer == null) return;
+        bool? elevated;
+        try
+        {
+            using var process = RunningExe(s.Game, out _, out _);
+            elevated = process == null ? null : Elevated.OfProcess(process);
+        }
+        catch (System.ComponentModel.Win32Exception) { return; }
+        if (elevated is not { } now || now == (rec.RanElevated != null)) return;
+        rec.RanElevated = now ? DateTimeOffset.Now : null;
+        Store.SaveGame(s.Game.Id, rec);
+        if (rec.RanElevated != null) RecorderLog($"{s.Game.Name}: {ElevatedSessionNote}");
+    }
+
     static bool SameEnv(Dictionary<string, string>? a, Dictionary<string, string>? b) =>
         a == null ? b == null : b != null && a.Count == b.Count && a.All(kv => b.TryGetValue(kv.Key, out var v) && v == kv.Value);
 
-    /// <summary>Steam's fossilize-replay runs: Steam processes a game's shaders, and a Vulkan compile or set-aside waits for it.</summary>
-    bool SteamReplaying() => Processes(true).Any(p => Path.GetFileName(p.Exe) is var name
-        && (name.Equals("fossilize-replay64.exe", StringComparison.OrdinalIgnoreCase) || name.Equals(Replayer, StringComparison.OrdinalIgnoreCase)));
+    /// <summary>Steam's own replay of a game's Vulkan shaders (shader pre-caching) runs: a warm into the cache it fills waits.
+    /// Steam's Linux replayer is fossilize_replay. Our own replayer runs under the game's exe name, or natively on Linux as
+    /// fossilize-replay.
+    /// ponytail: any game's replay holds every Vulkan warm; the replayer's command line names the app id if that's too broad.</summary>
+    bool SteamReplaying() => Processes(true).Any(p => Path.GetFileName(p.Exe) is var n
+        && (n.Equals("fossilize-replay64.exe", StringComparison.OrdinalIgnoreCase) || n.Equals("fossilize-replay.exe", StringComparison.OrdinalIgnoreCase)
+            || n == "fossilize_replay"));
 
-    const string Replayer = "fossilize-replay.exe";
-
-    /// <summary><see cref="Reconcile"/> for a game whose recorder is or was the Vulkan layer: installed, updated or taken out as
-    /// the game's switch and state say, never while it runs, and after a full anti-cheat check of the folder. A DirectX
-    /// recorder in its folder goes first. True when something changed.</summary>
+    /// <summary><see cref="Reconcile"/> for a game on <see cref="VulkanRoute"/>: the layer registered and the ini signed while
+    /// the game's recorder is wanted, both out otherwise. A running game's change waits for it to exit.</summary>
     bool ReconcileVulkan(GameState s, GameRecord rec, bool changed)
     {
         var (g, id) = (s.Game, s.Game.Id);
         var dir = Path.GetDirectoryName(g.ExePath)!;
-        var appId = VulkanLayer.AppId(g);
-        if (rec.VulkanLayer != null && !OursUnder(rec.VulkanLayer, Store))   // not this copy's: never touched
+        var key = VulkanLayer.Key(g);
+        if (rec.VulkanLayer != null && !OursUnder(rec.VulkanLayer, Store))   // a record copied from another data folder: its registration is that copy's
         {
             rec.VulkanLayer = null;
             Store.SaveGame(id, rec);
         }
-        var manifest = rec.VulkanLayer ?? (appId == null ? "" : VulkanManifest(appId));
+        var manifest = rec.VulkanLayer ?? (key == null ? "" : VulkanManifest(key));
+        // a dll beside the exe that may be ours, or the layer's files, can't be read: anti-cheat first, then nothing until they read
         var unread = ProxyNames.Select(n => Path.Combine(dir, n))
-            .Concat(rec.VulkanLayer != null ? [manifest, Path.Combine(Path.GetDirectoryName(manifest)!, DllVulkan)] : [])
-            .FirstOrDefault(CantRead);
+            .Concat(rec.VulkanLayer == null ? [] : [manifest, Path.Combine(Path.GetDirectoryName(manifest)!, VulkanLayer.Dll)]).FirstOrDefault(CantRead);
         string? stamp = null, note = null;
         long gen = 0;
         var clean = false;
         if (s.AntiCheat == AntiCheat.None && (rec.VulkanLayer != null || rec.RecorderExe != null || unread != null))
         {
-            (stamp, gen) = (Stamp(ArmTarget(g).ExePath), RemovalGen(id));   // before the check, as Attest needs
+            (stamp, gen) = (Stamp(ArmTarget(g).ExePath), RemovalGen(id));
             if (FullCheck(g) is not AntiCheat.None and var found)
             {
-                AntiCheatFound(g, found ?? AntiCheat.Other, unfinished: found == null);
+                AntiCheatFound(g, found ?? AntiCheat.Other, unfinished: found == null);   // takes it out, or when the game exits
                 Refresh(g);
                 return true;
             }
             clean = true;
         }
-        if (unread != null)   // a file held by another process: nothing is judged from it
+        if (unread != null)
         {
             note = $"waits until {unread} can be read";
             if (note != _recorderNotes.GetValueOrDefault(id))
             {
-                _recorderNotes[id] = note;
-                changed = true;
+                (_recorderNotes[id], changed) = (note, true);
                 RecorderLog($"{g.Name}: recorder {note}");
             }
             if (changed) Refresh(g);
             return changed;
         }
-        var want = VulkanRoute(g, s.Engine) && RecorderWanted(rec.Recorder ?? RecorderOverride.Default, Settings.RecordAllGames && s.NoStutter == null, RecorderSkip(s, null), false);
-        if (want && VulkanLayer.Others(appId!, manifest).Count > 0)
-            (want, note) = (false, VulkanOtherNote);
-        var have = rec.VulkanLayer != null;
-        var stale = want && have && (VulkanLayerSource is { } source && File.Exists(source) && !SameBytes(Path.Combine(Path.GetDirectoryName(manifest)!, DllVulkan), source)
-            || !File.Exists(manifest) || !VulkanLayer.Registered(manifest) || !VulkanIn(g, rec));
-        var directX = rec.RecorderFiles.Count > 0 || rec.RecorderChained != null || OurProxyIn(dir);
-        if (want != have || stale || directX || !want && rec.RecorderExe != null)
+        // off the route (the game runs on DirectX now, or has no layer key): out, and the next reconcile is the DirectX one
+        var want = !LeftOut(g) && VulkanRoute(g, s.Engine) && RecorderWanted(rec.Recorder ?? RecorderOverride.Default, Settings.RecordAllGames && s.NoStutter == null, RecorderSkip(s, null), false);
+        if (want && VulkanBlocked(g, key!, manifest) is { } blocked) (want, note) = (false, blocked);
+        else if (want && rec.RanElevated != null) note = ElevatedSessionNote;   // the loader skips HKCU's layers and settings for it
+        var placed = rec.VulkanLayer != null;
+        var src = VulkanLayerSource;
+        // a copy that changed, or an install cut off before its registration (or after, by a crash): done again
+        var update = want && placed && (src != null && File.Exists(src) && !SameBytes(Path.Combine(Path.GetDirectoryName(manifest)!, VulkanLayer.Dll), src)
+                                        || !File.Exists(manifest) || !VulkanLayer.Registered(manifest, g) || !VulkanIn(g, rec));   // the last: the exe moved from a folder that's gone
+        // the DirectX recorder of an earlier evaluation (the game was on DirectX then): out first
+        var proxy = rec.RecorderFiles.Count > 0 || rec.RecorderChained != null || OurProxyIn(dir);
+        if (want != placed || update || proxy || !want && rec.RecorderExe != null)
         {
-            if (GameRunning(g)) note ??= stale ? "updates when the game exits" : want ? "installs when the game exits" : "removed when the game exits";
+            if (GameRunning(g)) note ??= update ? "updates when the game exits" : want ? "installs when the game exits" : "removed when the game exits";
             else
                 try
                 {
-                    if (directX && want && !Uninstall(g, rec)) throw new InvalidOperationException("the DirectX recorder in its folder couldn't be taken out yet");
+                    if (proxy && want && !Uninstall(g, rec)) throw new InvalidOperationException("the DirectX recorder in its folder couldn't be taken out yet");
                     if (want)
                     {
                         (stamp, gen) = (Stamp(ArmTarget(g).ExePath), RemovalGen(id));
@@ -175,7 +236,7 @@ public sealed partial class ScsKiller
                     }
                     else Uninstall(g, rec);
                     _recorderSkips.TryRemove(id, out _);
-                    RecorderLog($"{g.Name}: Vulkan recorder {(stale ? "updated" : want ? "installed" : "removed")} ({dir})");
+                    RecorderLog($"{g.Name}: Vulkan recorder {(update ? "updated" : want ? "installed" : "removed")} ({dir})");
                     changed = true;
                 }
                 catch (UnauthorizedAccessException)
@@ -188,37 +249,35 @@ public sealed partial class ScsKiller
                     }
                 }
                 catch (RemovedFromAllException e) { note = e.Message; }
-                catch (Exception e) when (e is IOException or InvalidOperationException or SecurityException)
+                catch (Exception e) when (e is IOException or InvalidOperationException or System.Security.SecurityException)
                 {
                     note = (want ? "couldn't install: " : "couldn't remove: ") + e.Message;
                     RecorderLog($"{g.Name}: Vulkan recorder {note}");
                 }
         }
-        else if (want && !GameRunning(g) && _removedFromAll) note = RemovedFromAllNote;
+        else if (want && !GameRunning(g) && _removedFromAll) note = RemovedFromAllNote;   // a registration the removal left: never armed again
         else if (want && !GameRunning(g))
         {
-            if (clean && !File.Exists(Path.Combine(dir, "scskiller.ini"))) UpdateRecorderIni(g, rec, "");   // an ini the user deleted
+            if (clean && !File.Exists(Path.Combine(dir, "scskiller.ini"))) UpdateRecorderIni(g, rec, "");
             if (clean && !Attest(ArmTarget(g), rec, stamp, gen)) note = ForeignIni(dir, rec);
             else UpdateRecorderIni(g, rec);
         }
         if (want && VulkanInboxDir(g) is { } inbox && !rec.VulkanInboxes.Contains(inbox, StringComparer.OrdinalIgnoreCase))
         {
-            rec.VulkanInboxes.Add(inbox);
+            rec.VulkanInboxes.Add(inbox);   // the exe's file key while it records: Steam replacing the exe leaves it to import
             Store.SaveGame(id, rec);
         }
         if (note != _recorderNotes.GetValueOrDefault(id))
         {
-            if (note == null) _recorderNotes.TryRemove(id, out _);
-            else _recorderNotes[id] = note;
+            if (note == null) _recorderNotes.TryRemove(id, out _); else _recorderNotes[id] = note;
             changed = true;
         }
         if (changed) Refresh(g);
         return changed;
     }
 
-    /// <summary>Copies the layer next to its manifest in the data folder, registers it for the game's app id and writes the
-    /// signed scskiller.ini next to the exe; the record names them before the registration. Refused in an anti-cheat folder,
-    /// before and after (a check that found one takes it all out again).</summary>
+    /// <summary>The layer's copy and manifest in the data folder, on the record before they're registered, then the ini beside
+    /// the exe (unsigned: <see cref="Attest"/> signs it). The full anti-cheat check follows; a finding takes it all out.</summary>
     void InstallVulkan(Game g, GameRecord rec, string manifest)
     {
         if (_removedFromAll) throw new RemovedFromAllException();
@@ -226,93 +285,105 @@ public sealed partial class ScsKiller
             throw new InvalidOperationException("the data folder is moved (SCSKILLER_DATA_DIR), which SCSKiller's uninstall doesn't know: set SCSKILLER_TEST_RECORDER=1 to install a recorder anyway, and take it out yourself");
         RefuseAntiCheat(g, rec);
         if (!GameFolderWrite(g)) throw new InvalidOperationException($"{g.Name} is running");
-        if (VulkanLayerSource is not { } source || !File.Exists(source)) throw new FileNotFoundException($"the Vulkan recorder ({DllVulkan}) was not found next to the app");
+        var src = VulkanLayerSource is { } p && File.Exists(p) ? p : throw new FileNotFoundException($"the Vulkan recorder ({VulkanLayer.Dll}) was not found next to the app");
         var dir = Path.GetDirectoryName(g.ExePath)!;
         var ini = Path.Combine(dir, "scskiller.ini");
-        var (state, judged) = JudgeIni(dir, Store, null, g.InstallDir);
-        if (state == IniState.Unknown) throw new IOException($"{ini} can't be read: not installing until it can");
-        if (state is not (IniState.Absent or IniState.Ours)) throw new InvalidOperationException($"{ini} is not SCSKiller's: the Vulkan recorder needs its own. Not installing.");
+        var (iniState, judged) = JudgeOwnIni(g, rec, dir, null);
+        if (iniState == IniState.Unknown) throw new IOException($"{ini} can't be read: not installing until it can");
+        if (iniState is not (IniState.Absent or IniState.Ours)) throw new InvalidOperationException($"{ini} is not SCSKiller's: the Vulkan recorder needs its own. Not installing.");
         (rec.RecorderExe, rec.RecorderInstallDir) = (g.ExePath, g.InstallDir);
-        StampLedger(dir);
-        var layerDir = Directory.CreateDirectory(Path.GetDirectoryName(manifest)!).FullName;
-        var dll = Path.Combine(layerDir, DllVulkan);
-        Place(dll, CopyOf(source), replace: true);
-        Place(manifest, Text(VulkanLayer.Manifest(VulkanLayer.AppId(g)!, dll)), replace: true);
+        StampLedger(dir);   // the layer finds this copy's recorder folder through it
+        var folder = Path.GetDirectoryName(manifest)!;
+        Directory.CreateDirectory(folder);
+        var dll = Path.Combine(folder, VulkanLayer.Dll);
+        Place(dll, CopyOf(src), replace: true);
+        Place(manifest, Text(VulkanLayer.Manifest(VulkanLayer.Key(g)!, dll)), replace: true);
         (rec.VulkanLayer, rec.VulkanLayerSha) = (manifest, Sha256(dll));
-        Store.SaveGame(g.Id, rec);   // on record before the registration: an uninstall finds it
+        Store.SaveGame(g.Id, rec);   // before the registration: every removal finds it
         InstallStep?.Invoke("vulkan");
-        VulkanLayer.Register(manifest);
+        VulkanLayer.Register(manifest, g);
         var late = false;
-        var found = GameFiles.DetectAntiCheat(g, quick: true, late: () => late = true);
-        if (found == AntiCheat.None && !WriteIni(dir, IniText(g, rec), judged, null, g.InstallDir, () => GameFolderWrite(g), step => { if (step == "saved") InstallStep?.Invoke("ini"); }, install: true)
-            && !GameFolderWrite(g))
+        var antiCheat = GameFiles.DetectAntiCheat(g, quick: true, late: () => late = true);
+        if (antiCheat == AntiCheat.None && !WriteIni(dir, IniText(g, rec), judged, null, g.InstallDir, () => GameFolderWrite(g),
+                step => { if (step == "saved") InstallStep?.Invoke("ini"); }, install: true) && !GameFolderWrite(g))
         {
             TakeOut(g, rec, "the game started while the Vulkan recorder was installed");
             throw new InvalidOperationException($"{g.Name} started while the recorder was installed");
         }
-        if (found == AntiCheat.None) found = GameFiles.DetectAntiCheat(g, quick: false, late: () => late = true);
-        if (found != AntiCheat.None)
+        if (antiCheat == AntiCheat.None) antiCheat = GameFiles.DetectAntiCheat(g, late: () => late = true);
+        if (antiCheat != AntiCheat.None)
         {
-            AntiCheatFound(g, found, installing: rec, unfinished: late);
-            throw AntiCheatRefusal(g, found, late);
+            AntiCheatFound(g, antiCheat, installing: rec, unfinished: late);
+            throw AntiCheatRefusal(g, antiCheat, late);
         }
-        lock (_scanLock) _scan?.Remove(g.Id);   // evaluated again with the layer in
+        lock (_scanLock) _scan?.Remove(g.Id);   // the next refresh evaluates the game again, its anti-cheat too
     }
 
-    /// <summary>Unregisters the record's layer and deletes its manifest and DLL when they are still the ones placed. A layer
-    /// outside this copy's data folder isn't ours: only forgotten. False when the registration can't be taken out yet.</summary>
+    /// <summary>The record's layer registration out, with its copy and manifest when nothing holds them: first in every
+    /// removal (<see cref="RemoveRecorder"/>), so no launch after it loads the layer. False when the registry refused.</summary>
     static bool UnregisterVulkan(GameRecord rec, AppStore store, string name, Action<string> log)
     {
         if (rec.VulkanLayer is not { } manifest) return true;
-        if (!OursUnder(manifest, store))
+        if (!OursUnder(manifest, store))   // a record copied from another data folder: that copy's registration, left to it
         {
             rec.VulkanLayer = null;
             return true;
         }
         try { VulkanLayer.Unregister(manifest); }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or SecurityException)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
             log($"{name}: couldn't unregister the Vulkan recorder ({e.Message}): tried again later");
             return false;
         }
-        var (dir, sha) = (Path.GetDirectoryName(manifest)!, rec.VulkanLayerSha);
+        var (sha, folder) = (rec.VulkanLayerSha, Path.GetDirectoryName(manifest)!);
         (rec.VulkanLayer, rec.VulkanLayerSha) = (null, null);
+        // only the bytes it placed: the copy by its hash, the manifest by its text, then the folder if nothing else is in it. A
+        // risk session's manifest names its copy beside the exe, which goes with the record's files
         try
         {
-            var dll = Path.Combine(dir, DllVulkan);
+            var dll = Path.Combine(folder, VulkanLayer.Dll);
             if (File.Exists(dll) && sha != null && Sha256(dll) == sha) File.Delete(dll);
             var appId = Path.GetFileNameWithoutExtension(manifest)["VkLayer_scskiller_".Length..];
-            if (File.Exists(manifest) && File.ReadAllText(manifest) == VulkanLayer.Manifest(appId, dll)) File.Delete(manifest);
-            if (!Directory.EnumerateFileSystemEntries(dir).Any()) Directory.Delete(dir);
+            if (File.Exists(manifest) && File.ReadAllText(manifest) is var text && (text == VulkanLayer.Manifest(appId, dll)
+                    || rec.RecorderExe is { } exe && text == VulkanLayer.Manifest(appId, Path.Combine(Path.GetDirectoryName(exe)!, VulkanLayer.Dll))))
+                File.Delete(manifest);
+            if (!Directory.EnumerateFileSystemEntries(folder).Any()) Directory.Delete(folder);
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { }   // unregistered: what's left loads nowhere
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { }   // held by a running game: unregistered, it's inert
         return true;
     }
 
-    /// <summary>Every registration of this copy's layers: one no record names, or whose game folder is gone, is taken out; a
-    /// game not listed (or not read yet) gets its VAC and anti-cheat check here, which takes its layer out on a find.</summary>
+    /// <summary>This copy's layer registrations (<see cref="VulkanLayer.Under"/>) out when no record names them, their exe's folder
+    /// isn't there (Steam took the whole folder) or their game has anti-cheat now, each logged with why: after every full
+    /// reconcile and in every watcher pass, whether the game is listed or not. A session's own cleanup decides on its
+    /// registration. A folder without its exe yet (an install under way) keeps it and is walked like any other.</summary>
     void SweepVulkan()
     {
-        var unlisted = new List<Game>();
+        var check = new List<Game>();
         lock (_recorderLock)
         {
-            List<string> manifests;
-            try { manifests = VulkanLayer.Under(Path.Combine(Store.DataDir, "vulkan-layer")); }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException or SecurityException)
+            List<string> registered;
+            try { registered = VulkanLayer.Under(Path.Combine(Store.DataDir, VulkanLayer.Folder)); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException)
             {
                 RecorderLog($"the Vulkan recorders' registrations can't be read: {e.Message}");
                 return;
             }
-            foreach (var manifest in manifests)
+            foreach (var manifest in registered)
                 try
                 {
-                    var id = "steam:" + VulkanLayer.ManifestAppId(manifest);
+                    if (VulkanLayer.GameId(manifest) is not { } id)
+                    {
+                        if (UnregisterVulkan(new GameRecord { VulkanLayer = manifest }, Store, manifest, RecorderLog))
+                            RecorderLog($"Vulkan recorder unregistered: no game is named for it ({manifest})");
+                        continue;
+                    }
                     if (OfflineLive(id)) continue;
                     var rec = Store.LoadGame(id);
-                    if (rec.OfflineSession != null) continue;   // its cleanup's
-                    var listed = Games.FirstOrDefault(s => s.Game.Id == id);
-                    var name = listed?.Game.Name ?? id;
-                    if (rec.VulkanLayer is not { } named || !named.Equals(manifest, StringComparison.OrdinalIgnoreCase))
+                    if (rec.OfflineSession != null) continue;   // CleanOfflineSession: kept only while the session's process runs
+                    var state = Games.FirstOrDefault(s => s.Game.Id == id);
+                    var name = state?.Game.Name ?? id;
+                    if (rec.VulkanLayer is not { } named || !named.Equals(manifest, GameFiles.Names))
                     {
                         if (UnregisterVulkan(new GameRecord { VulkanLayer = manifest }, Store, name, RecorderLog))
                             RecorderLog($"{name}: Vulkan recorder unregistered: no game record names it ({manifest})");
@@ -326,13 +397,18 @@ public sealed partial class ScsKiller
                         else RemoveRecorder(dir, rec, Store, name, RecorderLog, rec.RecorderInstallDir);
                         Store.SaveGame(id, rec);
                         if (rec.VulkanLayer == null) RecorderLog($"{name}: Vulkan recorder unregistered: {why}");
+                        continue;
                     }
-                    else if (listed == null || IsUnchecked(listed))
-                        unlisted.Add(listed?.Game ?? new Game(id, name, Core.Store.Steam, rec.RecorderInstallDir ?? dir, rec.RecorderExe!));
+                    // a listed game's own reconcile and the watcher pass walk it already
+                    if (state == null || IsUnchecked(state))
+                        check.Add(state?.Game ?? new Game(id, name, VulkanLayer.ManifestAppId(manifest) != null ? Core.Store.Steam : Core.Store.Other, rec.RecorderInstallDir ?? dir, rec.RecorderExe!));
                 }
-                catch (Exception e) { RecorderLog($"{manifest}: couldn't sweep the Vulkan recorder's registration: {e.Message}"); }
+                catch (Exception e)   // the next registration is swept all the same
+                {
+                    RecorderLog($"{manifest}: couldn't sweep the Vulkan recorder's registration: {e.Message}");
+                }
         }
-        foreach (var g in unlisted)   // outside the lock: a full check reads the whole install
+        foreach (var g in check)
             try
             {
                 if (VacCheck(g)) TakeOutNow(g, "VAC found");
@@ -341,7 +417,7 @@ public sealed partial class ScsKiller
             catch (Exception e) { RecorderLog($"{g.Name}: checking the Vulkan recorder's game for anti-cheat failed: {e.Message}"); }
     }
 
-    /// <summary>A file that is there but can't be opened (held by another process).</summary>
+    /// <summary>The file is there and can't be opened for reading (held against it, or this user may not read it).</summary>
     static bool CantRead(string path)
     {
         try
@@ -351,75 +427,131 @@ public sealed partial class ScsKiller
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return File.Exists(path); }
     }
 
-    /// <summary>A layer manifest under this copy's data folder: one SCSKiller placed and may take out.</summary>
+    /// <summary>The manifest is in <paramref name="store"/>'s own vulkan-layer folder.</summary>
     static bool OursUnder(string manifest, AppStore store)
     {
-        try
-        {
-            return Path.GetFullPath(manifest).StartsWith(Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(store.DataDir, "vulkan-layer"))) + Path.DirectorySeparatorChar,
-                StringComparison.OrdinalIgnoreCase);
-        }
+        try { return Path.GetFullPath(manifest).StartsWith(Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(store.DataDir, VulkanLayer.Folder))) + Path.DirectorySeparatorChar, GameFiles.Names); }
         catch (Exception e) when (e is ArgumentException or NotSupportedException or PathTooLongException) { return false; }
     }
 
-    /// <summary>The environment a Vulkan warm runs in: the cache redirection the game's last launch had (Steam's pre-caching),
-    /// the device on a driver keyed by it (AMD), or on NVIDIA, with no recording yet, Steam's own Vulkan cache of the game so
-    /// the compile fills what Steam's launch reads. Null: the driver's default cache.</summary>
+    /// <summary>NVIDIA's cache variables as Steam's shader pre-caching sets them for a game on Windows (measured): the driver
+    /// writes the game's cache under Steam's nvidiav1 folder of its app, in files of this app name.</summary>
+    const string SteamGlAppName = "steamapp_shader_cache";
+
+    /// <summary>The variables a Vulkan warm runs under: the last recorded session's cache variables, else, on Windows for a game
+    /// never recorded, Steam's (<see cref="SteamGlAppName"/>) once Steam made its NVIDIA folder. None: the driver's own cache.
+    /// Where the vendor keys on the device (<see cref="VulkanPlan.DeviceKey"/>), the game's recorded device too.
+    /// ponytail: the folder stands in for Steam's pre-caching setting, read Steam's config if a game with it off keeps one.</summary>
     Dictionary<string, string>? VulkanWarmEnv(Game g, GameRecord rec)
     {
-        if (Vendor.Caps.VulkanKey == "device" && rec.VulkanDevice is { } device)
-            return new(rec.VulkanCacheEnv ?? [], StringComparer.OrdinalIgnoreCase) { ["SCSKILLER_REPLAY_DEVICE"] = VulkanPlan.UnderSteamLayer(device) };
-        if (rec.VulkanCacheEnv == null && OperatingSystem.IsWindows() && Vendor.Vendor == GpuVendor.Nvidia && !File.Exists(FozPath(g.Id))
-            && SteamGlCache(g) is { } cache && Path.GetDirectoryName(cache) is { } dir && Directory.Exists(dir))
+        if (Vendor.Caps.VulkanKey == VulkanPlan.DeviceKey && rec.VulkanDevice is { } device)   // Steam's layer is only in a Steam launch
+            return new(rec.VulkanCacheEnv ?? new Dictionary<string, string>(), StringComparer.OrdinalIgnoreCase)
+                { [VulkanPlan.DeviceVariable] = g.Store == Core.Store.Steam ? VulkanPlan.UnderSteamLayer(device) : device };
+        if (rec.VulkanCacheEnv != null || !OperatingSystem.IsWindows() || Vendor.Vendor != GpuVendor.Nvidia || File.Exists(FozPath(g.Id))
+            || SteamGlCache(g) is not { } gl || Path.GetDirectoryName(gl) is not { } nv || !Directory.Exists(nv)) return rec.VulkanCacheEnv;
+        Log?.Report($"{g.Name}: the compile writes Steam's Vulkan cache of the game in {nv}");
+        return new(StringComparer.OrdinalIgnoreCase)
         {
-            Log?.Report($"{g.Name}: the compile writes Steam's Vulkan cache of the game in {dir}");
-            return new(StringComparer.OrdinalIgnoreCase)
-            {
-                ["__GL_SHADER_DISK_CACHE_PATH"] = dir,
-                ["__GL_SHADER_DISK_CACHE_APP_NAME"] = SteamGlAppName,
-                ["__GL_SHADER_DISK_CACHE_READ_ONLY_APP_NAME"] = "steam_shader_cache;steamapp_merged_shader_cache",
-                ["__GL_SHADER_DISK_CACHE_SKIP_CLEANUP"] = "1",
-            };
-        }
-        return rec.VulkanCacheEnv;
+            ["__GL_SHADER_DISK_CACHE_PATH"] = nv, ["__GL_SHADER_DISK_CACHE_APP_NAME"] = SteamGlAppName,
+            ["__GL_SHADER_DISK_CACHE_READ_ONLY_APP_NAME"] = "steam_shader_cache;steamapp_merged_shader_cache", ["__GL_SHADER_DISK_CACHE_SKIP_CLEANUP"] = "1",
+        };
     }
 
-    /// <summary>The game's cache on disk: its driver cache keys' files, and for a Vulkan game Steam's shader cache of it.</summary>
+    /// <summary>The game's driver-cache bytes: its keys' files and its files in Steam's GLCache folder (<see cref="SteamGlFiles"/>),
+    /// what Clear cache deletes. Null: none known.</summary>
     long? CacheOnDiskOf(Game g, EngineInfo? engine, GameRecord rec)
     {
-        var driver = rec.CacheKeys.Count > 0 && AppCache != null ? AppCache.SizeOf(rec.CacheKeys) : (long?)null;
-        return SteamGlFiles(g, engine) is { Count: > 0 } steam ? (driver ?? 0) + steam.Sum(f => f.Length) : driver;
+        long? keyed = rec.CacheKeys.Count > 0 && AppCache != null ? AppCache.SizeOf(rec.CacheKeys) : null;
+        return SteamGlFiles(g, engine) is { Count: > 0 } steam ? (keyed ?? 0) + steam.Sum(f => f.Length) : keyed;
     }
 
-    /// <summary>The files of Steam's Vulkan cache of a Vulkan game the driver writes (and Steam's own in it): never through a link.</summary>
+    /// <summary>NVIDIA: of <see cref="CacheOnDiskOf"/>, what its keys' files hold (<see cref="Vendors.NvidiaAppCache.UsedOf"/>). Null
+    /// on other vendors or without keys.</summary>
+    long? CacheInUseOf(Game g, EngineInfo? engine, GameRecord rec) =>
+        AppCache is Vendors.NvidiaAppCache nv && rec.CacheKeys.Count > 0 ? nv.UsedOf(rec.CacheKeys) + SteamGlFiles(g, engine).Sum(f => f.Length) : null;
+
+    /// <summary>A Vulkan game's files in Steam's cache folder of its app for this vendor (<see cref="SteamGlCache"/>), where Steam's
+    /// pre-caching points the driver: what the game and the warm write (<see cref="SteamGlAppName"/>, also AMD's file name) and
+    /// Steam's download and merge. Nothing else of Steam's folder, and none through a link.</summary>
     List<FileInfo> SteamGlFiles(Game g, EngineInfo? engine)
     {
-        if (!VulkanRoute(g, engine) || SteamGlCache(g) is not { } dir || GameFiles.FinalPath(dir) is not { } final || !SamePath(final, dir)) return [];
+        if (!VulkanRoute(g, engine) || SteamGlCache(g) is not { } dir || GameFiles.FinalPath(dir) is not { } final
+            || !SamePath(final, dir)) return [];
         try
         {
-            return new DirectoryInfo(dir).EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint })
-                .Where(f => f.Name.StartsWith(SteamGlAppName, StringComparison.OrdinalIgnoreCase) || AppCacheFiles.SteamOwn(f.Name)).ToList();
+            return [.. new DirectoryInfo(dir).EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint })
+                .Where(f => f.Name.StartsWith(SteamGlAppName, StringComparison.OrdinalIgnoreCase) || Vendors.AppCacheFiles.SteamOwn(f.Name))];
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return []; }
     }
 
-    const string SteamGlAppName = "steamapp_shader_cache";
-
-    /// <summary>The compile lock a clear of Steam's cache holds: none while the game's cache is set aside for its before
-    /// and after recording, or a compile of it runs.</summary>
+    /// <summary>For Clear cache's delete of <see cref="SteamGlFiles"/>: the game's lock, after the Linux placer took its
+    /// entries out of Steam's files. InvalidOperationException while a compile or a placement runs, or a before and after
+    /// recording has the folder set aside.</summary>
     FileStream SteamGlHeld(GameState s)
     {
-        if (PairAsides().Any(a => a.PendingGame == s.Game.Id))
-            throw new InvalidOperationException($"{s.Game.Name}'s cache is set aside for its before and after recording, end it first");
+        if (PairAsides().Any(a => a.PendingGame == s.Game.Id)) throw new InvalidOperationException($"{s.Game.Name}'s cache is set aside for its before and after recording, end it first");
+        (bool Done, string Status, IReadOnlyList<string>)? removed = null;
+        SteamPlaceOnce(s, remove: true, CancellationToken.None, ref removed);
+        if (removed is { Done: false } r) throw new InvalidOperationException(r.Status);
         return CompileLock(s.Game.Id) ?? throw new InvalidOperationException($"A compile of {s.Game.Name} is in progress");
     }
 
-    /// <summary>Steam's Fossilize folder of a Steam game in its library (steamapps\shadercache\&lt;app id&gt;\fozpipelinesv6) and
-    /// Steam's own folder; null for another store's game or without Steam.</summary>
+    /// <summary>Steam's folder, whose filter file a Vulkan plan reads Steam's archives by (<see cref="SteamSources"/>); null:
+    /// Steam's archives aren't read.</summary>
+    internal string? SteamRoot { get; set; }
+
+    /// <summary>A Steam game's archives in its library's shadercache folder (<see cref="SteamPipelineCache"/>): the top
+    /// level, where Steam records an application its filter has no rule for, as a Vulkan game is. None without Steam's
+    /// filter file (<see cref="SteamPipelineCache.Choose"/>).</summary>
+    /// <summary>The engine name of Steam's bucket of a DirectX game's pipelines under Proton (Linux); left null where none is read.</summary>
+    partial void SteamDxEngine(EngineInfo e, ref string? name);
+
+    partial void SteamSources(Game g, string? ours, ref List<FozSource>? sources)
+    {
+        if (SteamCache(g) is not var (dir, root)) return;
+        if (SteamPipelineCache.Choose(SteamPipelineCache.Buckets(dir, Log).Where(b => b.Hash == null), (uint)Vendor.Gpu.Vendor, FossilizeFilter.Read(root)) is { } bucket)
+            sources = SteamPipelineCache.Sources(bucket, ours);
+    }
+
+    // Steam records into them while the game runs, with no import of SCSKiller's to check the game again
+    partial void SteamStamp(Game g, EngineInfo? engine, ref string key)
+    {
+        string? dx = null;
+        if (engine != null) SteamDxEngine(engine, ref dx);
+        if (engine == null || !VulkanPlan.IsVulkan(engine) && dx == null || SteamCache(g) is not var (dir, root)) return;
+        try
+        {
+            var files = (Directory.Exists(dir) ? new DirectoryInfo(dir).GetFiles("*.foz", new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint }) : [])
+                .Append(new FileInfo(Path.Combine(root, FossilizeFilter.FileName)))
+                .Where(f => f.Exists).ToList();
+            key += $"|steam:{files.Count}.{files.Sum(f => f.Length)}.{files.Select(f => f.LastWriteTimeUtc.Ticks).DefaultIfEmpty().Max()}";
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { key += "|steam:?"; }
+    }
+
+    /// <summary>Valve's shader downloads in the game's Steam archives, where a plan reads them (a Vulkan game's, a DirectX
+    /// game's under Proton), as their paths, lengths and write times: one landing or replaced makes the plan stale. Null: none.</summary>
+    string? SteamDownloads(Game g, EngineInfo? engine)
+    {
+        string? dx = null;
+        if (engine != null) SteamDxEngine(engine, ref dx);
+        if (engine == null || !VulkanPlan.IsVulkan(engine) && dx == null || SteamCache(g) is not var (dir, _) || !Directory.Exists(dir)) return null;
+        try
+        {
+            var files = new DirectoryInfo(dir).GetFiles(SteamPipelineCache.Download, new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint })
+                .Select(f => $"{Path.GetRelativePath(dir, f.FullName)}:{f.Length}:{f.LastWriteTimeUtc.Ticks}").Order(StringComparer.Ordinal).ToList();
+            return files.Count == 0 ? null : string.Join('|', files);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
+    }
+
+    /// <summary>The game's shadercache folder in its Steam library and Steam's folder; null for a game not in a Steam
+    /// library, or where Steam's archives aren't read.</summary>
     (string Dir, string Root)? SteamCache(Game g)
     {
         var install = Path.TrimEndingDirectorySeparator(Path.GetFullPath(g.InstallDir)) + Path.DirectorySeparatorChar;
         var at = install.IndexOf(SteamSource.CommonPart, StringComparison.OrdinalIgnoreCase);
-        return SteamRoot is { } root && SteamSource.AppId(g.Id) is { } appId && at >= 0 ? (SteamPipelineCache.Dir(install[..at], appId), root) : null;
+        return SteamRoot is { } root && SteamSource.AppId(g.Id) is { } app && at >= 0 ? (SteamPipelineCache.Dir(install[..at], app), root) : null;
     }
 }

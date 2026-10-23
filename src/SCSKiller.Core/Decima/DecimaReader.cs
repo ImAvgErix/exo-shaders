@@ -45,9 +45,6 @@ public sealed class DecimaReader(string? dataDir = null) : IEngineReader
     /// carver's; ReadShaders re-indexes when it runs without an Index in the same process.</summary>
     readonly ConcurrentDictionary<string, IReadOnlyDictionary<string, Loc>> located = new();
 
-    /// <summary>Each game's archive folder and its archives' magic.</summary>
-    static readonly (string Dir, uint Magic, string Fork)[] Folders = [("Packed_DX12", DecimaArchive.Plain, HorizonZeroDawn), ("data", DecimaArchive.Encrypted, DeathStranding)];
-
     /// <summary>The game, its archives (by name) and how many other .bin files are beside them (another magic: another
     /// archive version, or not an archive), from the install's folders and the files' magic; null = neither layout.
     /// Packed_DX12 is Horizon Zero Dawn's even when none of its .bin files has a known magic (Archives empty).</summary>
@@ -65,6 +62,8 @@ public sealed class DecimaReader(string? dataDir = null) : IEngineReader
         }
         return null;
     }
+
+    static readonly (string Dir, uint Magic, string Fork)[] Folders = [("Packed_DX12", DecimaArchive.Plain, HorizonZeroDawn), ("data", DecimaArchive.Encrypted, DeathStranding)];
 
     public string DetectStamp(Game game, EngineInfo? engine) => keys.KeyStamp(game);
 
@@ -95,6 +94,7 @@ public sealed class DecimaReader(string? dataDir = null) : IEngineReader
         var (fork, archives, unknown) = Layout(game.InstallDir) ?? throw new InvalidDataException("not a Decima install: scan the game again");
         var salts = Salts(game, fork);
         var dir = Folders.First(l => l.Fork == fork).Dir;
+        string Library(string archive) => GameFiles.Rel(game.InstallDir, archive, Path.GetDirectoryName(archive)!, dir);
         try { Codecs.Load(zlib: false); }   // a missing codec fails the index, not each archive
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { throw new InvalidDataException("the Oodle codec can't be loaded", e); }
         var shaders = new Dictionary<string, ShaderInfo>();
@@ -189,8 +189,6 @@ public sealed class DecimaReader(string? dataDir = null) : IEngineReader
             + (bad > 0 ? $"; {bad} unparseable" : "")
             + $" ({sw.Elapsed.TotalSeconds:F1}s)");
         return new ShaderIndex(Convert.ToHexStringLower(content.GetHashAndReset()), [CarvedReader.Platform], shaders, maps);
-
-        string Library(string archive) => GameFiles.Rel(game.InstallDir, archive, Path.GetDirectoryName(archive)!, dir);
     }
 
     DecimaArchive.Salts? Salts(Game game, string fork) =>

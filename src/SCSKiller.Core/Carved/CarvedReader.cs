@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection.PortableExecutable;
+using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
@@ -29,6 +31,13 @@ public sealed class CarvedReader : IEngineReader
     public const string RedEngine4 = "REDengine 4", Northlight2 = "Northlight 2";
 
     public static readonly string[] Families = [Family, RedEngine4, Northlight2];
+
+    public const string NoRawShaders = "no raw DXBC/DXIL shaders in its files";
+
+    /// <summary>A DirectX 12 game whose files hold no shader the carver can read (packed or encrypted): it plans from a
+    /// recording's own shader bytes alone (Planner.Check), so its index is empty.</summary>
+    public static bool RecordedOnly(EngineInfo? engine) =>
+        engine?.Unsupported?.StartsWith(NoRawShaders, StringComparison.Ordinal) == true && engine.GraphicsApi.Contains("D3D12");
 
     /// <summary>The engine a carved game is built with, by a file only it ships: REDengine 4 (Cyberpunk 2077)
     /// engine\shader_final.cache; Northlight 2 (Alan Wake 2, CONTROL Resonant) .rmdtoc archive tables. Else <see cref="Family"/>.</summary>
@@ -71,6 +80,7 @@ public sealed class CarvedReader : IEngineReader
         var seen = new HashSet<string>();
         var perFile = new Dictionary<string, int>();
         int graphics = 0, compute = 0, dxil = 0, rts0 = 0;
+        var dcs = DcsSaved(game);
         var read = Walk(game.InstallDir, detect: true, (f, _, c) =>
         {
             var kind = Dxbc.Kind(c);
@@ -80,14 +90,15 @@ public sealed class CarvedReader : IEngineReader
             else if (kind == 5) compute++;
             if (!Dxbc.Part(c, "DXIL"u8).IsEmpty) dxil++;
             if (!Dxbc.Part(c, "RTS0"u8).IsEmpty) rts0++;
-        }, () => graphics >= MinGraphics);
+        }, () => graphics >= MinGraphics, also: DcsFiles(game, dcs));
         var programs = seen.Count;
         notes = $"{read / 1e6:F0} MB read; " + string.Join("; ", perFile.OrderByDescending(p => p.Value).Take(3)
-            .Select(p => $"{Path.GetRelativePath(game.InstallDir, p.Key)}: {p.Value}"));
+            .Select(p => $"{Rel(game, dcs, p.Key)}: {p.Value}"));
         var version = (dxil == programs ? "DXIL" : dxil == 0 ? "DXBC" : "DXIL+DXBC") + (programs > 0 && (rts0 >= 0.9 * programs || DawnStores.Read(game.InstallDir) != null) ? EmbeddedRootSignatures : "");
         const string packed = "compressed or packed: needs an engine reader";
         var unsupported = graphics >= MinGraphics ? null
-            : programs == 0 ? $"no raw DXBC/DXIL shaders in its files ({read / 1e9:F1} GB sampled): shaders are {packed}"
+            : dcs != null ? "no compiled shaders yet: play DCS once so it builds them"
+            : programs == 0 ? $"{NoRawShaders} ({read / 1e9:F1} GB sampled): shaders are {packed}"
             : graphics == 0 ? $"only {compute} raw compute shaders: graphics shaders are {packed}"
             : $"only {graphics} raw graphics shaders: the rest are {packed}";
         return new EngineInfo(Fingerprint(game.InstallDir), programs == 0 ? "-" : version, null, GraphicsApi(game, dxil > 0), false, unsupported);
@@ -122,6 +133,7 @@ public sealed class CarvedReader : IEngineReader
 
     public ShaderIndex Index(Game game, EngineInfo engine, IProgress<string>? log, CancellationToken ct)
     {
+        if (RecordedOnly(engine)) return new ShaderIndex(ShaderIndex.EmptyContentHash, [Platform], new Dictionary<string, ShaderInfo>(), []);
         var sw = Stopwatch.StartNew();
         var locs = new Dictionary<string, Loc>();
         var shaders = new Dictionary<string, ShaderInfo>();
@@ -129,6 +141,7 @@ public sealed class CarvedReader : IEngineReader
         var perFile = new Dictionary<string, List<(long Off, int Size, int Kind, string Sha)>>();
         var platformOf = new Dictionary<string, string>(); // shaders a 32-lane GPU can't run (see LanePlatform)
         int graphics = 0, bad = 0;
+        var dcs = DcsSaved(game);
         var read = Walk(game.InstallDir, detect: false, (f, off, c) =>
         {
             ct.ThrowIfCancellationRequested();
@@ -147,7 +160,7 @@ public sealed class CarvedReader : IEngineReader
                 if (LanePlatform(Dxbc.WaveLanes(c)) is { } lanes) platformOf[sha] = lanes;
             }
             catch (Exception e) when (e is ArgumentException or IndexOutOfRangeException) { bad++; } // valid container, odd program: not usable
-        }, () => graphics >= MinGraphics, ct);
+        }, () => graphics >= MinGraphics, ct, DcsFiles(game, dcs));
 
         rootSigs.Apply(shaders);
         var dawn = DawnStores.Read(game.InstallDir);
@@ -166,7 +179,7 @@ public sealed class CarvedReader : IEngineReader
         }
         foreach (var (path, seq) in perFile)
         {
-            var rel = GameFiles.Rel(game.InstallDir, path);
+            var rel = Rel(game, dcs, path);
             Stamp(path, rel);
             if ((path == dawnFile ? dawnRuns : Records(seq)?.Select(r => (Run: r, Root: (string?)null)).ToList()) is { } runs)
                 foreach (var (run, root) in runs)
@@ -199,6 +212,7 @@ public sealed class CarvedReader : IEngineReader
     /// patched) is skipped: it fails at replay and is counted there.</summary>
     public void ReadShaders(Game game, EngineInfo engine, IReadOnlySet<string> sha1s, Action<string, byte[]> sink, CancellationToken ct)
     {
+        if (RecordedOnly(engine)) return;
         if (!located.TryGetValue(game.Id, out var locs))
         {
             Index(game, engine, null, ct);
@@ -278,7 +292,7 @@ public sealed class CarvedReader : IEngineReader
     static (List<FileInfo> Named, List<FileInfo> Other) Files(string dir)
     {
         var opts = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0, MaxRecursionDepth = 8 };
-        var all = GameFiles.EnumerateFiles(new DirectoryInfo(dir), "*", opts).Where(f => f.Length >= 64 && !NotShaders.Contains(f.Extension)).ToList();
+        var all = GameFiles.EnumerateFiles(new DirectoryInfo(dir), "*", opts).Where(f => f.Length >= 64 && !NotShaders.Contains(f.Extension) && !InMiddleware(dir, f.FullName)).ToList();
         bool Named(FileInfo f) => Path.GetRelativePath(dir, f.FullName) is var rel
             && (rel.Contains("shader", StringComparison.OrdinalIgnoreCase) || rel.Contains("pso", StringComparison.OrdinalIgnoreCase));
         return (all.Where(Named).OrderBy(f => f.FullName, GameFiles.PathOrder).ToList(),
@@ -290,9 +304,10 @@ public sealed class CarvedReader : IEngineReader
     /// 16+ containers. Detect stops once <paramref name="enough"/>. Unreadable files are skipped.
     /// ponytail: budget-bounded sampling of unnamed files (512 MB Detect, 4 GB Index); an engine that hides a small shader
     /// pack among many big unnamed files can be missed. Add a speed-hint glob for it if one ever is.</summary>
-    static long Walk(string dir, bool detect, Found found, Func<bool> enough, CancellationToken ct = default)
+    static long Walk(string dir, bool detect, Found found, Func<bool> enough, CancellationToken ct = default, List<FileInfo>? also = null)
     {
         var (named, other) = Files(dir);
+        named.InsertRange(0, also ?? []);
         var buf = new byte[Block];
         long read = 0;
         foreach (var f in named)
@@ -312,6 +327,94 @@ public sealed class CarvedReader : IEngineReader
         }
         return read;
     }
+
+    /// <summary>DCS World ships HLSL only and compiles it at run time into Saved Games\&lt;variant&gt;\fxo and metashaders2:
+    /// that folder, and how map paths spell it (never the user's own path). The variant is the word in the install's
+    /// dcs_variant.txt ("openbeta": DCS.openbeta), else DCS. Null: not DCS (DCS.exe in the install's bin or bin-mt).
+    /// Saved Games is the Windows known folder, SCSKILLER_TEST_SAVED_GAMES when set (a test run's scratch copy).</summary>
+    internal static (string Dir, string Rel)? DcsSaved(Game game)
+    {
+        if (!Path.GetFileName(game.ExePath).Equals("DCS.exe", StringComparison.OrdinalIgnoreCase)
+            || Path.GetFileName(Path.GetDirectoryName(game.ExePath)) is not { } bin
+            || !bin.Equals("bin", StringComparison.OrdinalIgnoreCase) && !bin.Equals("bin-mt", StringComparison.OrdinalIgnoreCase)) return null;
+        string variant;
+        try { variant = File.ReadAllText(GameFiles.Find(game.InstallDir, "dcs_variant.txt")).Trim(); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { variant = ""; }
+        var name = variant.Length == 0 ? "DCS" : $"DCS.{variant}";
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || name.EndsWith('.')) name = "DCS";
+        return (Path.Combine(SavedGames(), name), $@"<SavedGames>\{name}\");
+    }
+
+    static string SavedGames()
+    {
+        if (Environment.GetEnvironmentVariable("SCSKILLER_TEST_SAVED_GAMES") is { Length: > 0 } test) return test;
+        if (OperatingSystem.IsWindows() && SHGetKnownFolderPath(in SavedGamesId, 0, 0, out var p) == 0)
+        {
+            try { if (Marshal.PtrToStringUni(p) is { Length: > 0 } dir) return dir; }
+            finally { Marshal.FreeCoTaskMem(p); }
+        }
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games");
+    }
+
+    static readonly Guid SavedGamesId = new("4C5C32FF-BB9D-43B0-B5B4-2D72E54EAAA4");
+
+    [DllImport("shell32.dll")]
+    static extern int SHGetKnownFolderPath(in Guid id, uint flags, nint token, out nint path);
+
+    static readonly Regex AutoUpdateVersion = new(@"""version""\s*:\s*""([\d.]+)""", RegexOptions.CultureInvariant);
+
+    /// <summary>The installed DCS build from the install's autoupdate.cfg, null when unreadable.</summary>
+    static Version? DcsInstalled(Game game)
+    {
+        try { return AutoUpdateVersion.Match(File.ReadAllText(GameFiles.Find(game.InstallDir, "autoupdate.cfg"))) is { Success: true } m && Version.TryParse(m.Groups[1].Value, out var v) ? v : null; }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
+    }
+
+    internal static readonly string[] DcsFolders = ["fxo", "metashaders2"];
+
+    /// <summary>The files of <see cref="DcsSaved"/>'s folders, an .fxo only when it was built by the installed DCS build
+    /// (an update leaves the older ones unused), else the newest build any .fxo names when the install names none. A .meta2 names no build.</summary>
+    internal static List<FileInfo> DcsFiles(Game game, (string Dir, string Rel)? dcs)
+    {
+        if (dcs is not { } d) return [];
+        var files = DcsListing(d.Dir).Where(f => f.Length >= 64).OrderBy(f => f.FullName, GameFiles.PathOrder).ToList();
+        var builds = files.Where(f => f.Extension.Equals(".fxo", StringComparison.OrdinalIgnoreCase)).ToDictionary(f => f, FxoBuild);
+        var want = DcsInstalled(game) ?? builds.Values.OfType<Version>().DefaultIfEmpty().Max();   // null: no header read, every .fxo stays
+        return files.Where(f => !builds.TryGetValue(f, out var b) || b == want).ToList();
+    }
+
+    /// <summary>The files of the DCS folders under <paramref name="dir"/>; a folder gone or unreadable meanwhile counts as empty.</summary>
+    static List<FileInfo> DcsListing(string dir) => DcsFolders.SelectMany(f =>
+    {
+        try { return new DirectoryInfo(Path.Combine(dir, f)).GetFiles("*", new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = 0 }); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return []; }
+    }).ToList();
+
+    /// <summary>The DCS build an .fxo was compiled by: its header's u32-length string after a u16 (measured "2.9.30.28718").</summary>
+    internal static Version? FxoBuild(FileInfo f)
+    {
+        Span<byte> h = stackalloc byte[38];
+        try
+        {
+            using var s = f.OpenRead();
+            if (s.ReadAtLeast(h, h.Length, throwOnEndOfStream: false) < h.Length) return null;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
+        var n = System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(h[2..]);
+        return n is > 0 and <= 32 && Version.TryParse(Encoding.ASCII.GetString(h.Slice(6, (int)n)), out var v) ? v : null;
+    }
+
+    static string Rel(Game game, (string Dir, string Rel)? dcs, string path) =>
+        dcs is { } d && path.StartsWith(d.Dir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+            ? d.Rel + GameFiles.Rel(d.Dir, path) : GameFiles.Rel(game.InstallDir, path);
+
+    /// <summary>DCS's compiled shader folders by name, size and write time and the installed build (it picks the .fxo): a play
+    /// that compiles more, or an update, re-plans.</summary>
+    public string IndexStamp(Game game) => DcsSaved(game) is { } d
+        ? DcsInstalled(game) + ";" + string.Join(';', DcsListing(d.Dir).OrderBy(f => f.FullName, StringComparer.Ordinal).Select(f => $"{f.Directory!.Name}/{f.Name}|{f.Length}|{f.LastWriteTimeUtc.Ticks}"))
+        : "";
+
+    public string DetectStamp(Game game, EngineInfo? engine) => IndexStamp(game);
 
     static (long Lo, long Hi)[] Windows(long len, long w) =>
         len <= 3 * w ? [(0, len)] : [(0, w), (len / 2 - w / 2, len / 2 + w / 2), (len - w, len)];
@@ -386,12 +489,15 @@ public sealed class CarvedReader : IEngineReader
 
     /// <summary>D3D12 when the game ships DXIL (SM6 runs on DX12 only), the Agility SDK runtime (D3D12Core.dll) or its own
     /// binaries import d3d12.dll / export D3D12SDKVersion; "D3D11 or D3D12" when they import d3d11.dll too (and no DXIL);
-    /// D3D11 / Vulkan when that's all they import; "D3D11 or D3D12" when nothing is readable.</summary>
+    /// D3D11 / Vulkan when that's all they import (Vulkan also when the exe loads it at runtime, <see cref="LoadsVulkan"/>);
+    /// "D3D11 or D3D12" when nothing is readable. Middleware's own shaders and runtime (<see cref="InMiddleware"/>) don't count,
+    /// nor a Wine prefix's in the game folder (<see cref="GameFiles.InWinePrefix"/>).</summary>
     static string GraphicsApi(Game game, bool dxil)
     {
         var apis = Imports(game);
         var core = new EnumerationOptions { RecurseSubdirectories = true, MaxRecursionDepth = 4, IgnoreInaccessible = true, AttributesToSkip = 0 };
-        bool d3d12 = dxil || apis.Contains("D3D12") || GameFiles.EnumerateFiles(game.InstallDir, "D3D12Core.dll", core).Any();
+        bool d3d12 = dxil || apis.Contains("D3D12") || GameFiles.EnumerateFiles(game.InstallDir, "D3D12Core.dll", core)
+            .Any(p => !InMiddleware(game.InstallDir, p) && !GameFiles.InWinePrefix(game.InstallDir, game.ExePath, p));
         bool d3d11 = apis.Contains("D3D11");
         return d3d12 ? (d3d11 && !dxil ? UnrealRhi.Ambiguous : "D3D12") : d3d11 ? "D3D11" : apis.Contains("Vulkan") ? "Vulkan" : UnrealRhi.Ambiguous;
     }
@@ -403,15 +509,23 @@ public sealed class CarvedReader : IEngineReader
     static readonly string[] Middleware = ["eossdk", "libxess", "dstorage", "gfsdk", "nvngx", "sl.", "amd_", "ffx", "nvlowlatency", "galaxy",
         "steam_api", "discord", "overlay", "igxess", "renderdoc", "reshade", "dxgi", "d3d1", "d3d9", "opengl32", "vulkan-1", "libegl", "libglesv2",
         "vk_swiftshader", "d3dcompiler", "dxcompiler", "dxil", "cef", "nvapi", "nvtt", "physx", "bink", "xess", "fsr", "dlss", "streamline",
-        "gameoverlay", "twitch", "nvrtx", "nri", "nrd", "nrc", "ags", "libxell", "pix", "winpix", "aftermath", "gfnruntime"];
+        "gameoverlay", "twitch", "nvrtx", "nri", "nrd", "nrc", "ags", "libxell", "pix", "winpix", "aftermath", "gfnruntime", "optiscaler", "helixsr"];
 
-    /// <summary>APIs imported by the exe and the non-middleware DLLs next to it (+ "D3D12" for an exported D3D12SDKVersion).
-    /// Empty when unreadable (Xbox/GDK exes are ACL-protected) or the game has anti-cheat (like UnrealReader, we don't open
-    /// those binaries).</summary>
+    /// <summary>Middleware that ships its own shaders or D3D12 runtime under its name, whatever API the game runs on
+    /// (HelixSR\helixsr_kernels.pak holds DXIL, OptiScaler's D3D12_Optiscaler\D3D12Core.dll): a file with it in its path
+    /// below the install is out of the shader walk and of the API.</summary>
+    static readonly string[] MiddlewareFolders = ["helixsr", "optiscaler"];
+
+    static bool InMiddleware(string dir, string path) =>
+        Path.GetRelativePath(dir, path).Split('\\', '/').Any(p => MiddlewareFolders.Any(m => p.Contains(m, StringComparison.OrdinalIgnoreCase)));
+
+    /// <summary>APIs imported by the exe and the non-middleware DLLs next to it (+ "D3D12" for an exported D3D12SDKVersion),
+    /// or "Vulkan" when none is and the exe loads it at runtime (<see cref="LoadsVulkan"/>). Empty when unreadable (Xbox/GDK
+    /// exes are ACL-protected). Read in a game with anti-cheat too: only for its API, which a risk session's recorder follows.</summary>
     static HashSet<string> Imports(Game game)
     {
         var apis = new HashSet<string>();
-        if (Path.GetDirectoryName(game.ExePath) is not { } dir || !Directory.Exists(dir) || GameFiles.DetectAntiCheat(game) != AntiCheat.None) return apis;
+        if (Path.GetDirectoryName(game.ExePath) is not { } dir || !Directory.Exists(dir)) return apis;
         var bins = GameFiles.EnumerateFiles(dir, "*.dll").Where(p => !Middleware.Any(m => Path.GetFileName(p).StartsWith(m, StringComparison.OrdinalIgnoreCase)));
         foreach (var p in bins.Prepend(game.ExePath))
             try
@@ -421,7 +535,48 @@ public sealed class CarvedReader : IEngineReader
                 if (agility) apis.Add("D3D12");
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidOperationException) { }
+        if (apis.Count == 0 && LoadsVulkan(game.ExePath)) apis.Add("Vulkan");
         return apis;
+    }
+
+    // lowercase; a DLL name also in UTF-16, as LoadLibraryW takes it (GetProcAddress names are ASCII only)
+    static readonly byte[][] VulkanLoader = [A("vulkan-1.dll"), W("vulkan-1.dll")], VulkanEntry = [A("vkcreateinstance"), A("vkgetinstanceprocaddr")],
+        D3DNames = [A("d3d12.dll"), W("d3d12.dll"), A("d3d11.dll"), W("d3d11.dll"), A("dxgi.dll"), W("dxgi.dll"), A("d3d12createdevice"), A("d3d11createdevice"), A("createdxgifactory")];
+    static byte[] A(string s) => Encoding.ASCII.GetBytes(s);
+    static byte[] W(string s) => Encoding.Unicode.GetBytes(s);
+
+    /// <summary>The exe names vulkan-1.dll and a Vulkan loader entry point, and no D3D or DXGI runtime (any case): it loads
+    /// Vulkan at runtime (Enshrouded imports no graphics API). Read in blocks, exes run to hundreds of MB.</summary>
+    internal static bool LoadsVulkan(string exe)
+    {
+        const int Overlap = 32;   // > the longest name, so one cut by a block end is seen whole next time
+        try
+        {
+            using var h = File.OpenHandle(exe, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, FileOptions.SequentialScan);
+            var buf = new byte[Block + Overlap];
+            bool loader = false, entry = false;
+            var kept = 0;
+            for (long pos = 0; RandomAccess.Read(h, buf.AsSpan(kept, Block), pos) is var n and > 0; pos += n)
+            {
+                var span = buf.AsSpan(0, kept + n);
+                foreach (ref var b in span[kept..])
+                    if ((uint)(b - 'A') <= 'Z' - 'A') b |= 0x20;
+                if (Has(span, D3DNames)) return false;
+                loader |= Has(span, VulkanLoader);
+                entry |= Has(span, VulkanEntry);
+                kept = Math.Min(Overlap, span.Length);
+                span[^kept..].CopyTo(buf);
+            }
+            return loader && entry;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return false; }
+
+        static bool Has(ReadOnlySpan<byte> span, byte[][] names)
+        {
+            foreach (var name in names)
+                if (span.IndexOf(name) >= 0) return true;
+            return false;
+        }
     }
 
     /// <summary>Import + delay-import DLL names (<paramref name="delayed"/> false: imports only); <paramref name="agility"/>: exports D3D12SDKVersion.</summary>

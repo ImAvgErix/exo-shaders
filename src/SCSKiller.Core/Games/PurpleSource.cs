@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
@@ -16,7 +17,7 @@ public sealed class PurpleSource(IEnumerable<(string Code, string Name, string I
     public IReadOnlyList<Game> Discover()
     {
         var games = new List<Game>();
-        foreach (var (code, name, install) in entries ?? Entries())
+        foreach (var (code, name, install) in entries ?? (OperatingSystem.IsWindows() ? Entries() : []))
         {
             if (!Directory.Exists(install)) continue;
             var info = Path.Combine(install, $"VersionInfo_{code}.xml");
@@ -31,6 +32,7 @@ public sealed class PurpleSource(IEnumerable<(string Code, string Name, string I
     }
 
     /// <summary>PurpleLauncher.exe, from the command of PURPLE's nc-purple: protocol; null when PURPLE isn't installed.</summary>
+    [SupportedOSPlatform("windows")]
     public static string? LauncherExe() =>
         LauncherIn(Registry.GetValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Classes\nc-purple\shell\open\command", null, null) as string);
 
@@ -44,6 +46,7 @@ public sealed class PurpleSource(IEnumerable<(string Code, string Name, string I
         return Path.GetFileName(exe).Equals("PurpleLauncher.exe", StringComparison.OrdinalIgnoreCase) && File.Exists(exe) ? exe : null;
     }
 
+    [SupportedOSPlatform("windows")]
     static IEnumerable<(string, string, string)> Entries()
     {
         using var root = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall");

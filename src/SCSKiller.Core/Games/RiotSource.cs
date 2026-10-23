@@ -49,6 +49,7 @@ public sealed class RiotSource(string? metadataDir = null, Func<string, string?>
         return games;
     }
 
-    static string? Uninstall(string entry) => EaSource.ReadRegistry($@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Uninstall\{entry}\DisplayName")
+    static string? Uninstall(string entry) => !OperatingSystem.IsWindows() ? null
+        : EaSource.ReadRegistry($@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Uninstall\{entry}\DisplayName")
         ?? EaSource.ReadRegistry($@"HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Uninstall\{entry}\DisplayName");
 }

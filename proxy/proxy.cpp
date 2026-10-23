@@ -57,6 +57,7 @@
 #include <deque>
 #include <format>
 #include <functional>
+#include <list>
 #include <map>
 #include <mutex>
 #include <set>
@@ -70,7 +71,9 @@
 #include <vector>
 #include "recorder_key.h"
 #include "overlay.h"
+#include "frame_enc.h"
 #include "admission.h"
+#include "admit.h"
 #include "sys_dxgi.h"
 #include "warm_items.h"
 #include "warm_memory.h"
@@ -113,6 +116,7 @@ static bool g_api11;  // loaded as d3d11.dll: the D3D11 recorder
 static bool g_frames_only;  // scskiller.ini frames_only=1 (d3d11.dll only): nothing is recorded
 static bool g_elsewhere;  // this dll's folder isn't the exe's: a mod loaded a copy of it from elsewhere (own_dir)
 static std::wstring g_dir;
+static const std::wstring& admit_dir() { return g_dir; }
 static bool g_warm;
 static int g_threads;
 static FILE *g_db, *g_log, *g_csv;
@@ -131,6 +135,9 @@ static std::vector<std::string> g_plan;                          // warm mode on
 static std::vector<std::string> g_items11;                       // warm mode only: D3D11 items, the tag ('1', '2', '3') + the payload
 static HashSet g_known_tuples;                                   // (stages + root sig) tuples known at launch
 static uint64_t g_lib_loads, g_db_records_at_start, g_creates, g_known_hits, g_tuple_hits, g_slow_known, g_slow_tuple, g_slow_unknown, g_unsupported;
+static std::atomic<uint64_t> g_create_fails;
+static std::atomic<uint64_t> g_dd_hits, g_dd_held, g_dd_hits_slow, g_dd_held_slow;  // dedupe: re-creates answered, and those whose kept
+                                                                                  // pipeline the game still held (driver call); slow: >= 10 ms
 static uint64_t g_repeats, g_slow_repeats;  // creates of a desc this process created before, and those over the slow mark
 static HashSet g_created;                    // every key this process created (note)
 static std::atomic<uint64_t> g_warm_ok, g_warm_fail, g_warm_crash;  // crash: skipped, it removed the device in an earlier run
@@ -175,22 +182,6 @@ static double live_pass(double& last) {
     last = now;
     return now - g_frozen_ms;
 }
-static long long unix_ms() { return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count(); }
-// An environment variable into v; false when unset, empty or too long for v (the call then leaves v unwritten).
-template <size_t N> static bool env(const wchar_t* name, wchar_t (&v)[N]) {
-    DWORD n = GetEnvironmentVariableW(name, v, N);
-    return n && n < N;
-}
-// A module's path as the loader reports it, at any length; "" when it can't be had or passes 32,768 characters.
-static std::wstring module_path(HMODULE m) {
-    for (DWORD size = MAX_PATH;; size = std::min<DWORD>(size * 2, 32768)) {
-        std::wstring s(size, L'\0');
-        const DWORD n = GetModuleFileNameW(m, s.data(), size);
-        if (!n) return L"";
-        if (n < size) return s.resize(n), s;
-        if (size == 32768) return L"";
-    }
-}
 static std::wstring exe_name() {
     const std::wstring s = module_path(nullptr);
     return s.substr(s.find_last_of(L"\\/") + 1);
@@ -217,472 +208,6 @@ void logf(const char* fmt, ...) {  // also used by warm11.cpp
     std::lock_guard l(g_early_mx);
     if (g_log) fputs((t + line).c_str(), g_log), fflush(g_log);
     else if (g_log_deferred) g_early += t + line;
-}
-
-// Admission, decided once at the first device (any path: D3D12CreateDevice, a device factory, a D3D11 device;
-// D3D12GetInterface's hooks only forward until then). The recorder records for the whole run only when all hold, else it is
-// a pure pass-through (no device hooked, nothing written in the game folder):
-//  - scskiller.ini's exe_size= and exe_time= are this process's exe as it is now, and its sig= is the HMAC the app made of
-//    them, the exe's file key, root= (and pid=/pid_time=) with its own key (recorder.key in its recorder folder, outside
-//    every game folder; recorder_sig). The app takes the stamp before a full anti-cheat check of the install
-//    (GameFiles.DetectAntiCheat walks it; this dll doesn't) and signs it only when that check is clean, so an exe updated
-//    since, or during it, is refused, and so is an ini that SCSKiller didn't write, or wrote for another exe or root;
-//  - no anti-cheat marker in this folder or in any folder above it up to the install root (root=, relative to this folder;
-//    more than 64 up refuses), each listed whole: the built-in list, plus scskiller.ini markers= (it only adds; malformed:
-//    no). pid= and pid_time= (its creation FILETIME, UTC) name the one process the app started suspended itself for an
-//    offline session: for that process EasyAntiCheat's names leave the list; any other process with that ini is refused;
-//  - no "Riot Games" folder in the exe's path;
-//  - no anti-cheat client module loaded, and not a VAC game by Steam's files (vac_now);
-//  - this dll was loaded from the exe's folder;
-//  - this folder isn't on the app's revocation list (recorder.revoked: folders whose scskiller.ini it couldn't take out);
-//  - scskiller.ini is still as it was read when the decision is made (the app takes it out when it finds anti-cheat).
-// risk=1 with that binding, inside the signed stamp (a session the user confirmed at their own risk, beside the anti-cheat):
-// the marker, Riot, client and VAC checks still run but refuse on nothing they find, and the log names it all once, as it
-// opens. Nothing is hidden from the anti-cheat. risk= without pid= or with another value is refused ("risk= malformed").
-// What a check couldn't inspect (a folder that can't be listed, Steam files that can't be read) refuses as without risk.
-// Accepted limits: a client that loads later in an admitted run isn't caught here, under risk or not (the app removes the
-// recorder at its next check); anti-cheat an update adds deeper in the install than those listings, without changing the
-// exe, is admitted until the app's next check (every 2 minutes while it runs, at its start otherwise) takes the recorder out.
-static const wchar_t* const kAntiCheatMarkers[] = {  // GameFiles.Markers; "*x": a name ending in x
-    L"EasyAntiCheat", L"EasyAntiCheat_EOS", L"start_protected_game.exe", L"EasyAntiCheat_EOS_Setup.exe", L"EasyAntiCheat_Setup.exe",
-    L"BattlEye", L"BEService.exe", L"BEService_x64.exe", L"BELauncher.exe", L"BEClient_x64.dll", L"BEClient.dll",
-    L"EAAntiCheat.Installer.exe", L"GameGuard", L"XIGNCODE", L"nProtect", L"randgrid.sys", L"NCGuardSDK", L"NCGuard", L"AntiCheatExpert",
-    L"AceAntibotClient", L"TP3Helper.exe", L"SGuard", L"SGuard64.exe", L"SGuardSvc64.exe", L"ACE-Base64.dll", L"ACE-Base.dat",
-    L"ACE-Setup64.exe", L"ACE-Service64.exe", L"ACE-ATS64.dll", L"ACE-CSI64.dll", L"ACE-DFS64.dll", L"TenProtect", L"TesSafe.sys",
-    L"HoYoKProtect.sys", L"mhypbase.dll", L"mhyprot.sys", L"mhyprot2.sys", L"mhyprot3.sys", L"ACE-BASE.sys",
-    L"GenshinImpact.exe", L"YuanShen.exe", L"StarRail.exe", L"ZenlessZoneZero.exe", L"BH3.exe", L"HYP.exe", L"HYPHelper.exe",
-    L"HYPWorker.exe", L"EAAntiCheat.GameServiceLauncher.exe", L"EAAntiCheat.GameServiceLauncher.dll", L"vgk.sys", L"vgc.exe",
-    L"VALORANT.exe", L"VALORANT-Win64-Shipping.exe", L"League of Legends.exe", L"LeagueClient.exe", L"LeagueClientUx.exe",
-    L"LeagueClientUxRender.exe", L"LoR.exe", L"Lion-Win64-Shipping.exe", L"RiotClientServices.exe", L"RiotClientUx.exe",
-    L"RiotClientUxRender.exe",
-    L"NeacClient.exe", L"NeacSafe64.sys", L"NeacSafe64_ex.sys",
-    L"NEP2.dll", L"NEPCleaner.exe",
-    L"BlackCall.aes", L"BlackCall64.aes", L"BlackCat64.sys", L"HShield", L"PunkBuster", L"PnkBstrA.exe", L"pbsvc.exe", L"pbsv.dll",
-    L"equ8_conf.json", L".build.info", L".product.db", L"Warframe.x64.exe", L"ONCE_HUMAN.exe", L"forzahorizon5.exe", L"forzahorizon6.exe", L"arbiter.dll", L"gameguard.des", L"DenuvoAC", L"denuvo-anti-cheat.sys", L"denuvo-anti-cheat-runtime.dll",
-    L"denuvo-anti-cheat-update-service.exe", L"Denuvo Anti-Cheat Installer.exe", L"Elytra", L"Elytra.exe", L"Elytra-Setup.exe", L"*.xem", L"*_BE.exe"};
-static const size_t kEasyAntiCheatMarkers = 5;  // the list's first entries
-static std::atomic<int> g_admission;  // 0 undecided, 1 records, -1 pass-through
-static std::atomic<bool> g_ags_refused;  // set before g_admission: admission saw no signed vendor=amd, or refused
-// The lines admission verified inside the signature: the AGS hook and the panel go by these, never by a later read.
-struct SignedLines {
-    std::wstring vendor, overlay, play_s, tag;
-};
-static SignedLines g_signed;  // written once, before g_admission
-static std::string utf8(const std::wstring& w) {
-    std::string s(WideCharToMultiByte(CP_UTF8, 0, w.data(), (int)w.size(), nullptr, 0, nullptr, nullptr), '\0');
-    WideCharToMultiByte(CP_UTF8, 0, w.data(), (int)w.size(), s.data(), (int)s.size(), nullptr, nullptr);
-    return s;
-}
-// The anti-cheat client modules loaded by now, by name.
-static std::vector<std::string> anti_cheat_loaded() {
-    std::vector<std::string> found;
-    for (auto m : {L"EasyAntiCheat_x64.dll", L"EasyAntiCheat_EOS.dll", L"BEClient_x64.dll", L"BEClient.dll", L"mhypbase.dll",
-                   L"core_ets2mp.dll", L"core_atsmp.dll", L"denuvo-anti-cheat-runtime.dll"})
-        if (GetModuleHandleW(m)) found.push_back(utf8(m));
-    return found;
-}
-// The exe's path has a "Riot Games" folder (GameFiles.RiotGames): the Riot Client installs every Riot title under one.
-static bool riot_games() {
-    std::wstring exe = module_path(nullptr);
-    if (exe.empty()) return true;
-    for (auto& c : exe)
-        if (c >= L'A' && c <= L'Z') c += L'a' - L'A';
-    return exe.find(L"\\riot games\\") != std::wstring::npos;
-}
-static bool is_marker(const wchar_t* name, const std::vector<std::wstring>& markers) {
-    size_t n = wcslen(name);
-    for (auto& m : markers)
-        if (m[0] == L'*' ? n >= m.size() - 1 && !_wcsicmp(name + n - (m.size() - 1), m.c_str() + 1) : !_wcsicmp(name, m.c_str())) return true;
-    return false;
-}
-// False: an addition in markers= that isn't a plain name (empty, a path, a wildcard other than a leading '*').
-static bool anti_cheat_markers(std::vector<std::wstring>& out) {
-    out.assign(std::begin(kAntiCheatMarkers), std::end(kAntiCheatMarkers));
-    wchar_t v[4096];
-    DWORD n = GetPrivateProfileStringW(L"scskiller", L"markers", L"", v, 4096, (g_dir + L"scskiller.ini").c_str());
-    if (n >= 4094) return false;
-    if (!n) return true;
-    std::wstring s = v;
-    for (size_t at = 0;;) {
-        size_t bar = s.find(L'|', at);
-        std::wstring m = s.substr(at, bar == std::wstring::npos ? std::wstring::npos : bar - at);
-        if (m.empty() || m.find_first_of(L"\\/:?\"<>") != std::wstring::npos || m.find(L'*', 1) != std::wstring::npos || m == L"*") return false;
-        out.push_back(m);
-        if (bar == std::wstring::npos) return true;
-        at = bar + 1;
-    }
-}
-// The markers among dir's entries, by name (at most 100,000 read): all of them, or the first. {"?"}: more entries than that,
-// or a listing that fails before it ends.
-static std::vector<std::string> anti_cheat_in(const std::wstring& dir, const std::vector<std::wstring>& markers, bool all) {
-    WIN32_FIND_DATAW fd;
-    HANDLE h = FindFirstFileExW(long_path(dir + L"*").c_str(), FindExInfoBasic, &fd, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
-    if (h == INVALID_HANDLE_VALUE) return {"?"};
-    std::vector<std::string> found;
-    bool listed = true;
-    for (size_t read = 0;;) {
-        if (++read > 100000) { listed = false; break; }
-        if (is_marker(fd.cFileName, markers)) {
-            found.push_back(utf8(fd.cFileName));
-            if (!all) break;
-        }
-        if (!FindNextFileW(h, &fd)) { listed = GetLastError() == ERROR_NO_MORE_FILES; break; }
-    }
-    FindClose(h);
-    if (!listed) found.assign(1, "?");
-    return found;
-}
-// While admission decides, ini_string reads this copy of scskiller.ini's bytes (the ones it compares again at the end), so
-// the values it checks and the signed lines it hands on come from one read: a file changed and put back meanwhile can't
-// split them (admission.h's ini_value).
-static thread_local const std::string* t_ini;
-
-// scskiller.ini's value of key, as written ("" when missing or longer than 1022).
-static std::wstring ini_string(const wchar_t* key) {
-    if (t_ini) {
-        std::wstring v = ini_value(*t_ini, key);
-        return v.size() < 1022 ? v : L"";
-    }
-    wchar_t v[1024];
-    DWORD n = GetPrivateProfileStringW(L"scskiller", key, L"", v, 1024, (g_dir + L"scskiller.ini").c_str());
-    return n && n < 1022 ? std::wstring(v, n) : L"";
-}
-static bool ini_number(const wchar_t* key, uint64_t& out) {
-    std::wstring v = ini_string(key);
-    if (v.empty() || v.size() >= 30 || !iswdigit(v[0])) return false;
-    wchar_t* end;
-    errno = 0;
-    out = wcstoull(v.c_str(), &end, 10);
-    return !*end && !errno;
-}
-// exe_size= and exe_time= (FILETIME, UTC) are this process's exe as it is now; missing or malformed: false.
-static bool exe_as_checked() {
-    const std::wstring exe = module_path(nullptr);
-    WIN32_FILE_ATTRIBUTE_DATA a;
-    uint64_t size, time;
-    return !exe.empty() && GetFileAttributesExW(exe.c_str(), GetFileExInfoStandard, &a) && ini_number(L"exe_size", size) && ini_number(L"exe_time", time)
-           && size == ((uint64_t)a.nFileSizeHigh << 32 | a.nFileSizeLow) && time == ((uint64_t)a.ftLastWriteTime.dwHighDateTime << 32 | a.ftLastWriteTime.dwLowDateTime);
-}
-// pid= and pid_time= name this process.
-static bool bound_here() {
-    uint64_t pid, at;
-    FILETIME created, x1, x2, x3;
-    return ini_number(L"pid", pid) && ini_number(L"pid_time", at) && pid == GetCurrentProcessId() && GetProcessTimes(GetCurrentProcess(), &created, &x1, &x2, &x3)
-           && at == ((uint64_t)created.dwHighDateTime << 32 | created.dwLowDateTime);
-}
-// The install root, with a trailing backslash; "" when root= is missing. root= is relative to here, this folder's final_dir
-// (ASCII "..\..", which the ini's ANSI read keeps), or absolute when the root is on another drive.
-static std::wstring install_root(const std::wstring& here) {
-    std::wstring v = ini_string(L"root");
-    if (v.empty()) return L"";
-    std::wstring p = (v.size() > 1 && (v[1] == L':' || (v[0] == L'\\' && v[1] == L'\\'))) ? v : here + v;
-    std::wstring full(32768, L'\0');
-    DWORD m = GetFullPathNameW(p.c_str(), (DWORD)full.size(), full.data(), nullptr);
-    if (!m || m >= full.size()) return L"";
-    full.resize(m);
-    return full.back() == L'\\' ? full : full + L'\\';
-}
-// here and each folder above it up to the install root; the root alone besides here when it isn't above it. Empty when
-// the root is more than 64 folders up: not all can be listed.
-static std::vector<std::wstring> folders_to(const std::wstring& here, const std::wstring& root) {
-    if (here.size() < root.size() || _wcsnicmp(here.c_str(), root.c_str(), root.size())) return {here, root};
-    std::vector<std::wstring> dirs;
-    for (std::wstring d = here; dirs.size() < 64;) {
-        dirs.push_back(d);
-        if (d.size() <= root.size()) return dirs;
-        d.resize(d.find_last_of(L'\\', d.size() - 2) + 1);
-    }
-    return {};
-}
-// <recorder folder>\refused\<this exe's file_key>; "" when it can't be had.
-static std::wstring refused_path() {
-    const std::wstring exe = module_path(nullptr), dir = recorder_dir(g_dir);
-    return exe.empty() || dir.empty() ? L"" : dir + L"\\refused\\" + file_key(exe);
-}
-// A pass-through writes nothing in the game folder: its reason goes to the app's recorder folder (refused_path, "unix_ms
-// why"), where the app shows it on the game's page; an admitted run deletes it.
-static void refused(const char* why) {
-    const std::wstring file = refused_path();
-    if (file.empty()) return;
-    if (!why) return (void)DeleteFileW(file.c_str());
-    // a PC the app never stamped a game on may have neither folder yet
-    const std::wstring dir = file.substr(0, file.find_last_of(L'\\'));
-    CreateDirectoryW(dir.substr(0, dir.find_last_of(L'\\')).c_str(), nullptr), CreateDirectoryW(dir.c_str(), nullptr);
-    HANDLE h = CreateFileW(file.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, 0, nullptr);
-    if (h == INVALID_HANDLE_VALUE) return;
-    char b[160];
-    int n = snprintf(b, sizeof b, "%lld %s", unix_ms(), why);
-    DWORD w;
-    WriteFile(h, b, (DWORD)std::clamp(n, 0, (int)sizeof b - 1), &w, nullptr);
-    CloseHandle(h);
-}
-// Valve Anti-Cheat (Games.Vac): VAC runs in Steam's client and bans for a foreign DLL in the game, and no file of the game
-// says so. Decided here at each launch, from Steam's own files as they are now (the app may have been closed while Steam
-// added VAC): an exe in a Steam library is the app whose appmanifest names its folder, and it records only when that app
-// isn't one of Valve's VAC titles and appinfo.vdf has its info without the "Valve Anti-Cheat enabled" category (category_8).
-// Anything that can't be read or found refuses. An exe outside every Steam library isn't Steam's: no VAC.
-static std::string read_all(const std::wstring& path, size_t cap = 1 << 20) {
-    std::string s;
-    if (FILE* f = _wfsopen(path.c_str(), L"rb", _SH_DENYNO)) {
-        char b[65536];
-        for (size_t n; s.size() < cap && (n = fread(b, 1, sizeof b, f));) s.append(b, n);
-        fclose(f);
-    }
-    return s;
-}
-// The values of "key" "value" pairs in a text VDF (libraryfolders.vdf, appmanifest_*.acf), unescaped.
-static std::vector<std::string> vdf_values(const std::string& text, const char* key) {
-    std::vector<std::string> out;
-    const std::string k = std::string("\"") + key + "\"";
-    for (size_t p = 0; (p = text.find(k, p)) != std::string::npos;) {
-        p += k.size();
-        size_t q = text.find_first_not_of(" \t\r\n", p);
-        if (q == std::string::npos || text[q] != '"') continue;
-        std::string v;
-        for (++q; q < text.size() && text[q] != '"'; ++q) v += text[q] == '\\' && q + 1 < text.size() ? text[++q] : text[q];
-        out.push_back(v);
-        p = q;
-    }
-    return out;
-}
-static std::wstring widen(const std::string& s) {
-    std::wstring w(MultiByteToWideChar(CP_UTF8, 0, s.data(), (int)s.size(), nullptr, 0), L'\0');
-    MultiByteToWideChar(CP_UTF8, 0, s.data(), (int)s.size(), w.data(), (int)w.size());
-    return w;
-}
-static bool under(const std::wstring& path, std::wstring dir) {
-    for (auto& c : dir) if (c == L'/') c = L'\\';
-    while (!dir.empty() && dir.back() == L'\\') dir.pop_back();
-    return path.size() > dir.size() + 1 && path[dir.size()] == L'\\' && !_wcsnicmp(path.c_str(), dir.c_str(), dir.size());
-}
-static const uint32_t kValveVac[] = {10, 80, 240, 300, 320, 440, 500, 550, 570, 730, 4000, 1422450};  // Games.Vac.Valve
-// Steam's appinfo.vdf (Games.SteamSource.AppInfoPath). Under Wine (Proton) it is the one of the Steam that started the game
-// (STEAM_COMPAT_CLIENT_INSTALL_PATH, through Wine's drives), even when a Steam in the prefix has its own, which can be stale.
-// Never the game's library: it can be an abandoned Steam's folder. The variable empty: the registry's Steam's, which
-// Proton's stand-in doesn't have. "" when the variable has no Windows path: nothing reads, VAC.
-static std::wstring appinfo_path(const std::wstring& steam) {
-    const std::wstring own = steam + L"\\appcache\\appinfo.vdf";
-    const bool wine = GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "wine_get_version");  // Vendors.Wine.Running
-    // tests: Wine without its drives (the client path as it is), only in a process exporting SCSKiller_WarmHost (selftest)
-    const bool test = !wine && GetProcAddress(GetModuleHandleW(nullptr), "SCSKiller_WarmHost") && GetEnvironmentVariableW(L"SCSKILLER_TEST_WINE", nullptr, 0);
-    const DWORD n = wine || test ? GetEnvironmentVariableW(L"STEAM_COMPAT_CLIENT_INSTALL_PATH", nullptr, 0) : 0;
-    if (n <= 1) return own;
-    std::wstring v(n, L'\0'), r;
-    const DWORD got = GetEnvironmentVariableW(L"STEAM_COMPAT_CLIENT_INSTALL_PATH", v.data(), n);
-    if (!got || got >= n) return L"";  // changed in between
-    v.resize(got);
-    auto dos = (wchar_t* (*)(const char*))GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "wine_get_dos_file_name");
-    if (test) r = v;
-    else if (wchar_t* d = dos ? dos(utf8(v).c_str()) : nullptr) r = d, HeapFree(GetProcessHeap(), 0, d);
-    while (!r.empty() && r.back() == L'\\') r.pop_back();  // a drive's root: "S:\"
-    return r.empty() ? L"" : r + L"\\appcache\\appinfo.vdf";
-}
-// A binary KeyValues object (appinfo.vdf's app entries), walked with every read bounded: keys are inline names (v28) or
-// u32 indexes into the file's string table (v29). Finds root/[appinfo/]common and its category object. False: malformed.
-struct Kv {
-    const std::string& b;
-    size_t at;
-    const std::vector<std::string>* names;  // v29's string table; null: v28
-    bool common = false, category = false, vac = false;
-    bool key(std::string& out) {
-        if (names) {
-            uint32_t i;
-            if (at + 4 > b.size()) return false;
-            memcpy(&i, b.data() + at, 4), at += 4;
-            if (i >= names->size()) return false;
-            return out = (*names)[i], true;
-        }
-        size_t z = b.find('\0', at);
-        if (z == std::string::npos) return false;
-        return out = b.substr(at, z - at), at = z + 1, true;
-    }
-    // path: 0 root, 1 appinfo, 2 common, 3 common/category, 4 anything else
-    bool object(int path, int depth) {
-        if (depth > 32) return false;
-        for (;;) {
-            if (at >= b.size()) return false;
-            uint8_t t = (uint8_t)b[at++];
-            if (t == 8) return true;
-            std::string k;
-            if (!key(k)) return false;
-            if (path == 3 && k == "category_8") vac = true;
-            switch (t) {
-            case 0: {
-                int sub = path <= 1 && !_stricmp(k.c_str(), "common") ? 2 : path == 0 && !_stricmp(k.c_str(), "appinfo") ? 1
-                        : path == 2 && !_stricmp(k.c_str(), "category") ? 3 : 4;
-                if (sub == 2) common = true;
-                if (sub == 3) category = true;
-                if (!object(sub, depth + 1)) return false;
-                break;
-            }
-            case 1: {
-                size_t z = b.find('\0', at);
-                if (z == std::string::npos) return false;
-                at = z + 1;
-                break;
-            }
-            case 2: case 3: case 4: case 6: at += 4; break;
-            case 7: case 10: at += 8; break;
-            default: return false;
-            }
-            if (at > b.size()) return false;
-        }
-    }
-};
-
-// nullptr: records; else why not. Never throws: a failure anywhere refuses for a game in a Steam library.
-static const char* vac_now_unguarded() {
-    const std::wstring exe = module_path(nullptr);
-    if (exe.empty()) return "VAC: the game's path can't be read";  // a cut path could hide its steamapps\common folder
-    // a game in a steamapps\common folder is Steam's wherever its library is: the library is the path itself
-    std::wstring lower = exe;
-    for (auto& c : lower) c = c == L'/' ? L'\\' : towlower(c);
-    const size_t sc = lower.find(L"\\steamapps\\common\\");
-    wchar_t root[MAX_PATH];
-    DWORD n = sizeof root;
-    bool have_root = true;
-    // tests: another Steam folder, only in a process exporting SCSKiller_WarmHost (selftest), never a game
-    if (GetProcAddress(GetModuleHandleW(nullptr), "SCSKiller_WarmHost") && GetEnvironmentVariableW(L"SCSKILLER_TEST_STEAM_ROOT", root, MAX_PATH)) {
-    } else if (RegGetValueW(HKEY_CURRENT_USER, L"Software\\Valve\\Steam", L"SteamPath", RRF_RT_REG_SZ, nullptr, root, &n) != ERROR_SUCCESS) have_root = false;
-    if (!have_root) return sc != std::wstring::npos ? "VAC: in a Steam game folder, and Steam's folder is unknown" : nullptr;
-    std::wstring steam = root;
-    for (auto& c : steam) if (c == L'/') c = L'\\';
-    std::wstring lib;
-    if (sc != std::wstring::npos) lib = exe.substr(0, sc);
-    else {
-        // elsewhere in a library (its root, a folder beside steamapps): Steam's, but not a game folder Steam names
-        std::vector<std::wstring> libs = {steam};
-        for (auto& p : vdf_values(read_all(steam + L"\\steamapps\\libraryfolders.vdf"), "path")) libs.push_back(widen(p));
-        for (auto& l : libs) if (under(exe, l)) return "VAC: in a Steam library, not a Steam game folder";
-        return nullptr;  // outside every library Steam lists, and not in a steamapps\common folder: not Steam's
-    }
-    std::wstring rest = exe.substr(sc + wcslen(L"\\steamapps\\common\\")), folder = rest.substr(0, rest.find(L'\\'));
-    uint32_t app = 0;
-    WIN32_FIND_DATAW fd;
-    std::wstring apps = lib + L"\\steamapps\\";
-    HANDLE h = FindFirstFileW((apps + L"appmanifest_*.acf").c_str(), &fd);
-    for (bool ok = h != INVALID_HANDLE_VALUE; ok && !app; ok = FindNextFileW(h, &fd)) {
-        std::string t = read_all(apps + fd.cFileName, 1 << 16);
-        auto dirs = vdf_values(t, "installdir"), ids = vdf_values(t, "appid");
-        if (!dirs.empty() && !ids.empty() && !_wcsicmp(widen(dirs[0]).c_str(), folder.c_str())) app = (uint32_t)strtoul(ids[0].c_str(), nullptr, 10);
-    }
-    if (h != INVALID_HANDLE_VALUE) FindClose(h);
-    if (!app) return "VAC: no Steam manifest names the game's folder";
-    if (std::find(std::begin(kValveVac), std::end(kValveVac), app) != std::end(kValveVac)) return "VAC (a Valve game)";
-    // appinfo.vdf: u32 magic (v28 0x07564428, v29 0x07564429), u32 universe, [v29: i64 offset of the key string table],
-    // then entries {u32 app, u32 size, u32 info state (2: Steam has the info), 56 more bytes, binary KeyValues} until app 0
-    FILE* f = _wfsopen(appinfo_path(steam).c_str(), L"rb", _SH_DENYNO);
-    if (!f) return "VAC: Steam's appinfo.vdf can't be read";
-    const int64_t flen = _filelengthi64(_fileno(f));
-    const char* why = "VAC: the game isn't in Steam's appinfo.vdf";
-    uint32_t hd[2] = {};
-    int64_t table = 0;
-    std::string entry;
-    std::vector<std::string> names;
-    if (fread(hd, 4, 2, f) != 2 || (hd[0] != 0x07564428 && hd[0] != 0x07564429) || (hd[0] == 0x07564429 && (fread(&table, 8, 1, f) != 1 || table < 16 || table >= flen)))
-        why = "VAC: Steam's appinfo.vdf isn't understood";
-    else
-        for (uint32_t a[2]; fread(a, 4, 2, f) == 2 && a[0];) {
-            const int64_t left = (hd[0] == 0x07564429 ? table : flen) - _ftelli64(f);
-            if (a[1] > left) { why = "VAC: Steam's appinfo.vdf is damaged"; break; }
-            if (a[0] != app) { if (_fseeki64(f, a[1], SEEK_CUR)) break; continue; }
-            if (a[1] < 61 || a[1] > (16u << 20)) { why = "VAC: the game's entry in appinfo.vdf is damaged"; break; }
-            entry.resize(a[1]);
-            if (fread(entry.data(), 1, a[1], f) != a[1]) { entry.clear(), why = "VAC: Steam's appinfo.vdf can't be read"; }
-            break;
-        }
-    if (!entry.empty() && hd[0] == 0x07564429) {  // the string table: u32 count, then NUL-terminated names to the end
-        uint32_t count = 0;
-        std::string t;
-        if (_fseeki64(f, table, SEEK_SET) || fread(&count, 4, 1, f) != 1 || flen - table > (64 << 20) || count > (1u << 24)) entry.clear();
-        else {
-            t.resize((size_t)(flen - table - 4));
-            if (fread(t.data(), 1, t.size(), f) != t.size()) entry.clear();
-            for (size_t p = 0; !entry.empty() && names.size() < count;) {
-                size_t z = t.find('\0', p);
-                if (z == std::string::npos) entry.clear();
-                else names.push_back(t.substr(p, z - p)), p = z + 1;
-            }
-        }
-        if (entry.empty()) why = "VAC: Steam's appinfo.vdf can't be read";
-    }
-    fclose(f);
-    if (entry.empty()) return why;
-    uint32_t state;
-    memcpy(&state, entry.data(), 4);
-    Kv kv{entry, 60, hd[0] == 0x07564429 ? &names : nullptr};
-    if (!kv.object(0, 0)) return "VAC: the game's entry in appinfo.vdf is damaged";
-    if (!kv.common) return "VAC: Steam has no info about the game";
-    if (kv.vac) return "VAC (Steam marks the game)";
-    if (!kv.category && state != 2) return "VAC: Steam has no info about the game";
-    return nullptr;
-}
-
-static const char* vac_now() {
-    try {
-        return vac_now_unguarded();
-    } catch (...) {
-        return "VAC: Steam's files couldn't be checked";
-    }
-}
-
-// This folder's key on the app's revocation list (recorder.revoked in its recorder folder: the file_key of each folder whose
-// scskiller.ini it couldn't take out, one a line, as ScsKiller.Revoke writes them), or the list can't be read whole (only
-// a list that doesn't exist is empty): why it refuses; nullptr: neither.
-static const char* revoked_here() {
-    const std::wstring dir = recorder_dir(g_dir), file = dir + L"\\recorder.revoked";
-    if (dir.empty()) return "SCSKiller's revocation list can't be read";
-    std::string list;
-    FILE* f = _wfsopen(file.c_str(), L"rb", _SH_DENYNO);
-    if (!f) {
-        const DWORD e = GetFileAttributesW(file.c_str()) == INVALID_FILE_ATTRIBUTES ? GetLastError() : ERROR_ACCESS_DENIED;
-        return e == ERROR_FILE_NOT_FOUND || e == ERROR_PATH_NOT_FOUND ? nullptr : "SCSKiller's revocation list can't be read";
-    }
-    char b[65536];
-    for (size_t n; list.size() <= (1 << 20) && (n = fread(b, 1, sizeof b, f));) list.append(b, n);
-    const bool bad = ferror(f) || list.size() > (1 << 20);
-    fclose(f);
-    if (bad) return "SCSKiller's revocation list can't be read";
-    std::wstring here = g_dir;
-    if (here.size() > 3 && here.back() == L'\\') here.pop_back();
-    std::string key;
-    for (wchar_t c : file_key(here)) key += (char)c;
-    for (size_t at = 0; at < list.size();) {
-        size_t end = list.find('\n', at);
-        std::string line = list.substr(at, end == std::string::npos ? std::string::npos : end - at);
-        if (!line.empty() && line.back() == '\r') line.pop_back();
-        if (line == key) return "revoked by SCSKiller";
-        if (end == std::string::npos) break;
-        at = end + 1;
-    }
-    return nullptr;
-}
-// sig= is recorder_sig of this exe's and this folder's file_key, the stamp lines (signed_stamp: vendor= and the countdown's lines
-// too, so a hand edit can't turn the AGS hook or the panel on), root= and the root's file_key under the
-// recorder folder's recorder.key: an ini copied beside another exe or a hard link of it in another folder, or reached
-// through a link whose root= resolves to another folder, fails.
-static bool signed_by_app(const std::wstring& root) {
-    const std::wstring dir = recorder_dir(g_dir), exe = module_path(nullptr), sig = ini_string(L"sig"), pid = ini_string(L"pid");
-    if (dir.empty() || exe.empty() || sig.size() != 40) return false;
-    const std::string key = read_all(dir + L"\\recorder.key", 256);
-    if (key.size() < 32 || key.size() > 128) return false;
-    const std::wstring stamp = signed_stamp(ini_string(L"exe_size"), ini_string(L"exe_time"), pid, ini_string(L"pid_time"), ini_string(L"risk"), ini_string(L"vendor"),
-                                            ini_string(L"overlay"), ini_string(L"ab_play_s"), ini_string(L"ab_tag"));
-    const auto no_slash = [](const std::wstring& d) { return d.substr(0, d.size() > 3 ? d.size() - 1 : d.size()); };
-    const std::wstring want = recorder_sig(key, file_key(exe), file_key(no_slash(g_dir)), stamp, ini_string(L"root"), file_key(no_slash(root)));
-    return !want.empty() && sig == want;
-}
-
-// scskiller.ini's bytes, read whole; false when it can't be, or is over 64 KB (the app's is a few hundred bytes).
-static bool ini_bytes(const std::wstring& path, std::string& out) {
-    out.clear();
-    FILE* f = _wfsopen(path.c_str(), L"rb", _SH_DENYNO);
-    if (!f) return false;
-    char b[4096];
-    for (size_t n; out.size() <= 65536 && (n = fread(b, 1, sizeof b, f));) out.append(b, n);
-    const bool ok = !ferror(f) && out.size() <= 65536;
-    fclose(f);
-    return ok;
 }
 
 // Matched in the lowercase "<parent folder>\<file name>" of each loaded module.
@@ -783,65 +308,28 @@ static void log_modules() {
     logf("modules: listed in %.2f ms", (t1.QuadPart - t0.QuadPart) * 1000.0 / fq.QuadPart);
 }
 
+static std::atomic<int> g_admission;  // 0 undecided, 1 records, -1 pass-through
+static std::atomic<bool> g_ags_refused;  // set before g_admission: admission saw no signed vendor=amd, or refused
+// The lines admission verified inside the signature: the AGS hook and the panel go by these, never by a later read.
+struct SignedLines {
+    std::wstring vendor, overlay, play_s, tag;
+};
+static SignedLines g_signed;  // written once, before g_admission
 static void unhook_ags(const char* why);
 static bool admitted() {
     if (g_warm) return true;  // scskiller_warm's staged child replays; it is never a game
     static std::once_flag once;
     std::call_once(once, [] {
         const std::wstring ini = g_dir + L"scskiller.ini";
-        std::string read, again;
+        std::string read;
         const bool whole = ini_bytes(ini, read);
         t_ini = &read;
         struct Live {
             ~Live() { t_ini = nullptr; }
         } live;
-        std::vector<std::wstring> markers;
-        // the folders as they are on disk: a launch through a link or junction lists the real exe-to-root chain
-        const std::wstring here = final_dir(g_dir), root = here.empty() ? L"" : install_root(here);
-        const bool bound = !ini_string(L"pid").empty(), risk = !ini_string(L"risk").empty();
+        bool risk = false;
         std::string seen;
-        const char* why = g_dir.empty() ? "the recorder's folder can't be read"
-                        : g_elsewhere ? "loaded from another folder than the exe"
-                        : !exe_as_checked() ? "exe not as checked"
-                        : !whole ? "scskiller.ini can't be read whole"
-                        : here.empty() ? "the exe's folder can't be resolved"
-                        : root.empty() ? "no install root"
-                        : odd_name(here) || odd_name(root) ? "a folder name ends in a dot or a space"
-                        : !signed_by_app(root) ? "not signed by SCSKiller"
-                        : bound && !bound_here() ? "bound to another process"
-                        : !risk_well_formed(ini_string(L"pid"), ini_string(L"risk")) ? "risk= malformed"
-                        : !anti_cheat_markers(markers) ? "markers= malformed" : nullptr;
-        if (!why) why = revoked_here();
-        if (!why && bound && !risk) markers.erase(markers.begin(), markers.begin() + kEasyAntiCheatMarkers);  // the app started this process without EasyAntiCheat
-        const std::vector<std::wstring> dirs = why ? std::vector<std::wstring>{} : folders_to(here, root);
-        if (!why && dirs.empty()) why = "install root too far up";
-        if (!why) {
-            std::vector<std::string> found;
-            const char* found_why = nullptr;
-            for (auto& d : dirs) {
-                const std::vector<std::string> names = anti_cheat_in(d, markers, risk);
-                if (names.empty()) continue;
-                const bool beside = d == here;
-                if (!found_why || names[0] == "?") found_why = beside ? "anti-cheat next to the exe" : "anti-cheat in the install folder";
-                if (names[0] == "?") {
-                    found.assign(1, "?");
-                    break;
-                }
-                for (auto& n : names) found.push_back(n + (beside ? " (next to the exe)" : " (in the install folder)"));
-                if (!risk) break;
-            }
-            why = decide(risk, riot_games(), found, found_why, anti_cheat_loaded(), vac_now(), seen);
-        }
-        // tests: a change in between. SCSKILLER_TEST_ADMIT_GATE=<name>: sets the event <name>.checked, waits for <name>.go.
-        // Only in a process exporting SCSKiller_WarmHost (selftest), never a game.
-        if (wchar_t gate[64]; !why && GetProcAddress(GetModuleHandleW(nullptr), "SCSKiller_WarmHost") && env(L"SCSKILLER_TEST_ADMIT_GATE", gate)) {
-            HANDLE checked = OpenEventW(EVENT_MODIFY_STATE, FALSE, (gate + std::wstring(L".checked")).c_str());
-            HANDLE go = OpenEventW(SYNCHRONIZE, FALSE, (gate + std::wstring(L".go")).c_str());
-            if (checked) SetEvent(checked), CloseHandle(checked);
-            if (go) WaitForSingleObject(go, 60000), CloseHandle(go);
-        }
-        if (!why && (!ini_bytes(ini, again) || again != read)) why = "scskiller.ini changed while deciding";  // the app took it out meanwhile
-        if (!why) why = revoked_here();
+        const char* why = admission_verdict(whole, read, g_elsewhere, risk, seen);
         {
             std::lock_guard l(g_early_mx);
             if (!why && (g_log = _wfopen((g_dir + L"scskiller.log").c_str(), L"a"))) fputs(g_early.c_str(), g_log), fflush(g_log);
@@ -933,6 +421,10 @@ struct Writer {
     std::vector<std::pair<Hash, std::string_view>> blobs;  // shader bytes live in game memory during the call
     std::vector<Hash> rsigs;
     Hash rsh{};
+    void* rsp = nullptr;  // the root signature object: the dedupe key's identity, never written to the record
+    D3D12_CACHED_PIPELINE_STATE cached{};  // the CachedPSO blob, likewise: hashed only for a dedupe
+    uint32_t rast = 0;    // the stream output's rasterized stream, which a desc without entries doesn't record
+    bool no_dedupe = false;  // a stream with two CachedPSO subobjects: the runtime refuses it, a hit mustn't
     Tuple tup;
     NvExt nv = nv_now(tag);  // at the hook's entry, on the creating thread
     bool below = false;   // a create under a layer: its root signatures are the ones the layer gave the device
@@ -941,6 +433,7 @@ struct Writer {
     template <class T> void pod(T& v) { raw(&v, sizeof v); }
     void u32(uint32_t v) { raw(&v, 4); }
     void hash(const Hash& h) { raw(h.data(), 20); }
+    void cached_pso(const D3D12_CACHED_PIPELINE_STATE& c) { no_dedupe |= cached.pCachedBlob != nullptr, cached = c; }
     void sh(D3D12_SHADER_BYTECODE& b, uint32_t stage) {
         if (!b.pShaderBytecode || !b.BytecodeLength) return hash(kZero);
         size_t n = shader_len(b);
@@ -959,13 +452,14 @@ struct Writer {
         if (auto it = g_rs_of.find(p); !h && it != g_rs_of.end()) h = &it->second;
         if (!h) { ok = false, why = "root signature was not created through a hooked device"; return; }
         rsigs.push_back(*h);
-        rsh = *h;
+        rsh = *h, rsp = p;
         hash(*h);
     }
     // Stream output, only when it declares entries (NumEntries 0 = no SO, written as nothing: older records keep their
     // keys): u32 n, n x (u32 stream, str8 semantic, u32 index, start component, component count, output slot),
     // u32 strides n + strides, u32 rasterized stream. 'G': after the desc's last field; 'S': as subobject kSoDecl.
     void so(D3D12_STREAM_OUTPUT_DESC& d) {
+        rast = d.RasterizedStream;
         if (!d.NumEntries) return;
         if (!d.pSODeclaration) { ok = false, why = "stream output entries without a declaration"; return; }
         u32(d.NumEntries);
@@ -1215,6 +709,7 @@ static void write_stream(Writer& w, const D3D12_PIPELINE_STATE_STREAM_DESC& d) {
         size_t in = align(pos + 4, s.align);
         bool decl = t == D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_STREAM_OUTPUT && ((D3D12_STREAM_OUTPUT_DESC*)(base + in))->NumEntries;
         if (t != D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CACHED_PSO) w.u32(decl ? kSoDecl : t), io_sub(w, t, base + in), ++count;
+        else w.cached_pso(*(D3D12_CACHED_PIPELINE_STATE*)(base + in));
         pos = align(in + s.size, sizeof(void*));
     }
     memcpy(&w.s[count_at], &count, 4);
@@ -1880,8 +1375,9 @@ static void note(Writer& w, double ms, bool lib, double pre_ms) {
                 GetCurrentThreadId(), (int)t_presenting);
     }
     if (g_creates % 500 == 0) {
-        logf("creates=%llu (library loads %llu) known=%llu tuple_known=%llu | slow: known=%llu tuple_only=%llu unknown=%llu | repeats=%llu slow=%llu | unsupported=%llu db=%zu nvapi_state=%llu",
-             g_creates, g_lib_loads, g_known_hits, g_tuple_hits, g_slow_known, g_slow_tuple, g_slow_unknown, g_repeats, g_slow_repeats, g_unsupported, g_keys.size(), g_nv_creates);
+        logf("creates=%llu (library loads %llu) known=%llu tuple_known=%llu | slow: known=%llu tuple_only=%llu unknown=%llu | repeats=%llu slow=%llu | unsupported=%llu failed=%llu db=%zu nvapi_state=%llu dedupe=%llu held=%llu slow: dedupe=%llu held=%llu",
+             g_creates, g_lib_loads, g_known_hits, g_tuple_hits, g_slow_known, g_slow_tuple, g_slow_unknown, g_repeats, g_slow_repeats, g_unsupported, g_create_fails.load(), g_keys.size(),
+             g_nv_creates, g_dd_hits.load(), g_dd_held.load(), g_dd_hits_slow.load(), g_dd_held_slow.load());
     }
 }
 
@@ -2043,9 +1539,10 @@ static bool removed() {
     return true;
 }
 
-static SIZE_T g_fault_item = SIZE_MAX;  // SCSKILLER_WARM_FAULT=<item>[-<last>]:<av|hang|die> (development): a fault / hang in that state object; in PSOs (each up to last) with SCSK_TEST_HOOKS
+static SIZE_T g_fault_item = SIZE_MAX;  // SCSKILLER_WARM_FAULT=<item>[-<last>]:<av|hang|die|hold<ms>> (development): a fault / hang in that state object; in PSOs (each up to last) with SCSK_TEST_HOOKS
 static SIZE_T g_fault_last = SIZE_MAX;
-static int g_fault_kind;                // 1 access violation after the create, 2 a create that never returns, 3 the process dies (a PSO, with SCSK_TEST_HOOKS)
+static int g_fault_kind;                // 1 access violation after the create, 2 a create that never returns, 3 the process dies, 4 a PSO create that takes g_fault_hold_ms (a PSO, with SCSK_TEST_HOOKS)
+static DWORD g_fault_hold_ms;
 
 // SCSKILLER_WARM_SO_MS=<ms> (development): no driver call for state objects; each create takes ms per state object it
 // builds on (plus one) and succeeds, so chains of any depth run on WARP. SCSKILLER_WARM_SO_KB=<kb>: each also commits kb that is
@@ -2103,9 +1600,10 @@ static std::atomic<bool> g_d12_over;  // the D3D12 workers are done: the budget 
 static HANDLE g_rt_sem;              // g_rt_threads at a time; nullptr = no limit
 static std::atomic<uint64_t> g_released, g_release_batches;
 
+// the commit charge, as PrivateUsage is on Windows: Wine reports PrivateUsage as 0 and this as the anonymous resident memory
 static double private_mb() {
-    PROCESS_MEMORY_COUNTERS_EX m{sizeof m};
-    return K32GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&m, sizeof m) ? m.PrivateUsage / 1048576.0 : 0;
+    PROCESS_MEMORY_COUNTERS m{sizeof m};
+    return K32GetProcessMemoryInfo(GetCurrentProcess(), &m, sizeof m) ? m.PagefileUsage / 1048576.0 : 0;
 }
 
 // SCSKILLER_WARM_RELEASE_HANG=1 (development): one more state object at the end of the warm, whose Release never returns
@@ -2293,6 +1791,7 @@ static __declspec(noinline) int replay_one(size_t j, size_t nrec) {
     if (j == g_fault_item && g_fault_kind == 1 && !is_so(j, nrec)) *(volatile int*)nullptr = 0;
     if (j >= g_fault_item && j <= g_fault_last && g_fault_kind == 2 && !is_so(j, nrec)) Sleep(INFINITE);
     if (j == g_fault_item && g_fault_kind == 3) TerminateProcess(GetCurrentProcess(), 0xC0000005);  // as a driver fault no handler sees ends it
+    if (j == g_fault_item && g_fault_kind == 4 && !is_so(j, nrec)) Sleep(g_fault_hold_ms);
 #endif
     return j < nrec ? replay(j, g_recs[j]) : replay_plan(j, g_plan[j - nrec]);
 }
@@ -2567,7 +2066,9 @@ static void warm_main() {
     }
     wchar_t fault[32] = {};  // SCSKILLER_WARM_FAULT (development): see g_fault_item
     if (env(L"SCSKILLER_WARM_FAULT", fault)) {
-        g_fault_item = _wtoi64(fault), g_fault_kind = wcsstr(fault, L"hang") ? 2 : wcsstr(fault, L"die") ? 3 : 1;
+        const wchar_t* hold = wcsstr(fault, L"hold");
+        g_fault_item = _wtoi64(fault), g_fault_kind = wcsstr(fault, L"hang") ? 2 : wcsstr(fault, L"die") ? 3 : hold ? 4 : 1;
+        if (hold) g_fault_hold_ms = (DWORD)_wtoi(hold + 4);
         const wchar_t* last = wcschr(fault, L'-');
         g_fault_last = last ? _wtoi64(last + 1) : g_fault_item;
     }
@@ -2931,7 +2432,151 @@ static HRESULT STDMETHODCALLTYPE hk_rs(ID3D12Device* dev, UINT mask, const void*
 
 static thread_local Hash t_asked;  // the key of the game's create in flight on this thread (zero: none, or not recordable)
 
-template <class F> static HRESULT timed_create(ID3D12Device* dev, void** pp, Writer& w, F&& call, bool lib = false) {
+// Never recorded: a warm would plan it and fail again. A game may retry the same one every frame: the first distinct
+// (key, hr) pairs are logged, the rest only counted. Not under g_mx, and nothing allocated but the log line.
+static void create_failed(const Writer& w, const Hash& k, HRESULT hr) {
+    ++g_create_fails;
+    static std::atomic<bool> full;
+    if (full) return;
+    static std::mutex& mx = *new std::mutex;
+    static std::pair<Hash, HRESULT> seen[20];
+    static size_t n;
+    bool last;
+    {
+        std::lock_guard l(mx);
+        if (n == std::size(seen) || std::find(seen, seen + n, std::pair{k, hr}) != seen + n) return;
+        seen[n++] = {k, hr};
+        if ((last = n == std::size(seen))) full = true;
+    }
+    if (w.ok) logf("create failed ('%c') hr=0x%08x key %s", w.tag, (unsigned)hr, hex(k).data());
+    else logf("create failed ('%c') hr=0x%08x, not recordable: %s", w.tag, (unsigned)hr, w.why);
+    if (last) logf("create failed: 20 distinct logged, further ones are only counted");
+}
+
+static std::wstring cfg(const wchar_t* var, const wchar_t* key, const wchar_t* def);
+template <class T> static void patch(void** vt, int slot, void* hook, T& orig);
+
+// Re-create dedupe: a create identical to one made before on the same device, of a pipeline nothing but us holds any more,
+// gets that object back (QueryInterface, so AddRef'd and in the interface asked for) with no driver call. On NVIDIA from
+// 621 such re-creates stall together, all creating threads for ~50 ms every ~2 s in a game that re-creates 40% of its
+// PSOs. The key is the record key plus what the record leaves out: the device, the root signature object, the NVAPI state
+// and the CachedPSO blob. Never with a layer under our hooks (a mod's d3d12.dll, a wrapping layer): a hit would skip it.
+// SCSKILLER_DEDUPE / ini dedupe=: 0 off, 1 on, unset: on for NVIDIA. SCSKILLER_DEDUPE_MAX: objects kept (default 4096).
+// Private data other than a name on a kept object turns it off for the process: a layer's destruction callback
+// (ReShade's SetPrivateDataInterface) would fire while the object lives on, or reach the next holder.
+struct Dd { ID3D12PipelineState* o; std::list<Hash>::iterator at; };
+static std::mutex g_ddmx;  // map and LRU only: nothing under it calls out but D3D12Core's own AddRef
+static std::unordered_map<Hash, Dd, HashH> g_dd;
+static std::unordered_map<void*, Hash> g_dd_obj;  // kept object -> its key
+static std::list<Hash> g_ddlru;                   // front: least recently asked for
+static std::atomic<int> g_dd_mode{2};             // 0 off, 1 on, -1 NVIDIA only, 2 not read yet
+static std::atomic<bool> g_dd_layer;              // a layer's device is under our hooks (hook_below)
+static size_t g_dd_cap = 4096;
+static void** g_pso_vt;  // the PSO vtable whose private-data methods are hooked: only its objects are kept
+
+using PFN_SetPD = HRESULT(STDMETHODCALLTYPE*)(ID3D12Object*, REFGUID, UINT, const void*);
+using PFN_SetPDI = HRESULT(STDMETHODCALLTYPE*)(ID3D12Object*, REFGUID, const IUnknown*);
+enum { OBJ_SETPD = 4, OBJ_SETPDI = 5 };  // ID3D12Object, vtslots.cpp checks these
+static PFN_SetPD o_setpd;
+static PFN_SetPDI o_setpdi;
+
+static void dd_drop(std::unordered_map<Hash, Dd, HashH>::iterator it, std::vector<ID3D12PipelineState*>& out) {
+    out.push_back(it->second.o), g_dd_obj.erase(it->second.o), g_ddlru.erase(it->second.at), g_dd.erase(it);
+}
+static void dd_flush() {
+    std::vector<ID3D12PipelineState*> v;
+    {
+        std::lock_guard l(g_ddmx);
+        while (!g_dd.empty()) dd_drop(g_dd.begin(), v);
+    }
+    for (auto* o : v) o->Release();  // outside the lock: a PSO's teardown is the driver's
+}
+static void dd_private(void* o, REFGUID g) {
+    if (g == WKPDID_D3DDebugObjectName || g == WKPDID_D3DDebugObjectNameW || g_dd_mode == 0) return;
+    {
+        std::lock_guard l(g_ddmx);
+        if (!g_dd_obj.count(o)) return;
+    }
+    if (g_dd_mode.exchange(0) != 0) logf("dedupe: off, the game or a layer gave a pipeline private data");
+    dd_flush();
+}
+static HRESULT STDMETHODCALLTYPE hk_setpd(ID3D12Object* o, REFGUID g, UINT n, const void* p) { return dd_private(o, g), o_setpd(o, g, n, p); }
+static HRESULT STDMETHODCALLTYPE hk_setpdi(ID3D12Object* o, REFGUID g, const IUnknown* p) { return dd_private(o, g), o_setpdi(o, g, p); }
+
+static bool dd_on() {
+    static std::once_flag once;
+    std::call_once(once, [] {
+        std::wstring v = cfg(L"SCSKILLER_DEDUPE", L"dedupe", L"");
+        // a selftest host measures the driver's own re-creates: only when asked
+        bool host = GetProcAddress(GetModuleHandleW(nullptr), "SCSKiller_WarmHost") != nullptr;
+        int m = v == L"0" ? 0 : v == L"1" ? 1 : host ? 0 : -1;
+        if (wchar_t c[16]; env(L"SCSKILLER_DEDUPE_MAX", c) && _wtoi(c) >= 0) g_dd_cap = _wtoi(c);
+        int was = 2;
+        g_dd_mode.compare_exchange_strong(was, m);
+        logf("dedupe: %s, up to %zu kept", g_next || g_dd_layer ? "off (a layer is under the hooks)" : m == 0 ? "off" : m == 1 ? "on"
+                                           : g_ov_nvidia ? "on (NVIDIA)" : "off (not NVIDIA)", g_dd_cap);
+    });
+    int m = g_dd_mode;
+    return !g_next && !g_dd_layer && (m > 0 || (m < 0 && g_ov_nvidia));
+}
+
+static thread_local int t_dd;  // this create: 1 a dedupe hit, 2 its kept pipeline was still held
+template <class F> static HRESULT dd_create(ID3D12Device* dev, const Writer& w, const Hash& rk, REFIID riid, void** pp, F& call) {
+    if (rk == kZero || w.no_dedupe || !dd_on()) return call();
+    const Hash blob = w.cached.pCachedBlob && w.cached.CachedBlobSizeInBytes ? sha1(w.cached.pCachedBlob, w.cached.CachedBlobSizeInBytes) : kZero;
+    char b[20 + 2 * sizeof(void*) + sizeof(NvExt) + 4 + 20];
+    char* e = b;
+    for (auto [p, n] : {std::pair<const void*, size_t>{rk.data(), 20}, {&dev, sizeof dev}, {&w.rsp, sizeof w.rsp}, {&w.nv, sizeof w.nv},
+                        {&w.rast, 4}, {blob.data(), 20}})
+        memcpy(e, p, n), e += n;
+    const Hash k = sha1(b, e - b);
+    ID3D12PipelineState* pin = nullptr;
+    bool free = false;
+    t_dd = 0;
+    {
+        std::lock_guard l(g_ddmx);
+        if (auto it = g_dd.find(k); it != g_dd.end()) {
+            pin = it->second.o;
+            // ours + this pin: no holder left, so it's never shared with one. Claimed here: a second hit counts this pin.
+            free = pin->AddRef() == 2;
+            g_ddlru.splice(g_ddlru.end(), g_ddlru, it->second.at);
+        }
+    }
+    if (pin) {
+        // a removed device's create must fail as the driver's would: the game's recovery starts there
+        HRESULT hr = free && dev->GetDeviceRemovedReason() == S_OK ? pin->QueryInterface(riid, pp) : E_NOINTERFACE;
+        pin->Release();
+        if (SUCCEEDED(hr)) return t_dd = 1, ++g_dd_hits, hr;
+        if (!free) t_dd = 2, ++g_dd_held;
+    }
+    HRESULT hr = call();
+    ID3D12PipelineState* o = nullptr;
+    if (FAILED(hr) || !*pp || FAILED(((IUnknown*)*pp)->QueryInterface(IID_PPV_ARGS(&o)))) return hr;
+    std::vector<ID3D12PipelineState*> drop;
+    {
+        std::lock_guard l(g_ddmx);
+        if (!g_pso_vt) {
+            // only D3D12Core's own pipelines: one count for the whole object, which the claim's AddRef reads
+            void** vt = *(void***)o;
+            HMODULE m = nullptr;
+            wchar_t name[MAX_PATH] = {};
+            GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)vt, &m);
+            if (m) GetModuleFileNameW(m, name, MAX_PATH);
+            const wchar_t* base = wcsrchr(name, L'\\');
+            if (base && !_wcsicmp(base + 1, L"D3D12Core.dll")) patch(vt, OBJ_SETPD, (void*)hk_setpd, o_setpd), patch(vt, OBJ_SETPDI, (void*)hk_setpdi, o_setpdi);
+            if (vt[OBJ_SETPD] == (void*)hk_setpd && vt[OBJ_SETPDI] == (void*)hk_setpdi) g_pso_vt = vt;
+            else g_dd_mode = 0, logf("dedupe: off, the pipelines aren't D3D12Core's own or their private data methods couldn't be hooked");
+        }
+        // a holder still has the kept one, or another thread made the same at once: the first stays
+        if (!g_pso_vt || *(void***)o != g_pso_vt || g_dd_mode == 0 || g_dd.count(k)) drop.push_back(o);
+        else g_dd[k] = {o, g_ddlru.insert(g_ddlru.end(), k)}, g_dd_obj[o] = k;
+        while (g_dd.size() > g_dd_cap) dd_drop(g_dd.find(g_ddlru.front()), drop);
+    }
+    for (auto* x : drop) x->Release();
+    return hr;
+}
+
+template <class F> static HRESULT timed_create(ID3D12Device* dev, void** pp, Writer& w, F&& call, bool lib = false, const IID* riid = nullptr) {
     if (t_in || !pp) return call();
     t_in = true;
     on_first_pso(dev);
@@ -2941,29 +2586,33 @@ template <class F> static HRESULT timed_create(ID3D12Device* dev, void** pp, Wri
     // tests: a create that takes this long, as a cold compile does on a GPU (WARP compiles in about a millisecond)
     static const bool host = GetProcAddress(GetModuleHandleW(nullptr), "SCSKiller_WarmHost") != nullptr;
     if (wchar_t v[16]; host && env(L"SCSKILLER_TEST_CREATE_MS", v)) Sleep(_wtoi(v));
-    HRESULT hr = call();
+    t_dd = 0;
+    HRESULT hr = riid ? dd_create(dev, w, t_asked, *riid, pp, call) : call();
+    const Hash k = t_asked;
     t_asked = kZero;
     // a chained mod's create reaches hk_*_below, whose recording is ours, not the driver's: proxy_ms, not ms
     double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count() - t_below_ms;
-    if (SUCCEEDED(hr)) note(w, ms, lib, std::chrono::duration<double, std::milli>(t0 - w.t0).count() + t_below_ms);  // a failed library load is a miss: the game creates it next
+    if (ms >= 10 && t_dd) ++(t_dd == 1 ? g_dd_hits_slow : g_dd_held_slow);
+    if (SUCCEEDED(hr)) note(w, ms, lib, std::chrono::duration<double, std::milli>(t0 - w.t0).count() + t_below_ms);
+    else if (!lib) create_failed(w, k, hr);  // a failed library load is a miss: the game creates it next
     t_in = false;
     return hr;
 }
 
 static HRESULT STDMETHODCALLTYPE hk_gfx(ID3D12Device* dev, const D3D12_GRAPHICS_PIPELINE_STATE_DESC* d, REFIID riid, void** pp) {
     Writer w{'G'};
-    if (!t_in && pp) io_gfx(w, const_cast<D3D12_GRAPHICS_PIPELINE_STATE_DESC&>(*d));
-    return timed_create(dev, pp, w, [&] { return o_gfx(dev, d, riid, pp); });
+    if (!t_in && pp) io_gfx(w, const_cast<D3D12_GRAPHICS_PIPELINE_STATE_DESC&>(*d)), w.cached_pso(d->CachedPSO);
+    return timed_create(dev, pp, w, [&] { return o_gfx(dev, d, riid, pp); }, false, &riid);
 }
 static HRESULT STDMETHODCALLTYPE hk_cs(ID3D12Device* dev, const D3D12_COMPUTE_PIPELINE_STATE_DESC* d, REFIID riid, void** pp) {
     Writer w{'C'};
-    if (!t_in && pp) io_cs(w, const_cast<D3D12_COMPUTE_PIPELINE_STATE_DESC&>(*d));
-    return timed_create(dev, pp, w, [&] { return o_cs(dev, d, riid, pp); });
+    if (!t_in && pp) io_cs(w, const_cast<D3D12_COMPUTE_PIPELINE_STATE_DESC&>(*d)), w.cached_pso(d->CachedPSO);
+    return timed_create(dev, pp, w, [&] { return o_cs(dev, d, riid, pp); }, false, &riid);
 }
 static HRESULT STDMETHODCALLTYPE hk_stream(ID3D12Device2* dev, const D3D12_PIPELINE_STATE_STREAM_DESC* d, REFIID riid, void** pp) {
     Writer w{'S'};
     if (!t_in && pp) write_stream(w, *d);
-    return timed_create(dev, pp, w, [&] { return o_stream(dev, d, riid, pp); });
+    return timed_create(dev, pp, w, [&] { return o_stream(dev, d, riid, pp); }, false, &riid);
 }
 
 // A created state object's identity -> its record key, so records that build on it (links, additions) can name it.
@@ -3141,7 +2790,10 @@ static bool read8(const void* p, uint64_t& out) {
     __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
 }
 
-static void* hook_fn(void* target, void* hook, void** orig, bool idle = false, HookPatch* rec = nullptr, int max_tries = 0) {
+// keep: the trampoline runs whole instructions up to at least that many bytes before it jumps back, so a hooker that later
+// patches that much of the entry (a 12- or 14-byte absolute jmp) doesn't cut into where it resumes. Only with a first
+// instruction of 5 bytes or more; one it can't move refuses the hook.
+static void* hook_fn(void* target, void* hook, void** orig, bool idle = false, HookPatch* rec = nullptr, int max_tries = 0, size_t keep = 0) {
     std::lock_guard l(g_hook_mx);
     static uint8_t *page, *end;
     auto t = (uint8_t*)target;
@@ -3174,6 +2826,14 @@ static void* hook_fn(void* target, void* hook, void** orig, bool idle = false, H
         }
     }
     bool hot = n < 5;
+    uint8_t moved[32];
+    size_t k = n;
+    if (keep) {
+        if (hot || keep > 16 || !safe_code_read(moved, t, sizeof moved)) return nullptr;
+        for (size_t m; k < keep; k += m)
+            if (!(m = insn_len(moved + k))) return nullptr;
+        memcpy(moved, &was, 8);  // the snapshot's bytes: the exchange checks those
+    }
     // an entry can start a page: the padding page must then be code of the same allocation, protected as the entry's page is
     // (one VirtualProtect spans both and restores one protection), and no guard page
     MEMORY_BASIC_INFORMATION mp, mt;
@@ -3216,8 +2876,8 @@ static void* hook_fn(void* target, void* hook, void** orig, bool idle = false, H
         b[0] = 0xE9, memcpy(b + 1, &r32, 4);
     }
     abs_jmp(relay, hook);
-    memcpy(tramp, &was, n), abs_jmp(tramp + n, t + n);
-    FlushInstructionCache(GetCurrentProcess(), relay, tramp + n + 14 - relay);
+    memcpy(tramp, keep ? moved : (const uint8_t*)&was, k), abs_jmp(tramp + k, t + k);
+    FlushInstructionCache(GetCurrentProcess(), relay, tramp + k + 14 - relay);
     DWORD old;
     if (!VirtualProtect(lo, hi - lo, PAGE_EXECUTE_READWRITE, &old)) return nullptr;
     // the padding's jmp is in place and flushed before anything jumps to it
@@ -3232,12 +2892,18 @@ static void* hook_fn(void* target, void* hook, void** orig, bool idle = false, H
             if (hot) InterlockedCompareExchange64((volatile LONG64*)(t - 8), (LONG64)pad_was, (LONG64)pad_now);
         }
     }
+    // bytes past the exchanged 8 that another hooker changed meanwhile: the trampoline's copy is stale, the entry goes back
+    uint8_t after[24];
+    if (ok && k > 8 && !(safe_code_read(after, t + 8, k - 8) && !memcmp(after, moved + 8, k - 8))) {
+        InterlockedCompareExchange64((volatile LONG64*)t, (LONG64)was, (LONG64)now);
+        *orig = prev, ok = false;
+    }
     VirtualProtect(lo, hi - lo, old, &old);
     FlushInstructionCache(GetCurrentProcess(), lo, hi - lo);
     if (!ok) return nullptr;
     // published last, after both CASes took: unhook only restores a patch that is actually in
     if (rec) { rec->lo = lo, rec->hi = hi, rec->was = was, rec->now = now, rec->t = t; }
-    page += (14 + n + 14 + 15) & ~(size_t)15;
+    page += (14 + k + 14 + 15) & ~(size_t)15;
     return tramp;
 }
 
@@ -3690,6 +3356,7 @@ static void hook_below(ID3D12Device* dev, const char* layer) {
     if (vt == g_hooked_vt) logf("below: the %s returned the system device itself: its creates are recorded as the game's", layer);
     else {
         logf("below: device %p vtable %p under the %s", (void*)dev, (void*)vt, layer);
+        g_dd_layer = true;
         auto put_below = [&](void** t, int slot, void* hook, auto& orig) {
             // the mod handed the game this interface of the system device: the game's hook is already there and records it
             if (t[slot] == (void*)hk_gfx || t[slot] == (void*)hk_cs || t[slot] == (void*)hk_rs || t[slot] == (void*)hk_stream) return;
@@ -3743,7 +3410,6 @@ static void* sc_orig(void* sc, std::atomic<void*> ScVt::*slot) {
     return nullptr;
 }
 
-struct FrameAt { int64_t qpc; void* sc; bool game; };  // game: a frame generation swap chain's, the frames the game renders
 static std::mutex g_fmx;
 static std::vector<FrameAt> g_fq;  // under g_fmx: presents not yet written
 static std::atomic<int64_t> g_hook_ticks, g_hook_max;  // the hooks' own QPC ticks, for the log
@@ -4104,6 +3770,7 @@ static HRESULT STDMETHODCALLTYPE hk_present1(IDXGISwapChain1* sc, UINT sync, UIN
 // may hand a vtable's original an object of another vtable.
 static HMODULE g_sysdxgi;
 static bool g_dxgi_layer;  // the game's dxgi.dll isn't System32's, though its factory's vtable is
+static bool g_entry;       // Present is hooked at dxgi's entry (entry_hooks): no slot of a dxgi vtable is ever ours
 static bool sys_vtable(void** vt, const char* what, int slot, bool loud = true) {
     HMODULE m = module_of(vt);
     if (m && m == g_sysdxgi) return true;
@@ -4120,7 +3787,7 @@ static std::atomic<bool> g_ffx_hooked;  // an ffxCreateContext is hooked: fg_hoo
 // This thread's create is one the log shows: the create path's other lines are capped with it.
 static thread_local bool t_sc_loud = true;
 static void sc_patch(void** vt, int slot, void* hook, std::atomic<void*> ScVt::*orig) {
-    if (g_fg_off || vt[slot] == hook || !sys_vtable(vt, "swap chain", slot, t_sc_loud)) return;
+    if (g_entry || g_fg_off || vt[slot] == hook || !sys_vtable(vt, "swap chain", slot, t_sc_loud)) return;
     int n = g_nscvt, i = 0;
     while (i < n && g_scvt[i].vt != vt) ++i;
     // an overlay hooked the slot after us and calls our hook: taking it as the original would make Present call itself
@@ -4337,6 +4004,33 @@ static void sc_line(IUnknown* dev, const ScArgs& a, const char* result) {
          shown(queue_name(dev)).c_str(), result, a.api, a.n, GetCurrentThreadId(), t_sc_depth, g_sc_failed.load(), a.w, a.h, a.format,
          a.buffers, a.effect, a.flags, a.window, utf8(module_file(dev ? *(void**)dev : nullptr, qcode)).c_str(), utf8(module_file(a.caller, from)).c_str());
 }
+// A code address as module+offset (the file name only), or the bare address outside any module.
+static std::string code_at(const void* p) {
+    wchar_t path[MAX_PATH];
+    HMODULE m = module_of(p);
+    char off[32];
+    if (!m) return snprintf(off, sizeof off, "%p", p), off;
+    snprintf(off, sizeof off, "+0x%llx", (unsigned long long)((const BYTE*)p - (const BYTE*)m));
+    return utf8(module_file(p, path)) + off;
+}
+// A create hook entered again on its own thread, inside its own create: at 3 deep, once per process, who calls whom (the
+// original about to be called, whose hook holds the slot now, the caller, the stack). At 64 deep the create is refused
+// without calling the original, so a cycle of hooks fails the create instead of overflowing the stack. True: refuse it.
+static std::atomic<bool> g_sc_traced, g_sc_cut;
+static bool sc_cycle(const char* api, void** vt, int slot, const void* orig, const void* caller) {
+    if (t_sc_depth == 2 && !g_sc_traced.exchange(true)) {
+        void* frames[24];
+        USHORT n = CaptureStackBackTrace(0, 24, frames, nullptr);
+        std::string stack;
+        for (USHORT i = 0; i < n; ++i) stack += (i ? " < " : "") + code_at(frames[i]);
+        logf("frames: %s 3 deep on thread %lu: calls its original %p (%s), the slot holds %s, called from %s", api, GetCurrentThreadId(), orig,
+             code_at(orig).c_str(), vt[slot] == orig ? "that original" : code_at(vt[slot]).c_str(), code_at(caller).c_str());
+        logf("frames: %s 3 deep, stack: %s", api, stack.c_str());
+    }
+    if (t_sc_depth < 63) return false;
+    if (!g_sc_cut.exchange(true)) logf("frames: %s 64 deep on thread %lu: refused (DXGI_ERROR_INVALID_CALL), the hooks call each other", api, GetCurrentThreadId());
+    return true;
+}
 static void creating(IUnknown* dev, ScArgs& a) {
     a.n = ++g_sc_creates;
     ++t_sc_depth;
@@ -4466,6 +4160,7 @@ static void hook_swapchain(HRESULT hr, void* p, IUnknown* dev = nullptr, const S
     t_sc_loud = a->outer_loud;
 }
 static HRESULT STDMETHODCALLTYPE hk_createsc(IDXGIFactory* f, IUnknown* dev, DXGI_SWAP_CHAIN_DESC* d, IDXGISwapChain** pp) {
+    if (sc_cycle("CreateSwapChain", *(void***)f, SLOT_CREATESC, (void*)o_createsc, _ReturnAddress())) return DXGI_ERROR_INVALID_CALL;
     ScArgs a = sc_args("CreateSwapChain", d, _ReturnAddress());
     creating(dev, a);
     HRESULT hr = o_createsc(f, dev, d, pp);
@@ -4474,6 +4169,7 @@ static HRESULT STDMETHODCALLTYPE hk_createsc(IDXGIFactory* f, IUnknown* dev, DXG
 }
 static HRESULT STDMETHODCALLTYPE hk_createsc_hwnd(IDXGIFactory2* f, IUnknown* dev, HWND w, const DXGI_SWAP_CHAIN_DESC1* d,
                                                   const DXGI_SWAP_CHAIN_FULLSCREEN_DESC* fs, IDXGIOutput* o, IDXGISwapChain1** pp) {
+    if (sc_cycle("CreateSwapChainForHwnd", *(void***)f, SLOT_CREATESC_HWND, (void*)o_createsc_hwnd, _ReturnAddress())) return DXGI_ERROR_INVALID_CALL;
     ScArgs a = sc_args("CreateSwapChainForHwnd", d, w, _ReturnAddress());
     creating(dev, a);
     HRESULT hr = o_createsc_hwnd(f, dev, w, d, fs, o, pp);
@@ -4481,6 +4177,7 @@ static HRESULT STDMETHODCALLTYPE hk_createsc_hwnd(IDXGIFactory2* f, IUnknown* de
     return hr;
 }
 static HRESULT STDMETHODCALLTYPE hk_createsc_cw(IDXGIFactory2* f, IUnknown* dev, IUnknown* w, const DXGI_SWAP_CHAIN_DESC1* d, IDXGIOutput* o, IDXGISwapChain1** pp) {
+    if (sc_cycle("CreateSwapChainForCoreWindow", *(void***)f, SLOT_CREATESC_CW, (void*)o_createsc_cw, _ReturnAddress())) return DXGI_ERROR_INVALID_CALL;
     ScArgs a = sc_args("CreateSwapChainForCoreWindow", d, w, _ReturnAddress());
     creating(dev, a);
     HRESULT hr = o_createsc_cw(f, dev, w, d, o, pp);
@@ -4488,6 +4185,7 @@ static HRESULT STDMETHODCALLTYPE hk_createsc_cw(IDXGIFactory2* f, IUnknown* dev,
     return hr;
 }
 static HRESULT STDMETHODCALLTYPE hk_createsc_comp(IDXGIFactory2* f, IUnknown* dev, const DXGI_SWAP_CHAIN_DESC1* d, IDXGIOutput* o, IDXGISwapChain1** pp) {
+    if (sc_cycle("CreateSwapChainForComposition", *(void***)f, SLOT_CREATESC_COMP, (void*)o_createsc_comp, _ReturnAddress())) return DXGI_ERROR_INVALID_CALL;
     ScArgs a = sc_args("CreateSwapChainForComposition", d, nullptr, _ReturnAddress());
     creating(dev, a);
     HRESULT hr = o_createsc_comp(f, dev, d, o, pp);
@@ -4572,36 +4270,84 @@ static void ffx_loaded(const LdrString* name, HMODULE m) {
         if (size_t n = wcslen(kFfxDlls[i]); name->length == n * sizeof(wchar_t) && !_wcsnicmp(name->buffer, kFfxDlls[i], n)) ffx_hook(i, m, true);
 }
 
+// Ubisoft Connect's overlay inline-detours dxgi's CreateSwapChainForHwnd and takes what the factory's slot holds as its
+// original: with our hook there, our hook and its detour call each other on every create. Beside its loader no slot of a
+// dxgi vtable is ours: Present and Present1 are inline-hooked at their entry, found on a swap chain of our own on a hidden
+// window, and a detour another overlay puts there later runs ours as part of the original it calls. The panel goes on a
+// swap chain at its first present, with the queue it presents on (sc_queue).
+static PFN_Present o_entry_present;
+static PFN_Present1 o_entry_present1;
+static std::atomic<void*> g_entry_tried[8];  // the swap chains the panel was tried on
+// The queue a D3D12 swap chain presents on, AddRef'd: DXVK's answers GetDevice with it. System32's gives only its device,
+// so there the panel isn't drawn.
+static IUnknown* sc_queue(IDXGISwapChain* sc) {
+    IUnknown* q = nullptr;
+    return SUCCEEDED(sc->GetDevice(__uuidof(ID3D12CommandQueue), (void**)&q)) ? q : nullptr;
+}
+static void entry_attach(IDXGISwapChain* sc) {
+    if (!g_ovc.on || g_ov_off.load(std::memory_order_relaxed)) return;
+    for (auto& t : g_entry_tried) {
+        void* p = nullptr;
+        if (t.compare_exchange_strong(p, sc)) {
+            IUnknown* q = g_api11 ? nullptr : sc_queue(sc);  // D3D11: none, the swap chain's own device
+            overlay_attach(q, sc);  // once per swap chain, at its first present: the panel's lists are made here
+            if (q) q->Release();
+            return;
+        }
+        if (p == sc) return;
+    }
+}
+static HRESULT STDMETHODCALLTYPE hk_entry_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
+    entry_attach(sc);
+    return timed_present(sc, flags, [&] { return o_entry_present(sc, sync, flags); });
+}
+static HRESULT STDMETHODCALLTYPE hk_entry_present1(IDXGISwapChain1* sc, UINT sync, UINT flags, const DXGI_PRESENT_PARAMETERS* p) {
+    entry_attach(sc);
+    return timed_present(sc, flags, [&] { return o_entry_present1(sc, sync, flags, p); });
+}
+static bool entry_hooks(IUnknown* dev) {
+    auto create = (decltype(&CreateDXGIFactory1))GetProcAddress(g_sysdxgi, "CreateDXGIFactory1");
+    ID3D12Device* d12 = nullptr;
+    ID3D12CommandQueue* q = nullptr;
+    IUnknown* on = dev;  // D3D11: the device; D3D12: a direct queue of it
+    if (dev && SUCCEEDED(dev->QueryInterface(IID_PPV_ARGS(&d12)))) {
+        D3D12_COMMAND_QUEUE_DESC qd = {};
+        if (FAILED(d12->CreateCommandQueue(&qd, IID_PPV_ARGS(&q)))) q = nullptr;
+        on = q;
+    }
+    HWND w = CreateWindowExW(0, L"STATIC", L"", WS_POPUP, 0, 0, 8, 8, nullptr, nullptr, nullptr, nullptr);
+    DXGI_SWAP_CHAIN_DESC1 d = {8, 8, DXGI_FORMAT_R8G8B8A8_UNORM, FALSE, {1, 0}, DXGI_USAGE_RENDER_TARGET_OUTPUT, 2};
+    d.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+    IDXGIFactory2* f = nullptr;
+    IDXGISwapChain1* sc = nullptr;
+    HRESULT hr = !create || !on || !w ? E_FAIL : create(IID_PPV_ARGS(&f));
+    if (SUCCEEDED(hr)) hr = f->CreateSwapChainForHwnd(on, w, &d, nullptr, nullptr, &sc);
+    void *present = nullptr, *present1 = nullptr;
+    if (SUCCEEDED(hr)) {
+        bool forwarded;
+        IUnknown* n = native_of(sc, forwarded);  // Streamline's detour hands back its proxy
+        if (void** vt = *(void***)n; sys_vtable(vt, "swap chain", SLOT_PRESENT)) present = vt[SLOT_PRESENT], present1 = vt[SLOT_PRESENT1];
+        n->Release();
+    }
+    for (IUnknown* u : {(IUnknown*)sc, (IUnknown*)f, (IUnknown*)q, (IUnknown*)d12})
+        if (u) u->Release();
+    if (w) DestroyWindow(w);
+    if (!present) return logf("frames: not measured: no swap chain of our own to find dxgi's Present at (0x%08x)", (unsigned)hr), false;
+    pin_self();
+    std::string at0 = code_at(present), at1 = code_at(present1);
+    // only dxgi's own code: a slot another overlay hooked holds its function, never patched
+    auto why = [](void* p) { return module_of(p) != g_sysdxgi ? "not hooked (another module's function)" : "not hooked (its first instructions aren't ones the hook moves)"; };
+    // 14: the longest jmp another hooker writes at an entry, which then runs ours as part of its original
+    bool p0 = module_of(present) == g_sysdxgi && hook_fn(present, (void*)hk_entry_present, (void**)&o_entry_present, false, nullptr, 0, 14);
+    bool p1 = present1 != present && module_of(present1) == g_sysdxgi && hook_fn(present1, (void*)hk_entry_present1, (void**)&o_entry_present1, false, nullptr, 0, 14);
+    logf("frames: beside Ubisoft Connect's loader no dxgi slot is hooked: Present at %s %s, Present1 at %s %s", at0.c_str(),
+         p0 ? "hooked at its entry" : why(present), at1.c_str(), p1 ? "hooked at its entry" : why(present1));
+    if (!p0 && !p1) logf("frames: not measured: neither of dxgi's presents could be hooked at its entry");
+    return p0 || p1;
+}
+
 static HANDLE g_frames = INVALID_HANDLE_VALUE;
 static std::atomic<bool> g_frames_on;  // frame_writer runs: a hooked present's frame gets written, not just queued
-static const uint64_t kFramesCap = 32ull << 20;  // 8M frames: over 7 hours at 300 FPS
-struct FrameEnc {
-    int64_t qpc0 = 0, freq = 1;
-    uint64_t last_us = 0, bytes = 0;
-    std::vector<void*> scs;
-    std::vector<uint32_t> out;
-    // Top 4 bits 15 with the low 28 bits under kTagEnd: a tagged record, not a gap. A gap is written only for 2^28 us or
-    // more, so its milliseconds never go under kTagEnd, and a reader from before tagged records takes one for a gap of
-    // under 268 s. Tags 0-14: that swap chain index is frame generation's; 15 up to kTagEnd are free (ARCHITECTURE.md).
-    static constexpr uint32_t kTagEnd = (1u << 28) / 1000;
-    void put(const FrameAt& f) {
-        int64_t t = f.qpc - qpc0;
-        uint64_t us = t <= 0 ? 0 : (uint64_t)(t / freq * 1000000 + t % freq * 1000000 / freq);
-        uint64_t d = us > last_us ? us - last_us : 0;
-        last_us += d;
-        while (d >> 28) {
-            uint64_t ms = std::min<uint64_t>(d / 1000, 0x0FFFFFFE);  // at least kTagEnd: d / 1000 >= 2^28 / 1000
-            out.push_back(0xF0000000u | (uint32_t)ms);
-            d -= ms * 1000;
-        }
-        size_t i = std::find(scs.begin(), scs.end(), f.sc) - scs.begin();
-        if (i == scs.size() && i < 14) {
-            scs.push_back(f.sc);
-            if (f.game) out.push_back(0xF0000000u | (uint32_t)i);
-        }
-        out.push_back((uint32_t)std::min<size_t>(i, 14) << 28 | (uint32_t)d);
-    }
-};
 static FrameEnc g_fenc;  // the writer thread's
 static uint64_t g_fhead[4];  // the launch record, written when the first frame is
 static bool g_frames_full;
@@ -4667,12 +4413,16 @@ static void frame_writer() {
     }
 }
 
-static void frame_hooks() {
+static std::wstring module_dir(HMODULE m);
+// dev: the game's first device
+static void frame_hooks(IUnknown* dev) {
     if (g_warm) return;
     wchar_t on[8];  // not cfg(): a staged warm child may inherit SCSKILLER_* variables
     GetPrivateProfileStringW(L"scskiller", L"frames", L"1", on, 8, (g_dir + L"scskiller.ini").c_str());
     if (!wcscmp(on, L"0")) return logf("frames: off (scskiller.ini frames=0)");
     if (opti_fg()) return logf("frames: off (OptiScaler.ini has frame generation on)");
+    // Ubisoft Connect's loader ships beside the exe (entry_hooks)
+    g_entry = GetModuleHandleW(L"upc_r2_loader64.dll") || GetFileAttributesW((module_dir(nullptr) + L"upc_r2_loader64.dll").c_str()) != INVALID_FILE_ATTRIBUTES;
     // the dxgi.dll the game uses: a mod's in the game folder, if one is loaded by that name
     HMODULE m = GetModuleHandleW(L"dxgi.dll");
     if (!m) m = LoadLibraryW(L"dxgi.dll");
@@ -4681,7 +4431,8 @@ static void frame_hooks() {
     if (!create || FAILED(create(IID_PPV_ARGS(&f)))) return logf("frames: no DXGI factory, frame times not measured");
     g_sysdxgi = system_dxgi();
     HMODULE fm = m;
-    if (!sys_vtable(*(void***)f, "DXGI factory", SLOT_CREATESC)) {
+    if (g_entry) f->Release(), f = nullptr;
+    else if (!sys_vtable(*(void***)f, "DXGI factory", SLOT_CREATESC)) {
         // A mod's own factory object (ReShade as dxgi.dll) creates through System32's: its class's vtable is hooked instead,
         // never the mod's. Checked again: System32's export may be the mod's hook.
         f->Release(), f = nullptr;
@@ -4705,7 +4456,9 @@ static void frame_hooks() {
     uint64_t head[4] = {(uint64_t)(g_session_unix ? g_session_unix : unix_ms()), (uint64_t)(now_ms() * 1000), (uint64_t)q.QuadPart, (uint64_t)fq.QuadPart};
     memcpy(g_fhead, head, sizeof head);
     g_fenc.qpc0 = q.QuadPart, g_fenc.freq = fq.QuadPart;
-    {
+    if (g_entry) {
+        if (!g_sysdxgi || !entry_hooks(dev)) return;
+    } else {
         std::lock_guard l(g_mx);
         void** vt = *(void***)f;
         patch(vt, SLOT_CREATESC, (void*)hk_createsc, o_createsc);
@@ -4723,8 +4476,8 @@ static void frame_hooks() {
         GetModuleFileNameW(g_sysdxgi, path, MAX_PATH), GetModuleFileNameW(fm, from, MAX_PATH);
         g_dxgi_layer = m != g_sysdxgi;
         logf("frames: DXGI factory vtable %p hooked (%s; the factory of %s)", (void*)vt, shown(path).c_str(), shown(from).c_str());
+        f->Release();
     }
-    f->Release();
     g_ffx_late = true;  // before the look below: a dll loading meanwhile is hooked by one of the two (g_ffx_claimed)
     if (!ldr_notify()) logf("frames: no dll-load notification: a FidelityFX dll that loads later isn't hooked");
     ffx_hooks();
@@ -4855,12 +4608,13 @@ static HRESULT device_created(HRESULT hr, IUnknown* adapter, D3D_FEATURE_LEVEL f
         if (ID3D12Device* real = unwrapped((IUnknown*)*pp)) hook_below(real, "layer's"), real->Release();
     }
     static std::once_flag nv, frames;
-    std::call_once(nv, nv_hooks), std::call_once(frames, [] { frame_hooks(), overlay_config(); });
+    std::call_once(nv, nv_hooks), std::call_once(frames, [pp] { frame_hooks((IUnknown*)*pp), overlay_config(); });
     return hr;
 }
 
 extern "C" HRESULT WINAPI Proxy_D3D12CreateDevice(IUnknown* adapter, D3D_FEATURE_LEVEL fl, REFIID riid, void** pp) {
     if (!real_CreateDevice) return E_NOTIMPL;  // loaded as d3d11.dll
+    if (pp) dd_flush();  // our refs keep a released device alive, and the runtime hands out a live device again
     static std::once_flag once;
     std::call_once(once, [] {
         if (!(g_debug12 = GetEnvironmentVariableW(L"SCSKILLER_D3D12_DEBUG", nullptr, 0) > 0)) return;
@@ -4911,6 +4665,7 @@ static HRESULT STDMETHODCALLTYPE hk_factory_createdevice(ID3D12DeviceFactory* f,
     for (int i = 0, n = g_nfacvt.load(std::memory_order_acquire); i < n && !o; ++i)
         if (g_facvt[i].vt == vt) o = g_facvt[i].orig;
     if (!o) return E_FAIL;  // unreachable: only a vtable in the table points here
+    if (pp) dd_flush();
     return device_created(o(f, adapter, fl, riid, pp), adapter, fl, pp);
 }
 static void hook_factory(IUnknown* unk) {
@@ -4969,7 +4724,7 @@ extern "C" void WINAPI SCSKiller_StartWarm(IUnknown* unk) {
 extern "C" void WINAPI SCSKiller_WarmOptions(int threads, BOOL idle, uint64_t start) {
     g_staged = true;
     if (threads > 0) g_threads = threads;
-    g_prio = idle ? THREAD_PRIORITY_IDLE : THREAD_PRIORITY_BELOW_NORMAL;
+    g_prio = idle ? THREAD_PRIORITY_IDLE : THREAD_PRIORITY_ABOVE_NORMAL;  // in the child's below-normal class: base 7, below-normal as in a normal one
     g_start = start;
 }
 
@@ -5122,7 +4877,7 @@ static void device11_created(HRESULT hr, ID3D11Device* dev) {
         }
     }
     static std::once_flag frames;
-    std::call_once(frames, [] { frame_hooks(), overlay_config(); });
+    std::call_once(frames, [dev] { frame_hooks(dev), overlay_config(); });
 }
 
 // The device a create gave: its out-parameter, else (a game that asked only for the context or the swap chain) theirs.
@@ -5154,7 +4909,7 @@ extern "C" HRESULT WINAPI Proxy_D3D11CreateDeviceAndSwapChain(IDXGIAdapter* a, D
     if (!real11_CreateDeviceAndSwapChain) return E_NOTIMPL;
     HRESULT hr = real11_CreateDeviceAndSwapChain(a, t, sw, flags, fl, nfl, sdk, scd, sc, dev, got, ctx);
     device11_from(hr, dev, ctx, sc);
-    if (g_frames_on) hook_swapchain(hr, sc ? *sc : nullptr);  // made inside the call, before the factory's hooks were in
+    if (g_frames_on && !g_entry) hook_swapchain(hr, sc ? *sc : nullptr);  // made inside the call, before the factory's hooks were in
     return hr;
 }
 

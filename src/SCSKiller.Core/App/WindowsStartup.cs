@@ -38,8 +38,9 @@ public static class WindowsStartup
         return true;
     }
 
-    /// <summary><see cref="Set"/> when the user changed the setting (<paramref name="byUser"/>), else <see cref="Reconcile"/>;
-    /// only a <paramref name="release"/> build touches the value. A value the registry refuses changes nothing. True if it changed.</summary>
+    /// <summary>The app's call: <paramref name="byUser"/> is <see cref="Set"/>, otherwise the start's <see cref="Reconcile"/>.
+    /// Only a <paramref name="release"/> build touches the value: a Debug build from a checkout or worktree must not point the
+    /// sign-in entry at itself. A policy-locked key leaves the setting saved but unapplied. True if the value changed.</summary>
     public static bool Apply(bool byUser, bool release, bool on, string appExe, bool installed, Func<string?> read, Action<string?> write, Func<string, bool> exists)
     {
         if (!release) return false;

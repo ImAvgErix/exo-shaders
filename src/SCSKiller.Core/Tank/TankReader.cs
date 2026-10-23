@@ -66,7 +66,9 @@ public sealed class TankReader(string? documents = null) : IEngineReader
         var perFile = new ConcurrentDictionary<string, ConcurrentDictionary<string, byte>>();
         long blobs = 0, assets = 0, dxil = 0, bad = 0;
         var stops = new ConcurrentBag<string>();
-        Parallel.ForEach(files, new ParallelOptions { TaskScheduler = TaskScheduler.Current, MaxDegreeOfParallelism = Readers, CancellationToken = ct }, file =>
+        var options = ReaderLoops.Options(ct);
+        options.MaxDegreeOfParallelism = Math.Min(options.MaxDegreeOfParallelism, Readers);
+        Parallel.ForEach(files, options, file =>
         {
             var mine = perFile.GetOrAdd(file.Name, _ => new());
             try
