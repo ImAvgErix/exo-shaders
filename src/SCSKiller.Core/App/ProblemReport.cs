@@ -33,15 +33,16 @@ public static class ProblemReport
         }
     }
 
-    /// <summary>The report as shown and sent. <paramref name="log"/> null leaves the log section out.</summary>
-    public static string Build(string appVersion, string game, string store, string? vendor, string? gpu, string? driver, string windows,
+    /// <summary>The report as shown and sent. <paramref name="system"/> is its system line (<see cref="CompatReport.SystemLine"/>);
+    /// <paramref name="log"/> null leaves the log section out.</summary>
+    public static string Build(string appVersion, string game, string store, string? vendor, string? gpu, string? driver, string system,
         IEnumerable<(string Label, string Value)> page, IEnumerable<string>? log, Masker mask)
     {
         var b = new System.Text.StringBuilder();
         b.AppendLine($"SCSKiller {appVersion}");
         b.AppendLine($"Game: {game} ({store})");
         b.AppendLine($"GPU: {gpu ?? "unknown"} ({vendor ?? "unknown vendor"}), driver {driver ?? "unknown"}");
-        b.AppendLine($"Windows: {windows}");
+        b.AppendLine(system);
         b.AppendLine();
         b.AppendLine("On the game's page:");
         foreach (var (label, value) in page)

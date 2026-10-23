@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Text.RegularExpressions;
 using SCSKiller.Core.App;
 using SCSKiller.Core.Carved;
@@ -143,7 +142,7 @@ public static class AmdAgs
     public static string? DllFor(Game g, string? bundled)
     {
         var own = Path.Combine(Path.GetDirectoryName(g.ExePath) ?? "", DllName);
-        try { return File.Exists(own) && FileVersionInfo.GetVersionInfo(own).FileMajorPart == 6 ? own : bundled; }
+        try { return File.Exists(own) && PeVersionInfo.GetVersionInfo(own).FileMajorPart == 6 ? own : bundled; }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return bundled; }
     }
 

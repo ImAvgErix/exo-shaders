@@ -334,7 +334,7 @@ public partial class AppTests
         k.Settings = k.Settings with { RecordAntiCheatGames = true };
         await k.SettingsRefresh;
         Assert.True(k.Games.Single().RiskEligible);
-        Assert.EndsWith("; " + Planner.D3D11VsRecord, k.Games.Single().StatusReason);
+        Assert.EndsWith(". " + Format.Sentence(Planner.D3D11VsRecord), k.Games.Single().StatusReason);
     }
 
     /// <summary>A game with anti-cheat that needs a recording: with no session offered its status says the anti-cheat blocks

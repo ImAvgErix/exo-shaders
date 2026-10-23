@@ -71,7 +71,11 @@ public sealed class AmdBackend : IGpuVendorBackend, IRefreshableGpu
     public GpuVendor Vendor => GpuVendor.Amd;
     public GpuInfo Gpu { get; private set; }
     public VendorCaps Caps { get; } = new("amd-1", CacheKeyedByExeName: true, StateIndependentCache: false, CacheSizeConfigurable: false,
-        PerStageCache: true, RtCacheGranularity: RtCacheGranularity.WholeObject);   // selftest dxr 3: only an exact repeat of the whole object hits
+        PerStageCache: true, RtCacheGranularity: RtCacheGranularity.WholeObject,   // selftest dxr 3: only an exact repeat of the whole object hits
+        VulkanKey: "device", VulkanCacheCap: SteamVulkanCacheFile);   // a Vulkan cache is the device's, not the exe's
+
+    /// <summary>The bytes a game's Vulkan pipeline cache file holds at most (1.5 GiB).</summary>
+    public const long SteamVulkanCacheFile = 1536L << 20;
 
     static string LocalAppData => Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
     /// <summary>D3D12 shader/pipeline cache.</summary>

@@ -28,7 +28,11 @@ const string Usage = """
                                                   which it rebuilds at its next start
       nvidia-snapshot                             read-only: every global DRS setting, Auto Shader Compilation, its idle task
       nvidia-auto-shader off|low|medium|high      switch NVIDIA's Auto Shader Compilation (admin, asks first)
-        (cache set / nvidia-auto-shader, as the app runs them elevated: --yes skips the question, --result <file>
+      pipeline-cache-access                       once: let the account read D3D12's pipeline events without admin, so Exo
+                                                  measures each game's cache use while it plays (admin, asks first)
+      cleanup-guard [on|off]                      whether Windows' automatic cleanup can delete D3DSCache; on: keep it out
+                                                  (the DirectX Shader Cache handler's Autorun bit), off: undo (admin, asks first)
+        (cache set / nvidia-auto-shader / cleanup-guard, as the app runs them elevated: --yes skips the question, --result <file>
          writes the outcome as a JSON line, --for-user <SID> refuses a different account's elevation)
       record install|uninstall <game>
       record clear <game>                         delete the game's recording (the recorder's data files and SCSKiller's copy; asks first)
@@ -82,6 +86,8 @@ try
         "proton-env" => await ProtonEnv(),
         "nvidia-snapshot" => NvidiaSnapshot(),
         "nvidia-auto-shader" => NvidiaAutoShader(),
+        "pipeline-cache-access" => PipelineCacheAccess(),
+        "cleanup-guard" => CleanupGuard(),
         "fetch-codecs" => FetchCodecs(args.ElementAtOrDefault(1) ?? throw new ArgumentException("usage: scskiller fetch-codecs <dir>")),
         _ => Fail($"unknown command '{args[0]}'\n{Usage}"),
     };
@@ -585,6 +591,37 @@ int NvidiaAutoShader()
         return 1;
     Outcome.Message = nv.SetAutoShaderCompilation(level);
     Console.WriteLine($"{Outcome.Message} now: {nv.GetAutoShaderCompilation()?.ToString() ?? "not readable"}");
+    return 0;
+}
+
+// Windows' automatic cleanup and D3DSCache (WindowsCleanup): read, or keep it out / undo for an elevated prompt.
+int CleanupGuard()
+{
+    var on = args.ElementAtOrDefault(1) switch { null => (bool?)null, "on" => true, "off" => false, _ => throw new ArgumentException("cleanup-guard [on|off]") };
+    if (on is { } keep)
+    {
+        if (!Elevated.IsAdmin) return Fail("changing Windows' cleanup needs an elevated (administrator) prompt");
+        if (!args.Contains(Elevated.YesArg) && !Confirm(keep ? "Keep Windows' automatic cleanup from deleting compiled shaders (D3DSCache)?"
+                                                             : "Let Windows' automatic cleanup delete compiled shaders (D3DSCache) again?"))
+            return 1;
+        Outcome.Message = WindowsCleanup.Set(keep);
+        Console.WriteLine(Outcome.Message);
+    }
+    var s = WindowsCleanup.Check();
+    Console.WriteLine($"Windows' automatic cleanup: {s.Text} ({(s.Registered ? $"Autorun {s.Autorun?.ToString() ?? "not set"}" : "no DirectX Shader Cache handler")})");
+    return 0;
+}
+
+// Once, elevated: the account (--for-user, else this one) may run the pipeline cache session without admin (PipelineCacheWatch).
+int PipelineCacheAccess()
+{
+    if (!Elevated.IsAdmin) return Fail("giving an account access to D3D12's pipeline events needs an elevated (administrator) prompt");
+    var sid = new SecurityIdentifier(Opt(Elevated.ForUserArg) ?? Elevated.CurrentUserSid);
+    if (!args.Contains(Elevated.YesArg) && !Confirm($"Let {sid.Translate(typeof(NTAccount))} read D3D12's pipeline events (Exo Shaders' cache use while playing)?"))
+        return 1;
+    if (PipelineCacheWatch.GrantAccess(sid) is var e and not 0) return Fail($"Windows refused the access (error {e})");
+    Outcome.Message = "D3D12's pipeline events can be read without an administrator now";
+    Console.WriteLine(Outcome.Message);
     return 0;
 }
 

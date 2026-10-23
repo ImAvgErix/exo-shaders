@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using SCSKiller.Core.App;
 using SCSKiller.Core.Carved;
+using SCSKiller.Core.Games;
 using SCSKiller.Core.Unreal;
 
 namespace SCSKiller.Core.ReEngine;
@@ -93,7 +94,7 @@ public sealed class ReEngineReader(string dataDir, Func<string, string?>? downlo
 
     /// <summary>The folder holding re_chunk_000.pak: the exe's, else the install folder.</summary>
     public static string? Find(Game game) =>
-        new[] { Path.GetDirectoryName(game.ExePath), game.InstallDir }.FirstOrDefault(d => !string.IsNullOrEmpty(d) && File.Exists(Path.Combine(d, "re_chunk_000.pak")));
+        new[] { Path.GetDirectoryName(game.ExePath), game.InstallDir }.FirstOrDefault(d => !string.IsNullOrEmpty(d) && File.Exists(GameFiles.Find(d, "re_chunk_000.pak")));
 
     /// <summary>The title, so a planning rule can be its own: each RE Engine game builds its root signatures with its own
     /// parameters. Its exe's name in the characters a rule's fork takes ("PRAGMATA", "re8").</summary>
@@ -207,10 +208,11 @@ public sealed class ReEngineReader(string dataDir, Func<string, string?>? downlo
         }
 
         using var content = IncrementalHash.CreateHash(HashAlgorithmName.SHA1);
+        var dlc = GameFiles.Find(dir, Paks.Dlc);
         foreach (var p in paks.All)
         {
             var fi = new FileInfo(p.Path);
-            content.AppendData(Encoding.UTF8.GetBytes($"{Path.GetRelativePath(dir, p.Path)}|{fi.Length}|{fi.LastWriteTimeUtc.Ticks}\n"));
+            content.AppendData(Encoding.UTF8.GetBytes($"{GameFiles.Rel(dir, p.Path, dlc, Paks.Dlc)}|{fi.Length}|{fi.LastWriteTimeUtc.Ticks}\n"));
         }
         log?.Report($"{paks.All.Count} packages, {final.Count} files (probed in {probed:F1}s{(encrypted > 0 ? $", {encrypted} resource-encrypted skipped" : "")}): "
             + $"{files.Count} shader files{(unreadable > 0 ? $" ({unreadable} unreadable)" : "")}, {bytes / 1e9:F2} GB decompressed, {containers} containers -> {shaders.Count} shaders ("
@@ -319,13 +321,15 @@ public sealed class ReEngineReader(string dataDir, Func<string, string?>? downlo
         public string? Error;
         public string? Failed;   // the package Error is about
 
+        public const string Dlc = "dlc";
+
         static readonly Regex Patch = new(@"\.patch_(\d+)\.pak$", RegexOptions.IgnoreCase);
 
         public Paks(string dir, IReadOnlyList<BigInteger> moduli)
         {
-            var dlc = Path.Combine(dir, "dlc");
-            var paths = Directory.EnumerateFiles(dir, "re_chunk_*.pak")
-                .Concat(Directory.Exists(dlc) ? Directory.EnumerateFiles(dlc, "*.pak") : [])
+            var dlc = GameFiles.Find(dir, Dlc);
+            var paths = GameFiles.EnumerateFiles(dir, "re_chunk_*.pak")
+                .Concat(Directory.Exists(dlc) ? GameFiles.EnumerateFiles(dlc, "*.pak") : [])
                 .OrderBy(p => Patch.Match(p) is { Success: true } m ? int.Parse(m.Groups[1].Value) : 0).ThenBy(p => p, StringComparer.OrdinalIgnoreCase);
             foreach (var p in paths)
                 try
@@ -370,7 +374,7 @@ public sealed class ReEngineReader(string dataDir, Func<string, string?>? downlo
     {
         try
         {
-            if (Capability.Match(File.ReadAllText(Path.Combine(dir, "config.ini"))) is { Success: true } m) return "D3D" + m.Groups[1].Value;
+            if (Capability.Match(File.ReadAllText(GameFiles.Find(dir, "config.ini"))) is { Success: true } m) return "D3D" + m.Groups[1].Value;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
         return dxil == true ? "D3D12" : UnrealRhi.Ambiguous;

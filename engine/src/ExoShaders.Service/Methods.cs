@@ -31,7 +31,7 @@ internal sealed partial class Host
         "recorder.install", "recorder.uninstall", "recorder.set", "recorder.alongside", "recorder.offline", "recorder.startOffline",
         "recorder.startRisk", "recorder.clear", "game.clearCache", "game.putBackKept", "game.dropKept", "game.play",
         "games.remove", "games.hide", "cache.delete", "cache.freeOldDriver", "driver.setCacheLimit", "driver.setAutoShader",
-        "ba.start", "ba.launch", "ba.continue", "ba.recordAfterAgain", "ba.cancel",
+        "driver.setCleanupGuard", "game.asdUndo", "ba.start", "ba.launch", "ba.continue", "ba.recordAfterAgain", "ba.cancel",
     ];
 
     /// <summary>Options the settings policy (Policy.cs) owns: Exo Shaders has no settings, so these are refused.</summary>
@@ -401,6 +401,13 @@ internal sealed partial class Host
                 if (!cleared) { SetError(id, "Nothing was cleared: no shader-cache files of this game were found."); throw new ServiceError("Nothing was cleared: no shader-cache files of this game were found."); }
                 return Ok;
             }
+            case "game.asdUndo":
+            {
+                string id = p.ReqStr("id");
+                Game(id);
+                await Act(id, () => k.UndoLocalAsd(id, off: !(p.Bool("allow") ?? false)));
+                return Ok;
+            }
             case "game.putBackKept":
             {
                 string id = p.ReqStr("id");
@@ -654,6 +661,8 @@ internal sealed partial class Host
                 return await SetCacheLimit(p.ReqInt("index"));
             case "driver.setAutoShader":
                 return await SetAutoShader(p.ReqStr("level"));
+            case "driver.setCleanupGuard":
+                return await SetCleanupGuard(p.ReqBool("on"));
         }
         throw new ServiceError($"unknown method '{method}'");
     }
@@ -783,6 +792,7 @@ internal sealed partial class Host
         Put("left", view.Left);
         Put("compile", view.Compile);
         Put("session", view.Session);
+        if (_k.LastPlayCache(id) is { Percent: { } percent } cu) Put("cacheUse", new { verdict = cu.Verdict, detail = cu.Detail + ".", percent, pipelines = cu.Pipelines });
         Put("frames", view.FrameGraph);
         Put("framesSummary", view.FramesSummary);
         Put("hitchRows", view.HitchRows);
@@ -1015,6 +1025,18 @@ internal sealed partial class Host
         RequestCacheInfo(force: true, readAuto: true);
         return r is null ? new { ok = false, text = "Cancelled." }
             : r.Ok ? new { ok = true, text = r.Message is { Length: > 0 } m ? m : SCSKiller.Core.Vendors.NvidiaBackend.AutoShaderOutcome(level, changed: true) }
+            : new { ok = false, text = "Couldn't apply: " + r.Message.Split('\n')[0] };
+    }
+
+    /// <summary>Keeps Windows' automatic cleanup out of D3DSCache (on), or undoes it (WindowsCleanup).</summary>
+    private async Task<object> SetCleanupGuard(bool on)
+    {
+        Elevated.Result? r = await AsAdminAsync(() => WindowsCleanup.Set(on), ["cleanup-guard", on ? "on" : "off"]);
+        if (r is { Ok: false }) Log($"Windows cleanup guard {(on ? "on" : "off")}: {r.Message}");
+        Cleanup(force: true);
+        MarkState();
+        return r is null ? new { ok = false, text = "Cancelled." }
+            : r.Ok ? new { ok = true, text = r.Message }
             : new { ok = false, text = "Couldn't apply: " + r.Message.Split('\n')[0] };
     }
 

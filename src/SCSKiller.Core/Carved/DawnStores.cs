@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using SCSKiller.Core.Games;
 
 namespace SCSKiller.Core.Carved;
 
@@ -25,10 +26,12 @@ public static class DawnStores
     public sealed record Stores(string ShaderFile, string RootFile, string PsoFile, IReadOnlyDictionary<uint, long> Shaders,
         IReadOnlyDictionary<uint, Root> Roots, IReadOnlyList<(uint Root, uint[] Stages)> Pipelines, int Skipped);
 
+    /// <summary>The three stores, relative to the install.</summary>
+    public const string ShaderRel = @"bin\rawshader.store2", RootRel = @"bin\rawroot.store2", PsoRel = @"bin\rawpso.store2";
+
     public static Stores? Read(string installDir)
     {
-        var bin = Path.Combine(installDir, "bin");
-        string shaderFile = Path.Combine(bin, "rawshader.store2"), rootFile = Path.Combine(bin, "rawroot.store2"), psoFile = Path.Combine(bin, "rawpso.store2");
+        string shaderFile = GameFiles.Find(installDir, ShaderRel), rootFile = GameFiles.Find(installDir, RootRel), psoFile = GameFiles.Find(installDir, PsoRel);
         if (!File.Exists(psoFile) || !File.Exists(rootFile) || !File.Exists(shaderFile)) return null;
         try
         {

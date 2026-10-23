@@ -60,7 +60,7 @@ export function GamePage({ game: g, onBack }: { game: Game; onBack: () => void }
   const a = g.actions
   const line = stateLine(g)
   const compileLabel = a.compileText === 'Compile' ? 'Compile now' : a.compileText
-  const showLastPlay = !!d && !!(d.frames || d.framesSummary || d.session || d.hitchRows.length)
+  const showLastPlay = !!d && !!(d.frames || d.framesSummary || d.session || d.cacheUse || d.hitchRows.length)
 
   return (
     <div className="s-sheet-scroll" role="dialog" aria-label={g.name}>
@@ -198,6 +198,7 @@ function LastPlayPanel({ d }: { d: GameDetail }) {
       ) : d.framesSummary ? <Row label={d.framesSummary.verdict} /> : null}
       {d.hitchRows.map(r => <Row key={r.label} label={r.label}><Value>{r.value}</Value></Row>)}
       {d.session ? <Row label="Compiled while playing"><Value>{d.session.compiles.toLocaleString('en-US')}</Value></Row> : null}
+      {d.cacheUse ? <Row label={<span title={d.cacheUse.detail}>{d.cacheUse.verdict}</span>}><Value tone={d.cacheUse.percent >= 90 ? 'good' : undefined}>{d.cacheUse.pipelines.toLocaleString('en-US')} pipelines</Value></Row> : null}
     </Panel>
   )
 }

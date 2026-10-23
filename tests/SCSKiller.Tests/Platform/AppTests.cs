@@ -210,8 +210,9 @@ public partial class AppTests : IDisposable
         Assert.Null(k.Store.LoadGame(_game.Id).RecorderChained);
     }
 
-    /// <summary>The recorder goes into the game's folder under a temp name, then a rename: an update whose write fails (here
-    /// a folder holds the temp name) leaves the installed d3d12.dll whole, and the next one replaces it.</summary>
+    /// <summary>The recorder goes into the game's folder under a temp name (unique, so nothing can hold it beforehand), then
+    /// a rename: an update whose rename fails (here a reader holds d3d12.dll open) leaves the installed d3d12.dll whole and
+    /// no temp file behind, and the next one replaces it.</summary>
     [Fact]
     public async Task An_update_whose_write_fails_leaves_the_installed_recorder_whole()
     {
@@ -222,14 +223,14 @@ public partial class AppTests : IDisposable
         var dll = Path.Combine(_exeDir, "d3d12.dll");
         var installed = File.ReadAllBytes(dll);
         File.WriteAllBytes(_proxy, [.. "MZ fake proxy SCSKiller_StartWarm "u8, .. Guid.NewGuid().ToByteArray()]);   // the app was updated
-        Directory.CreateDirectory(dll + ".scskiller-new");
         var updated = Killer(new FakeReader(Unreal));
         updated.ProcessNames = () => new HashSet<string>();
         await updated.ScanAsync(default);
-        Assert.Throws<InvalidOperationException>(() => updated.InstallRecorder(_game.Id));
+        using (new FileStream(dll, FileMode.Open, FileAccess.Read, FileShare.Read))   // no FILE_SHARE_DELETE: the rename over it fails
+            Assert.Throws<InvalidOperationException>(() => updated.InstallRecorder(_game.Id));
         Assert.Equal(installed, File.ReadAllBytes(dll));
+        Assert.Empty(Directory.GetFileSystemEntries(_exeDir, "*.scskiller-new"));
 
-        Directory.Delete(dll + ".scskiller-new");
         updated.ReconcileRecorders(_game.Id);
         Assert.Equal(File.ReadAllBytes(_proxy), File.ReadAllBytes(dll));
         Assert.Empty(Directory.GetFileSystemEntries(_exeDir, "*.scskiller-new"));
@@ -5108,7 +5109,7 @@ public partial class AppTests : IDisposable
         Record(3);
         k.RefreshGame(_game.Id);
         var s = k.Games.Single();
-        Assert.Equal((GameStatus.Stale, "3 new pipelines recorded; compile again to include them"), (s.Status, s.StatusReason));
+        Assert.Equal((GameStatus.Stale, "3 new pipelines recorded. " + ScsKiller.RedoesNote + "the whole game"), (s.Status, s.StatusReason));
         Assert.Contains(s, k.StaleGames());
 
         await WarmOnce(k, _game.Id);
@@ -5116,7 +5117,7 @@ public partial class AppTests : IDisposable
 
         Record(1);   // appended: only the new records count
         k.RefreshGame(_game.Id);
-        Assert.Equal("1 new pipeline recorded; compile again to include them", k.Games.Single().StatusReason);
+        Assert.Equal("1 new pipeline recorded. " + ScsKiller.RedoesNote + "the whole game", k.Games.Single().StatusReason);
     }
 
     /// <summary>Pipelines the compiled plan already has don't count: a session that only re-records them leaves the game
@@ -5149,7 +5150,7 @@ public partial class AppTests : IDisposable
 
         Record(planned[0], Pso());
         k.RefreshGame(_game.Id);
-        Assert.Equal("1 new pipeline recorded; compile again to include them", k.Games.Single().StatusReason);
+        Assert.Equal("1 new pipeline recorded. " + ScsKiller.RedoesNote + "the whole game", k.Games.Single().StatusReason);
     }
 
     [Fact]
@@ -7214,7 +7215,7 @@ public partial class AppTests : IDisposable
         var s = k.Games.Single();
         Assert.Equal(GameStatus.Warmed, s.Status);   // the plan it has still compiles
         Assert.Equal(182_857, s.Plan!.Uncovered);
-        Assert.Contains($"; compiles {41_422:N0} pipelines; a 5-minute recording lets SCSKiller rebuild the rest", s.StatusReason);
+        Assert.Contains($". Compiles {41_422:N0} pipelines. A 5-minute recording lets SCSKiller rebuild the rest", s.StatusReason);
 
         var rec = k.Store.LoadGame(_game.Id);   // planned, not warmed yet: Ready with the same note
         rec.WarmedAt = null;
@@ -7247,7 +7248,7 @@ public partial class AppTests : IDisposable
         Assert.Equal(QueueStage.Done, k.Queue.Single().Stage);   // the rest compiled
         var s = k.Games.Single();
         Assert.Equal((GameStatus.Warmed, true, "Ray tracing needs a 5-min recording"), (s.Status, ScsKiller.RtAfterRecording(s), Format.ShortNote(s)));
-        Assert.EndsWith("; " + ScsKiller.RtAfterRecordingNote, s.StatusReason);
+        Assert.EndsWith(". " + Format.Sentence(ScsKiller.RtAfterRecordingNote), s.StatusReason);
 
         var rec = k.Store.LoadGame(_game.Id);   // planned, not compiled yet
         rec.WarmedAt = null;
@@ -7255,8 +7256,8 @@ public partial class AppTests : IDisposable
         s = (await k.ScanAsync(default)).Single();
         Assert.Equal((GameStatus.NeedsRecording, ScsKiller.RtNote(false, false)), (s.Status, s.StatusReason));
         Assert.Equal(false, s.InCommunityDb);
-        Assert.Contains("not in the community database yet", s.StatusReason);
-        Assert.Equal("Ray-traced effects need one short recording; " + ScsKiller.InDbNote, ScsKiller.RtNote(true, true));   // the database named once
+        Assert.Contains("Not in the community database yet", s.StatusReason);
+        Assert.Equal("Ray-traced effects need one short recording. " + Format.Sentence(ScsKiller.InDbNote), ScsKiller.RtNote(true, true));   // the database named once
 
         Assert.False(ScsKiller.NeedsRtRecording(rt with { RtUncovered = 1_200 }));   // 10%: not above
         Assert.True(ScsKiller.NeedsRtRecording(rt with { RtUncovered = 1_201 }));
@@ -7270,7 +7271,7 @@ public partial class AppTests : IDisposable
         Directory.CreateDirectory(Path.Combine(_game.InstallDir, "Fake", "Content", "EasyAntiCheat"));
         s = (await k.RescanAsync(default)).Single();
         Assert.Equal((AntiCheat.EasyAntiCheat, GameStatus.Warmed, false), (s.AntiCheat, s.Status, ScsKiller.RtAfterRecording(s)));
-        Assert.Contains("; ray-traced effects aren't compiled: they need a recording, which EasyAntiCheat blocks", s.StatusReason);
+        Assert.Contains(". Ray-traced effects aren't compiled: they need a recording, which EasyAntiCheat blocks", s.StatusReason);
     }
 
     /// <summary>Unreal 5 whose shaders trace rays inline: its DXIL libraries don't make it need a recording, compiled or
@@ -7287,7 +7288,7 @@ public partial class AppTests : IDisposable
         await WarmOnce(k, _game.Id);
         var s = k.Games.Single();
         Assert.Equal(GameStatus.Warmed, s.Status);
-        Assert.EndsWith("; " + ScsKiller.RtInlineNote, s.StatusReason);
+        Assert.EndsWith(". " + Format.Sentence(ScsKiller.RtInlineNote), s.StatusReason);
         Assert.Equal((false, true), (ScsKiller.NeedsRtRecording(s), ScsKiller.RtInlineCovers(s.Plan)));
 
         var rec = k.Store.LoadGame(_game.Id);   // built before RtInline was counted
@@ -7301,7 +7302,7 @@ public partial class AppTests : IDisposable
         s = k.Games.Single();
         Assert.True(k.Queue.Single().PlanCheck);
         Assert.Equal((GameStatus.Ready, (long?)1_193), (s.Status, s.Plan!.RtInline));
-        Assert.EndsWith("; " + ScsKiller.RtInlineNote, s.StatusReason);
+        Assert.EndsWith(". " + Format.Sentence(ScsKiller.RtInlineNote), s.StatusReason);
         Assert.Equal("Path tracing needs a recording", Format.ShortNote(s));
     }
 
@@ -7403,7 +7404,7 @@ public partial class AppTests : IDisposable
             return;
         }
         Assert.Equal((12_000L, true), (s.Plan!.RtUncovered, s.RtUnseen));   // the page's count stays honest
-        Assert.EndsWith("; " + ScsKiller.RtUnseenNote, s.StatusReason);
+        Assert.EndsWith(". " + Format.Sentence(ScsKiller.RtUnseenNote), s.StatusReason);
         Assert.Equal("No ray tracing seen while recording", Format.ShortNote(s));
 
         Launch(1, "20.0,G,0,0,1.0");   // a later short launch: 5 minutes were recorded already
@@ -8054,8 +8055,8 @@ public partial class AppTests : IDisposable
         Assert.Equal(GameStatus.Warmed, s.Status);
         Assert.True(ScsKiller.IsPartlyWarmed(s));
         Assert.Equal(0.75, s.Careful!.LaunchCompiled);
-        Assert.Equal("partly warmed for driver 100.01: 75% of the 400 pipelines its first launch created still compiled; " +
-                     $"a careful compile ({ScsKiller.AmdCarefulThreads} threads, in passes) reaches more of them, in about {ScsKiller.Duration(careful)}", s.StatusReason);
+        Assert.Equal("partly warmed for driver 100.01: 75% of the 400 pipelines its first launch created still compiled. " +
+                     $"A careful compile ({ScsKiller.AmdCarefulThreads} threads, in passes) reaches more of them, in about {ScsKiller.Duration(careful)}", s.StatusReason);
         Assert.Equal(TimeSpan.FromSeconds(10), s.EstimatedWarmTime);   // the fast compile's, measured
 
         k.SetCarefulCompile(_game.Id, true);
@@ -10712,7 +10713,7 @@ public partial class AppTests : IDisposable
         var s = both.Games.Single();
         Assert.Equal((Core.Unreal.UnrealRhi.Ambiguous, Core.Unreal.UnrealRhi.Ambiguous), (s.Engine!.GraphicsApi, s.ApiDetected));   // both planned, the user may pick one
         Assert.Equal("11+12", ScsKiller.ApiKey(s.Engine.GraphicsApi));
-        Assert.Equal(["12", "11", null], new[] { "D3D12 (last run)", "D3D11 (your choice)", "Vulkan" }.Select(ScsKiller.ApiKey));
+        Assert.Equal(["12", "11", "vk", null], new[] { "D3D12 (last run)", "D3D11 (your choice)", "Vulkan", "OpenGL" }.Select(ScsKiller.ApiKey));
     }
 
     [Fact]
@@ -15718,7 +15719,7 @@ public partial class AppTests : IDisposable
         k.StartCommunitySync();
         await k.CommunitySync;
         var s = k.Games.Single();
-        Assert.Equal((GameStatus.Stale, "1 new pipeline recorded; compile again to include them", 1L), (s.Status, s.StatusReason, s.RecordedSinceWarm));
+        Assert.Equal((GameStatus.Stale, "1 new pipeline recorded. " + ScsKiller.RedoesNote + "the whole game", 1L), (s.Status, s.StatusReason, s.RecordedSinceWarm));
         Assert.Empty(k.DriverStaleGames());
         Assert.NotNull(NewShaders.Key(s, new HashSet<string>()));
 
@@ -16256,7 +16257,7 @@ public partial class AppTests : IDisposable
         await k.WhenQueueIdle().WaitAsync(TimeSpan.FromSeconds(10));
         Assert.True(File.Exists(planner.SharedPacks!.PathOf("amd", "amd_fidelityfx_dx12.dll", CommunityTests.Sha1(File.ReadAllBytes(Path.Combine(_exeDir, "amd_fidelityfx_dx12.dll"))))));
         var s = k.Games.Single();   // the warm compiled the plan made before A came: A is still to compile
-        Assert.Equal((GameStatus.Stale, "1 new upscaler pipeline; compile again to include them", 1L), (s.Status, s.StatusReason, s.RecordedSinceWarm));   // a pack's: not recorded
+        Assert.Equal((GameStatus.Stale, "1 new upscaler pipeline. Compile again to include them", 1L), (s.Status, s.StatusReason, s.RecordedSinceWarm));   // a pack's: not recorded
     }
 
     [Fact]
@@ -16683,7 +16684,7 @@ public partial class AppTests : IDisposable
         var s = k.Games.Single();
         Assert.Equal(Planner.Version, k.Store.LoadGame(_game.Id).WarmedPlanVersion);
         Assert.Equal((GameStatus.Stale, 1L, 1L), (s.Status, s.NewPipelines, NewShaders.Count(s)));
-        Assert.Equal("1 new pipeline; compile again to include them", s.StatusReason);
+        Assert.Equal("1 new pipeline. " + ScsKiller.RedoesNote + "the whole game", s.StatusReason);
         await Compile(k);
         Assert.Equal((GameStatus.Warmed, 0L), (k.Games.Single().Status, NewShaders.Count(k.Games.Single())));
     }
@@ -17141,13 +17142,13 @@ public partial class AppTests : IDisposable
         await k.CommunitySync;
         var s = k.Games.Single();   // re-evaluated by the manifest check alone: nothing was downloaded
         Assert.Equal((GameStatus.NeedsRecording, true, 18_406, (CommunityInfo?)null), (s.Status, s.InCommunityDb, s.CommunityDbPsos, s.Community));
-        Assert.Equal("needs one short recording; in the community database for Patreon supporters", s.StatusReason);
+        Assert.Equal("needs one short recording. In the community database for Patreon supporters", s.StatusReason);
         Assert.Equal(["GET https://api.test.com/v1/manifest/0"], fake.Log);   // no object, no token, nothing about the game
         Assert.False(File.Exists(Path.Combine(k.Store.GameDir(game.Id), "community.db")));
 
         k.DbEntitled = () => true;
         k.RefreshGame(game.Id);
-        Assert.Equal("needs one short recording; " + ScsKiller.InDbNote, k.Games.Single().StatusReason);
+        Assert.Equal("needs one short recording. " + Format.Sentence(ScsKiller.InDbNote), k.Games.Single().StatusReason);
     }
 
     [Fact]
@@ -17292,7 +17293,7 @@ public partial class AppTests : IDisposable
         {
             (MaterializedWith, UnresolvedAtMaterialize) = (recording, recording == null ? -1 : SCSKiller.Tests.Planning.RehydrateTests.Unresolved(recording.DbPath).Count);
             Directory.CreateDirectory(workDir);
-            File.WriteAllBytes(Path.Combine(workDir, "scskiller_gen.db"), genDb ?? "gen"u8.ToArray());
+            File.WriteAllBytes(Path.Combine(workDir, "scskiller_gen.db"), genDb ?? []);   // empty, not junk: a stop resumes only from a readable work order (ScsKiller.WorkOrder)
             if (mainDb != null) File.WriteAllBytes(Path.Combine(workDir, "scskiller.db"), mainDb);
             if (skipped > 0) File.WriteAllText(Path.Combine(workDir, Planner.SkippedFile), skipped.ToString()); // like Planner.Materialize
             Materialized?.Invoke();

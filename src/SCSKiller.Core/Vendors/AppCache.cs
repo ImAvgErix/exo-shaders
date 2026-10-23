@@ -26,9 +26,12 @@ public static class AppCacheFiles
 
     /// <summary>Deletes all <paramref name="files"/> or none: InvalidOperationException ("files in use by ...") when one
     /// is open (the driver holds a running app's files). All files are opened exclusively first, so nothing can open them
-    /// between the check and the delete. Returns how many were deleted.</summary>
-    public static int DeleteAll(IReadOnlyList<FileInfo> files)
+    /// between the check and the delete. Returns how many were deleted. Steam's own shader cache files (<see cref="SteamOwn"/>)
+    /// are refused, all of them kept, unless <paramref name="steams"/> names them.</summary>
+    public static int DeleteAll(IReadOnlyList<FileInfo> files, IReadOnlySet<string>? steams = null)
     {
+        if (files.FirstOrDefault(f => SteamOwn(f.Name) && steams?.Contains(f.FullName) != true) is { } steam)
+            throw new InvalidOperationException($"{steam.Name} is Steam's shader cache, not deleted");
         var held = new List<FileStream>();
         try
         {
@@ -37,7 +40,7 @@ public static class AppCacheFiles
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException)
                 {
                     var users = ProcessesUsing(f.FullName).Select(Describe).ToList();
-                    throw new InvalidOperationException($"files in use by {(users.Count > 0 ? string.Join(", ", users) : "another process")} ({f.Name})", e);
+                    throw new InvalidOperationException(users.Count > 0 ? $"files in use by {string.Join(", ", users)} ({f.Name})" : Unheld(f, e), e);
                 }
             foreach (var f in files) if (f.IsReadOnly) f.IsReadOnly = false;   // Delete refuses a read-only file: none is deleted before all can be
             foreach (var f in files) f.Delete();   // gone once our handles close
@@ -45,6 +48,16 @@ public static class AppCacheFiles
         }
         finally { foreach (var h in held) h.Dispose(); }
     }
+
+    /// <summary>A file Steam's shader pre-caching writes in the driver's cache folder, not the driver's.</summary>
+    internal static bool SteamOwn(string fileName) =>
+        fileName.StartsWith("steam_shader_cache", StringComparison.OrdinalIgnoreCase) || fileName.StartsWith("steamapp_merged_shader_cache", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Why a file no process holds open couldn't be opened, with the error's code; AMD's cache folders say how
+    /// AMD Software removes it.</summary>
+    static string Unheld(FileInfo f, Exception e) =>
+        $"{(e is UnauthorizedAccessException ? "access denied to" : "no process found holding")} {f.Name} (0x{e.HResult:X8})"
+        + (f.Directory is { Name: "DxcCache" or "DxCache", Parent.Name: "AMD" } ? ". Reset Shader Cache in AMD Software removes it" : "");
 
     /// <summary>The folder exists and its files can be listed: false for a link (a junction to another drive) whose target is
     /// gone, which Directory.Exists still reports as there.</summary>

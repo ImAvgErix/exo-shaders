@@ -11,6 +11,10 @@ public sealed class SteamSource(string? steamRoot = null) : IGameSource
 {
     public Store Store => Store.Steam;
 
+    /// <summary>"\steamapps" and "\steamapps\common\", as a path in a Steam library has them.</summary>
+    internal static readonly string AppsPart = Path.DirectorySeparatorChar + "steamapps";
+    internal static readonly string CommonPart = $"{AppsPart}{Path.DirectorySeparatorChar}common{Path.DirectorySeparatorChar}";
+
     (string Stamp, HashSet<uint> Asked, Dictionary<uint, string> Types)? _types;   // appinfo.vdf is only re-read when it changes
 
     /// <summary>Games listed before, by id: a game's exe is reused while its build and install folder are the same and the
@@ -105,11 +109,11 @@ public sealed class SteamSource(string? steamRoot = null) : IGameSource
     public static (uint? Id, bool InLibrary) AppAt(string root, string path)
     {
         var full = Path.GetFullPath(path);
-        var at = full.IndexOf(@"\steamapps\common\", StringComparison.OrdinalIgnoreCase);
+        var at = full.IndexOf(CommonPart, StringComparison.OrdinalIgnoreCase);
         if (at < 0)
-            return (null, Libraries(root).Any(lib => full.StartsWith(Path.TrimEndingDirectorySeparator(lib) + '\\', StringComparison.OrdinalIgnoreCase)));
-        var apps = full[..(at + @"\steamapps".Length)];
-        var folder = full[(at + @"\steamapps\common\".Length)..].Split('\\')[0];
+            return (null, Libraries(root).Any(lib => full.StartsWith(Path.TrimEndingDirectorySeparator(lib) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)));
+        var apps = full[..(at + AppsPart.Length)];
+        var folder = full[(at + CommonPart.Length)..].Split(Path.DirectorySeparatorChar)[0];
         foreach (var acf in Directory.Exists(apps) ? Directory.EnumerateFiles(apps, "appmanifest_*.acf") : [])
         {
             var text = File.ReadAllText(acf);

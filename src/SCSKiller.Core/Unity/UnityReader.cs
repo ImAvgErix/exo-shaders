@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using SCSKiller.Core.Carved;
+using SCSKiller.Core.Games;
 using SCSKiller.Core.Unreal;
 using static SCSKiller.Core.Unity.UnityFiles;
 
@@ -35,12 +36,12 @@ public sealed class UnityReader : IEngineReader
     {
         var opts = new EnumerationOptions { RecurseSubdirectories = true, MaxRecursionDepth = 1, IgnoreInaccessible = true, AttributesToSkip = 0 };
         IEnumerable<string> dirs = [Path.GetDirectoryName(game.ExePath) ?? "", game.InstallDir];
-        if (Directory.Exists(game.InstallDir)) dirs = dirs.Concat(Directory.EnumerateDirectories(game.InstallDir, "*", opts));
-        foreach (var dir in dirs.Where(d => d.Length > 0 && File.Exists(Path.Combine(d, "UnityPlayer.dll"))))
+        if (Directory.Exists(game.InstallDir)) dirs = dirs.Concat(GameFiles.EnumerateDirectories(game.InstallDir, "*", opts));
+        foreach (var dir in dirs.Where(d => d.Length > 0 && File.Exists(GameFiles.Find(d, "UnityPlayer.dll"))))
         {
             var own = Path.Combine(dir, Path.GetFileNameWithoutExtension(game.ExePath) + "_Data");
-            var data = Directory.EnumerateDirectories(dir, "*_Data").OrderBy(d => !d.Equals(own, StringComparison.OrdinalIgnoreCase))
-                .FirstOrDefault(d => File.Exists(Path.Combine(d, "globalgamemanagers")) || File.Exists(Path.Combine(d, "data.unity3d")));
+            var data = GameFiles.EnumerateDirectories(dir, "*_Data").OrderBy(d => !d.Equals(own, StringComparison.OrdinalIgnoreCase))
+                .FirstOrDefault(d => File.Exists(GameFiles.Find(d, "globalgamemanagers")) || File.Exists(GameFiles.Find(d, "data.unity3d")));
             if (data != null) return (dir, data);
         }
         return null;
@@ -64,19 +65,32 @@ public sealed class UnityReader : IEngineReader
                     catch (Exception e) when (e is IOException or InvalidDataException) { }
                 }
             }
-        if (string.IsNullOrEmpty(version)) version = FileVersionInfo.GetVersionInfo(Path.Combine(player, "UnityPlayer.dll")) is { FileMajorPart: > 0 } v
+        if (string.IsNullOrEmpty(version)) version = PeVersionInfo.GetVersionInfo(GameFiles.Find(player, "UnityPlayer.dll")) is { FileMajorPart: > 0 } v
             ? $"{v.FileMajorPart}.{v.FileMinorPart}.{v.FileBuildPart}" : "?";
         var lastRun = LastRun(PlayerLog(data));
-        return new EngineInfo(Family, version, null, Api(apis, lastRun), false,
+        var launch = UnrealRhi.LaunchOptions(game);
+        var api = Api(apis, lastRun, launch);
+        return new EngineInfo(Family, version, null, api, false,
             probed > 0 && readable == 0 ? $"Unity {version}: none of {probed} built-in shaders has DirectX (d3d11) code this reader can read" : null,
-            ApiGuessed: ApiGuessed(apis, lastRun));
+            ApiGuessed: ApiGuessed(apis, LaunchApi(launch) ?? lastRun),
+            OffersVulkan: apis?.Contains(VulkanApi) == true || api.StartsWith("Vulkan", StringComparison.Ordinal));
     }
 
-    /// <summary>The API the last run used (Player.log), else the first of the build's list; "D3D11 or D3D12" when neither is
-    /// readable. A launch option (-force-d3d12 / -force-d3d11) overrides the list; only a log shows that.</summary>
-    public static string Api(int[]? apis, string? lastRun) =>
-        lastRun != null ? $"{lastRun} (last run)"
-        : apis is [var first, ..] ? first switch { 2 => "D3D11", 18 => "D3D12", 21 => "Vulkan", _ => "OpenGL" }
+    /// <summary>The build's graphics API id for Vulkan (BuildSettings' list).</summary>
+    const int VulkanApi = 21;
+
+    /// <summary>The API a Steam launch option forces (-force-d3d11, -force-d3d12, -force-vulkan); null when none does.</summary>
+    static string? LaunchApi(string launch) =>
+        Regex.Match(launch, @"(?:^|\s)-force-(d3d11|d3d12|vulkan)\b", RegexOptions.IgnoreCase) is { Success: true } m
+            ? m.Groups[1].Value.ToLowerInvariant() switch { "d3d11" => "D3D11", "d3d12" => "D3D12", _ => "Vulkan" }
+            : null;
+
+    /// <summary>The API a launch option forces, else the one the last run used (Player.log), else the first of the build's
+    /// list; "D3D11 or D3D12" when none is readable.</summary>
+    public static string Api(int[]? apis, string? lastRun, string launch = "") =>
+        LaunchApi(launch) is { } forced ? $"{forced} (launch option)"
+        : lastRun != null ? $"{lastRun} (last run)"
+        : apis is [var first, ..] ? first switch { 2 => "D3D11", 18 => "D3D12", VulkanApi => "Vulkan", _ => "OpenGL" }
         : UnrealRhi.Ambiguous;
 
     /// <summary>The build offers DirectX 11 and 12 and no log shows which ran: the first of its list is a guess (a launch
@@ -88,18 +102,19 @@ public sealed class UnityReader : IEngineReader
     /// <summary><see cref="LocalLow"/>\&lt;company&gt;\&lt;product&gt;\Player.log (from *_Data\app.info); null when app.info doesn't name it.</summary>
     string? PlayerLog(string data)
     {
-        try { return File.ReadAllLines(Path.Combine(data, "app.info")) is [var company, var product, ..] ? Path.Combine(LocalLow, company, product, "Player.log") : null; }
+        try { return File.ReadAllLines(GameFiles.Find(data, "app.info")) is [var company, var product, ..] ? Path.Combine(LocalLow, company, product, "Player.log") : null; }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
     }
 
-    /// <summary>The Player.log <see cref="Detect"/> reads the last run's API from, by size and write time: a new run redoes it.</summary>
+    /// <summary>The Player.log <see cref="Detect"/> reads the last run's API from, by size and write time, and the game's
+    /// launch options: a new run or a changed option redoes it.</summary>
     public string DetectStamp(Game game, EngineInfo? engine)
     {
         if (engine != null && engine.Family != Family) return "";
         if (!dataDirs.TryGetValue(game.ExePath, out var data) && Find(game) is var (_, found))
             dataDirs[game.ExePath] = data = found;   // a miss isn't kept: the install may be mid-update
         var log = data == null ? null : PlayerLog(data) is { } p ? new FileInfo(p) : null;
-        return log is { Exists: true } ? $"{log.Length}|{log.LastWriteTimeUtc.Ticks}" : "";
+        return (log is { Exists: true } ? $"{log.Length}|{log.LastWriteTimeUtc.Ticks}" : "") + "|" + UnrealRhi.LaunchOptions(game);
     }
 
     readonly ConcurrentDictionary<string, string> dataDirs = new(StringComparer.OrdinalIgnoreCase);
@@ -133,7 +148,7 @@ public sealed class UnityReader : IEngineReader
                 ct.ThrowIfCancellationRequested();
                 files++;
                 if (src.In != null) bundles.Add(src.In);
-                var rel = Path.GetRelativePath(data, src.Path) + (src.Node != null ? $"|{src.Node}" : "");
+                var rel = GameFiles.Rel(data, src.Path) + (src.Node != null ? $"|{src.Node}" : "");
                 foreach (var o in src.File.Objects.Where(o => o.ClassId is ShaderClass or ComputeShaderClass))
                 {
                     if (o.ClassId == ShaderClass) shaderObjs++; else computeObjs++;
@@ -164,10 +179,10 @@ public sealed class UnityReader : IEngineReader
         located[game.Id] = locs;
 
         using var content = IncrementalHash.CreateHash(HashAlgorithmName.SHA1);
-        foreach (var path in locs.Values.Select(l => l.Path).Distinct().Order(StringComparer.OrdinalIgnoreCase))
+        foreach (var path in locs.Values.Select(l => l.Path).Distinct().Order(GameFiles.PathOrder))
         {
             var f = new FileInfo(path);
-            content.AppendData(Encoding.UTF8.GetBytes($"{Path.GetRelativePath(data, path)}|{f.Length}|{f.LastWriteTimeUtc.Ticks}\n"));
+            content.AppendData(Encoding.UTF8.GetBytes($"{GameFiles.Rel(data, path)}|{f.Length}|{f.LastWriteTimeUtc.Ticks}\n"));
         }
         log?.Report($"{files} serialized files ({bundles.Count} bundles, {bundles.Sum(b => b.BlocksDecompressed)} blocks decompressed): {shaderObjs} Shader objects"
             + $"{(noBlob > 0 ? $" ({noBlob} without d3d11 code)" : "")}{(unreadable > 0 ? $" ({unreadable} unreadable)" : "")}, {computeObjs} ComputeShaders -> {shaders.Count} shaders ("
@@ -224,7 +239,7 @@ public sealed class UnityReader : IEngineReader
     static IEnumerable<Source> Sources(string data, bool onlyManagers)
     {
         var opts = new EnumerationOptions { RecurseSubdirectories = !onlyManagers, IgnoreInaccessible = true, AttributesToSkip = 0, MaxRecursionDepth = 8 };
-        var paths = Directory.EnumerateFiles(data, "*", opts).Where(p => !IsResource(p)).Order(StringComparer.OrdinalIgnoreCase);
+        var paths = GameFiles.EnumerateFiles(data, "*", opts).Where(p => !IsResource(p)).Order(GameFiles.PathOrder);
         foreach (var path in onlyManagers ? paths.Where(p => Managers.Append("data.unity3d").Contains(System.IO.Path.GetFileName(p), StringComparer.OrdinalIgnoreCase)) : paths)
         {
             if (Open(path, null) is { } loose) { yield return loose; continue; }

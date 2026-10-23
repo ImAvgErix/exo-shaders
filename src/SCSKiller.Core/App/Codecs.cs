@@ -32,6 +32,10 @@ public static class Codecs
 
     public const string OodleUrl = "https://github.com/WorkingRobot/OodleUE/releases/download/2026-06-04-1357/clang-cl-x64-release.zip";
 
+    public const string ZlibUrl = "https://github.com/NotOfficer/Zlib-ng.NET/releases/download/1.0.0/zlib-ng2.dll.gz";
+
+    static string OodleZipEntry => "bin/" + OodleHelper.OodleFileName;
+
     /// <summary>The line a user sees for an error a missing codec caused (<see cref="NoOodleDll"/>, <see cref="NoNativeOodle"/>:
     /// the details are its inner exception), else null.</summary>
     public static string? Reason(Exception e)
@@ -89,14 +93,17 @@ public static class Codecs
     public static bool DownloadOodle(string path)
     {
         using var zip = new ZipArchive(Get(OodleUrl));
-        using var dll = (zip.GetEntry("bin/" + OodleHelper.OodleFileName) ?? throw new InvalidDataException($"{OodleUrl} has no {OodleHelper.OodleFileName}")).Open();
+        using var dll = (zip.GetEntry(OodleZipEntry) ?? throw new InvalidDataException($"{OodleUrl} has no {OodleHelper.OodleFileName}")).Open();
         Save(dll, path);
         return true;
     }
 
-    public static bool DownloadZlib(string path)
+    public static bool DownloadZlib(string path) => DownloadZlib(path, Get);
+
+    /// <summary><paramref name="get"/>: the download, replaceable for tests.</summary>
+    internal static bool DownloadZlib(string path, Func<string, MemoryStream> get)
     {
-        using var dll = new GZipStream(Get(ZlibHelper.DOWNLOAD_URL), CompressionMode.Decompress);
+        using var dll = new GZipStream(get(ZlibUrl), CompressionMode.Decompress);
         Save(dll, path);
         return true;
     }

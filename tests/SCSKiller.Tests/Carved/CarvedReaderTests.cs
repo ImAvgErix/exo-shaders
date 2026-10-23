@@ -215,7 +215,7 @@ public class CarvedReaderTests
         var reader = new CarvedReader();
         var engine = reader.Detect(d.Game)!;
         var planner = new Planner();
-        Assert.Equal(new PlanCheck(Readiness.Ready, "no recording needed; also compiles every DirectX 11 shader (the game may run on either)"), // its SM 5.1 shaders: none for DX11
+        Assert.Equal(new PlanCheck(Readiness.Ready, "no recording needed. Also compiles every DirectX 11 shader (the game may run on either)"), // its SM 5.1 shaders: none for DX11
             planner.Check(d.Game, engine, null, Ff7.Nvidia));
         Assert.Equal(Readiness.NeedsRecording, planner.Check(d.Game, engine with { Version = "DXBC", GraphicsApi = "D3D12" }, null, Ff7.Nvidia).Readiness); // ambiguous: Ready for DX11 anyway
         var index = reader.Index(d.Game, engine, null, CancellationToken.None);

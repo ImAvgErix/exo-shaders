@@ -36,6 +36,11 @@ public sealed class GameRecord
     public string? PlanCommunity { get; set; }              // the community recording (object id) the plan was built with; null = none
     public string? PlanOfficial { get; set; }               // the official recording (object id) the plan was built with; null = none
     public string? PlanMaps { get; set; }                   // ScsKiller.MapsFingerprint of the index the plan was built from
+    public string? D3DSCacheFolder { get; set; }            // the game's own D3DSCache folder (named by its exe path), found again once emptied
+    public string? D3DSCacheExe { get; set; }               // the exe path that folder's dbs name
+    public bool WarmedD3DSCache { get; set; }               // the last complete warm's D3DSCache dbs were kept, not deleted
+    public string? D3DSCacheMade { get; set; }              // the D3DSCache folder SCSKiller made before the game's first run
+    public DateTimeOffset? D3DSCacheEmptiedAt { get; set; } // that folder was found emptied after the warm (ScsKiller.D3DSCacheGone): compile again
     public long ResumeAt { get; set; }                       // Done of a stopped warm of the current plan
     public long ResumeItems { get; set; }                    // items the stopped segments of that warm created...
     public double ResumeSeconds { get; set; }                // ...and their time: a complete warm's time and rate include them
@@ -43,6 +48,7 @@ public sealed class GameRecord
     public long ResumeDriverSkipped { get; set; }            // ...and their skips (WarmResult.DriverSkipped)
     public string? ResumeGpu { get; set; }                   // ...on this driver (ScsKiller.DriverId): another one's cache lacks them; null = unknown, as another
     public string? ResumeLayer { get; set; }                 // ...through this ReShade layer (ReShadeInstall.Fingerprint); null = none
+    public string? ResumeWork { get; set; }                  // ...of this work order (the plan's items in order): another order's item numbers aren't these; null = unknown
     public string? ResumeExe { get; set; }                   // ...staged as this exe name (another name's cache lacks them); null = unknown, as another
     public string? ResumeAgs { get; set; }                   // ...registering this AGS app name ("" = none; another name's cache lacks them); null = an earlier build's
     public bool ResumeAftermath { get; set; }                // ...starting NVIDIA Aftermath as the game does (its shader debug info is another key)
@@ -74,6 +80,11 @@ public sealed class GameRecord
     public bool IniIsUsers { get; set; }                     // an earlier build's: the scskiller.ini there is the user's (now its folder's IniOwner)
     public string? RecorderExe { get; set; }                 // the game's exe while a recorder is installed: uninstall finds it without a scan
     public string? RecorderInstallDir { get; set; }          // and its install root, for the running check
+    public string? VulkanLayer { get; set; }                 // the Vulkan recorder's layer manifest we registered for this game; null = none
+    public string? VulkanLayerSha { get; set; }              // ...and the SHA-256 of the layer DLL placed beside it
+    public List<string> VulkanInboxes { get; set; } = [];   // folders the Vulkan recorder wrote recordings to, imported from
+    public Dictionary<string, string>? VulkanCacheEnv { get; set; }   // the driver-cache environment the game's last Vulkan launch ran with (VulkanLayer.CacheEnv)
+    public string? VulkanDevice { get; set; }                // ...and the Vulkan device it ran on (VulkanLayer.Device)
     public string? RecorderMoveFrom { get; set; }            // a recorder moving next to the game's exe: the old exe, until SCSKiller's files are out of its folder
     public string? RunsExe { get; set; }                    // the exe of its install the game was seen running when discovery named another: used instead (ScsKiller.Following)
     public string? RunsExeFrom { get; set; }                // ...discovery's exe then, and the build (store version, else RunsExe's size and write time):
@@ -124,6 +135,8 @@ public sealed class GameRecord
     public DateTimeOffset? UnreachedWarm { get; set; }      // NVIDIA: the WarmedAt of a warm that launch showed the game's lookups miss (ScsKiller.IsUnreached)
     public DateTimeOffset? CacheClearedAt { get; set; }     // the app last deleted the game's driver cache: launches before it left none of their compiles there
     public PlayWindow? LastPlay { get; set; }               // the last run of the game the app watched from start to exit
+    public PipelineCacheUse? LastPlayCache { get; set; }    // ...and how D3D12 says the cache served its pipelines (Exo Shaders); null = not measured
+    public AsdIdentity? AsdIdentity { get; set; }           // the identity D3D12 last gave the game (ASDInit): what a warm's device should name itself
     public bool RecordedLong { get; set; }                   // a recorded launch of ScsKiller.EnoughRecording or more since the recording was last cleared
     public bool RtUnseen { get; set; }                       // a recorded launch of ScsKiller.EnoughRecording built no ray tracing state object, and none since did
     public DxApi? ApiOverride { get; set; }                  // the user's DirectX (IScsKiller.SetApiOverride); null = Auto
@@ -254,6 +267,8 @@ public sealed class AppStore(string dataDir)
 
     internal static string CopyMutex(string portable) => $@"Global\SCSKiller-portable-copy-{PortableId(portable)}";
 
+    internal static string OldFolderMutex(string portable) => $@"Global\SCSKiller-portable-old-folder-{PortableId(portable)}";
+
     static string PortableId(string portable) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.TrimEndingDirectorySeparator(Path.GetFullPath(portable)).ToUpperInvariant())))[..16];
 
@@ -263,10 +278,9 @@ public sealed class AppStore(string dataDir)
         if (portable == null) return local;
         var data = Path.Combine(portable, "data");
         if (File.Exists(Path.Combine(data, MigratedFile))) return data;
-        var id = PortableId(portable);
-        var oldFolder = $@"Global\SCSKiller-portable-old-folder-{id}";
+        var oldFolder = OldFolderMutex(portable);
         Mutex gate;
-        try { gate = new Mutex(false, CopyMutex(portable)); }
+        try { gate = NamedMutex.Open(CopyMutex(portable)); }
         catch (Exception)   // another user's, which this one can't open: no copy
         {
             onOldFolder = Hold(oldFolder);
@@ -333,18 +347,13 @@ public sealed class AppStore(string dataDir)
         // the open handle is the signal, not ownership: it lasts as long as any process keeps one, whichever thread made it
         static IDisposable? Hold(string name)
         {
-            try { return new Mutex(false, name); }
+            try { return NamedMutex.Open(name); }
             catch (Exception) { return null; }
         }
 
         static bool Held(string name)
         {
-            try
-            {
-                if (!Mutex.TryOpenExisting(name, out var m)) return false;
-                m.Dispose();
-                return true;
-            }
+            try { return NamedMutex.Held(name); }
             catch (UnauthorizedAccessException) { return true; }   // another user's process holds it
         }
     }
@@ -488,7 +497,8 @@ public sealed class AppStore(string dataDir)
         return s.ToString();
     }
 
-    static readonly char[] BadNameChars = Path.GetInvalidFileNameChars();
+    // Windows' invalid file name characters, spelled out: the same names on every system
+    static readonly char[] BadNameChars = [.. Enumerable.Range(0, 32).Select(c => (char)c), '"', '<', '>', '|', ':', '*', '?', '\\', '/'];
 
     // What each record handed out held when it was loaded or last saved: a save writes only what its holder changed since.
     readonly ConditionalWeakTable<GameRecord, JsonObject> _held = new();
@@ -570,7 +580,7 @@ public sealed class AppStore(string dataDir)
                     return;
                 }
                 // ERROR_SHARING_VIOLATION, ERROR_LOCK_VIOLATION: another holder has it
-                catch (IOException e) when ((e.HResult & 0xFFFF) is 32 or 33 && clock.Elapsed < limit)
+                catch (IOException e) when (IoErrors.HeldElsewhere(e) && clock.Elapsed < limit)
                 {
                     if (!waiting) Waits?.Invoke(_file);
                     waiting = true;

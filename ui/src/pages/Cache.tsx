@@ -130,6 +130,22 @@ function Budget({ compiling, oldDriverFree, onFreed }: { compiling: boolean; old
     }
   }
 
+  async function setCleanupGuard(on: boolean) {
+    const text = on
+      ? 'Windows’ automatic cleanup will skip the DirectX Shader Cache, where the driver keeps compiled shaders. Disk Cleanup and Settings can still delete it when you choose. Windows will ask for administrator permission.'
+      : 'Windows’ automatic cleanup can delete compiled shaders again, and games then compile them while you play. Windows will ask for administrator permission.'
+    if (!(await confirm(on ? 'Keep compiled shaders from Windows’ cleanup?' : 'Let Windows’ cleanup delete compiled shaders?', text, on ? 'Keep' : 'Allow'))) return false
+    try {
+      const r = await call<{ ok: boolean; text: string }>('driver.setCleanupGuard', { on })
+      if (!r.ok) say(r.text, 'bad')
+      return r.ok
+    } catch (e) {
+      say(errorText(e), 'bad')
+      return false
+    }
+  }
+
+  const cleanup = snap.app.gpu.windowsCleanup
   return (
     <section className="s-budget s-arrive">
       <div className="s-budget-line">
@@ -139,6 +155,20 @@ function Budget({ compiling, oldDriverFree, onFreed }: { compiling: boolean; old
       </div>
       <Bar percent={cache.percent} tone={cache.warn ? 'bad' : undefined} />
       {cache.warn ? <p className="s-bad">{cache.warn}</p> : null}
+      {snap.app.gpu.shaderDelivery ? (
+        <div className="s-budget-old">
+          <span className="s-muted">Advanced Shader Delivery</span>
+          <span className={snap.app.gpu.shaderDelivery.works ? 's-good' : 's-muted'}>{snap.app.gpu.shaderDelivery.text}</span>
+        </div>
+      ) : null}
+      {cleanup ? (
+        <div className="s-budget-old">
+          <span className="s-muted">Windows automatic cleanup</span>
+          <span className={cleanup.kept ? 's-good' : 's-muted'}>{cleanup.text}</span>
+          {!cleanup.kept ? <Btn compact disabled={compiling} doneText="Kept" onClick={() => setCleanupGuard(true)}>Keep</Btn>
+            : cleanup.canUndo ? <Btn compact disabled={compiling} onClick={() => setCleanupGuard(false)}>Undo</Btn> : null}
+        </div>
+      ) : null}
       {cache.oldDriverNote ? (
         <div className="s-budget-old">
           <span className="s-muted">{cache.oldDriverNote}</span>

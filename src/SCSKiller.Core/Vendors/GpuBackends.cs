@@ -6,7 +6,10 @@ public static class GpuBackends
 {
     /// <summary>Backend for the picked adapter (<see cref="Pick"/>). <paramref name="intel"/>: <see cref="Settings.ExperimentalIntel"/>.</summary>
     public static IGpuVendorBackend Detect(GpuChoice? choice = null, bool intel = false) =>
-        For(Pick(Adapters(), choice)?.Gpu ?? new GpuInfo(GpuVendor.Unknown, "no D3D adapter", "", 0, 0), intel);
+        Pick(Adapters(), choice, intel) is { } adapter ? For(adapter, intel) : For(new GpuInfo(GpuVendor.Unknown, "no D3D adapter", "", 0, 0), intel);
+
+    /// <summary>The backend of the listed adapter <paramref name="adapter"/>.</summary>
+    public static IGpuVendorBackend For(DxgiAdapter adapter, bool intel = false) => For(adapter.Gpu, intel);
 
     /// <summary>The backend of <paramref name="gpu"/>. Adding a vendor = one case here.</summary>
     public static IGpuVendorBackend For(GpuInfo gpu, bool intel = false)
@@ -33,19 +36,29 @@ public static class GpuBackends
 
     public static GpuInfo? Primary(IReadOnlyList<DxgiAdapter> adapters) => adapters.MaxBy(a => a.Gpu.DedicatedVideoMemory)?.Gpu;
 
-    /// <summary>The adapter the user picked (<see cref="Chosen"/>), else the one with the most video memory.</summary>
-    public static DxgiAdapter? Pick(IReadOnlyList<DxgiAdapter> adapters, GpuChoice? choice) =>
-        Chosen(adapters, choice) ?? adapters.MaxBy(a => a.Gpu.DedicatedVideoMemory);
+    /// <summary>The adapter the user picked (<see cref="Chosen"/>), else the one with the most video memory, of those with a
+    /// backend first (<see cref="HasBackend"/>).</summary>
+    public static DxgiAdapter? Pick(IReadOnlyList<DxgiAdapter> adapters, GpuChoice? choice, bool intel = false) =>
+        Chosen(adapters, choice, intel) ?? adapters.Where(a => HasBackend(a, intel)).MaxBy(a => a.Gpu.DedicatedVideoMemory)
+        ?? adapters.MaxBy(a => a.Gpu.DedicatedVideoMemory);
 
     /// <summary>The listed adapter <paramref name="choice"/> names: by its LUID (with its vendor and device id) while this
-    /// boot keeps it, else by vendor, device id and name; of identical cards, the first DXGI lists. Null when none is.</summary>
-    public static DxgiAdapter? Chosen(IReadOnlyList<DxgiAdapter> adapters, GpuChoice? choice) => choice is not { } c ? null
-        : adapters.FirstOrDefault(a => (a.Gpu.AdapterLuid, a.Gpu.Vendor, a.DeviceId) == (c.AdapterLuid, c.Vendor, c.DeviceId))
-          ?? adapters.FirstOrDefault(a => (a.Gpu.Vendor, a.DeviceId, a.Gpu.Name) == (c.Vendor, c.DeviceId, c.Name));
+    /// boot keeps it, else by vendor, device id and name; of identical cards, the first DXGI lists. Null when none with a
+    /// backend (<see cref="HasBackend"/>) is.</summary>
+    public static DxgiAdapter? Chosen(IReadOnlyList<DxgiAdapter> adapters, GpuChoice? choice, bool intel = false)
+    {
+        if (choice is not { } c) return null;
+        var usable = adapters.Where(a => HasBackend(a, intel)).ToList();
+        return usable.FirstOrDefault(a => (a.Gpu.AdapterLuid, a.Gpu.Vendor, a.DeviceId) == (c.AdapterLuid, c.Vendor, c.DeviceId))
+            ?? usable.FirstOrDefault(a => (a.Gpu.Vendor, a.DeviceId, a.Gpu.Name) == (c.Vendor, c.DeviceId, c.Name));
+    }
 
     /// <summary>The adapters SCSKiller compiles for (NVIDIA, AMD, and Intel with <paramref name="intel"/>): what a pick is offered from.</summary>
     public static IEnumerable<DxgiAdapter> Usable(IReadOnlyList<DxgiAdapter> adapters, bool intel = false) =>
-        adapters.Where(a => a.Gpu.Vendor is GpuVendor.Nvidia or GpuVendor.Amd || intel && a.Gpu.Vendor == GpuVendor.Intel);
+        adapters.Where(a => (a.Gpu.Vendor is GpuVendor.Nvidia or GpuVendor.Amd || intel && a.Gpu.Vendor == GpuVendor.Intel) && HasBackend(a, intel));
+
+    /// <summary>The adapter's vendor backend can run here: always on Windows, where every vendor's comes with its driver.</summary>
+    public static bool HasBackend(DxgiAdapter adapter, bool intel) => true;
 
     public static GpuChoice ChoiceOf(DxgiAdapter a) => new(a.Gpu.AdapterLuid, a.Gpu.Vendor, a.DeviceId, a.Gpu.Name);
 

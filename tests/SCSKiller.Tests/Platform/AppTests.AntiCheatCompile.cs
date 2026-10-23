@@ -256,7 +256,7 @@ public partial class AppTests
     [Theory]
     [InlineData(GpuVendor.Nvidia, "nvidia-1", "Dx11", "compiles every DirectX 11 shader")]
     [InlineData(GpuVendor.Amd, "amd-1", "Dx11", "compiles every DirectX 11 shader but the vertex shaders")]
-    [InlineData(GpuVendor.Nvidia, "nvidia-1", null, "compiles every DirectX 11 shader (the game may run on either); for DirectX 12, needs a recording, which its anti-cheat blocks")]
+    [InlineData(GpuVendor.Nvidia, "nvidia-1", null, "compiles every DirectX 11 shader (the game may run on either). For DirectX 12, needs a recording, which its anti-cheat blocks")]
     public async Task Overwatch_on_Steam_compiles_offline_and_never_gets_the_recorder(GpuVendor vendor, string profile, string? api, string reason)
     {
         Tank.TankReaderTests.WriteStorage(_game.InstallDir, Tank.TankReaderTests.VsAndPs, api == null ? null : "GraphicsAPI = " + api);

@@ -124,7 +124,7 @@ public sealed class TankReaderTests : IDisposable
         }
         Assert.Equal(Readiness.Ready, new Planner().Check(game, engine, null, Ff7.Nvidia).Readiness);
         // AMD compiles a D3D11 VS per input layout, which only a recording gives: the PS and CS are compiled
-        Assert.Equal(new PlanCheck(Readiness.Ready, "compiles every DirectX 11 shader but the vertex shaders; " + Planner.D3D11VsRecord),
+        Assert.Equal(new PlanCheck(Readiness.Ready, "compiles every DirectX 11 shader but the vertex shaders. " + Core.App.Format.Sentence(Planner.D3D11VsRecord)),
             new Planner().Check(game, engine, null, Ff7.Amd));
     }
 

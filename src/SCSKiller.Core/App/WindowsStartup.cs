@@ -38,6 +38,15 @@ public static class WindowsStartup
         return true;
     }
 
+    /// <summary><see cref="Set"/> when the user changed the setting (<paramref name="byUser"/>), else <see cref="Reconcile"/>;
+    /// only a <paramref name="release"/> build touches the value. A value the registry refuses changes nothing. True if it changed.</summary>
+    public static bool Apply(bool byUser, bool release, bool on, string appExe, bool installed, Func<string?> read, Action<string?> write, Func<string, bool> exists)
+    {
+        if (!release) return false;
+        try { return byUser ? Set(on, appExe, read, write) : Reconcile(on, appExe, installed, read, write, exists); }
+        catch (Exception e) when (e is UnauthorizedAccessException or System.Security.SecurityException or IOException) { return false; }
+    }
+
     /// <summary>Whether a Run command starts <paramref name="exe"/>: the same full path, ignoring quotes, arguments, case
     /// and the \\?\ prefix.</summary>
     public static bool PointsAt(string? command, string exe) =>

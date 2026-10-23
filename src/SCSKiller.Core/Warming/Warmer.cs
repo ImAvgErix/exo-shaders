@@ -45,6 +45,7 @@ public sealed class Warmer(IGpuVendorBackend vendor, string? warmExe = null) : I
     public TimeSpan StuckAfter { get; init; } = TimeSpan.FromSeconds(30);
     public const string StuckError = "the compile didn't stop cleanly (the driver may be stuck), so it was ended";
     public const string NoDoneError = "scskiller_warm exited without a done event";
+    public const string DiedError = "scskiller_warm died without an exit code";
 
     /// <summary>Removed devices, faults or hangs in a row whose retry blamed no new item before a warm gives up. Replaceable for tests.</summary>
     public int MaxRecoveries { get; init; } = 20;
@@ -62,6 +63,12 @@ public sealed class Warmer(IGpuVendorBackend vendor, string? warmExe = null) : I
 
     public IProgress<string>? Log { get; set; }
 
+    /// <summary>Where the run's processes start (<see cref="WarmHost.For"/>), by game and work folder. Replaceable for tests.</summary>
+    internal Func<Game, string, IWarmHost>? Host { get; init; }
+
+    /// <summary>Steam's folder for the host (default: Steam's own).</summary>
+    internal string? SteamRoot { get; init; }
+
     /// <summary>The game's AGS registration (<see cref="AmdAgs.Of"/>); null or returning null: a plain device.</summary>
     public Func<Game, AgsRegistration?>? Ags { get; set; }
 
@@ -76,7 +83,20 @@ public sealed class Warmer(IGpuVendorBackend vendor, string? warmExe = null) : I
     /// <summary>The warm exe for a vendor, relative to native\: NVIDIA's runs on the segment heap, since on the NT heap its
     /// compiler threads queue on the process heap's lock. AMD's compiler is slower on the segment heap, so the others keep
     /// the NT heap. Both are named scskiller_warm.exe and stage themselves under the game's name.</summary>
-    public static string ExeFor(GpuVendor vendor) => vendor == GpuVendor.Nvidia ? @"segheap\scskiller_warm.exe" : "scskiller_warm.exe";
+    public static string ExeFor(GpuVendor vendor, bool vulkan = false) => vendor == GpuVendor.Nvidia ? Path.Combine("segheap", "scskiller_warm.exe") : "scskiller_warm.exe";
+
+    /// <summary>Why the game can't be compiled on this PC now, one line; null = it can.</summary>
+    public string? Refusal(Game game, bool vulkan = false) => WarmHost.Refusal(game, SteamRoot, vulkan);
+
+    /// <summary>A Vulkan warm's environment: the game's cache variables (<see cref="WarmOptions.CacheEnv"/>, so the driver
+    /// writes where the game's cache is), then <paramref name="env"/> over them.</summary>
+    internal static IReadOnlyDictionary<string, string>? VulkanEnv(IReadOnlyDictionary<string, string>? env, IReadOnlyDictionary<string, string>? cache)
+    {
+        if (cache is not { Count: > 0 }) return env;
+        var all = new Dictionary<string, string>(cache, StringComparer.OrdinalIgnoreCase);
+        foreach (var (k, v) in env ?? new Dictionary<string, string>()) all[k] = v;
+        return all;
+    }
 
     public IWarmRun Start(Game game, string workDir, WarmOptions options, IProgress<WarmProgress>? progress) =>
         Start(game, workDir, options, progress, vendor.Gpu);
@@ -85,19 +105,33 @@ public sealed class Warmer(IGpuVendorBackend vendor, string? warmExe = null) : I
     /// records the run for.</summary>
     public IWarmRun Start(Game game, string workDir, WarmOptions options, IProgress<WarmProgress>? progress, GpuInfo gpu)
     {
-        var exe = warmExe ?? NativeTools.Find(ExeFor(vendor.Vendor))
-                  ?? throw new FileNotFoundException($"{ExeFor(vendor.Vendor)} not found next to the app or in proxy\\build\\Release");
-        string? stagePath = null;
-        if (Games.XboxSource.AppUserModelId(game) == null && (stagePath = StagePath(game, workDir, out var why)) == null)
-            Log?.Report($"{game.Name}: the compile runs without the install's folder layout: {why}");
-        var reg = vendor.Vendor == GpuVendor.Amd ? Ags?.Invoke(game) : null;
-        var ags = AgsArgs(vendor.Vendor, reg, reg == null ? null : AmdAgs.DllFor(game, NativeTools.Find(AmdAgs.DllName)), out var agsWhy);
-        if (agsWhy != null) Log?.Report($"{game.Name}: {agsWhy}");
-        if (Layer?.Invoke(game, workDir) is { } layer) ags = [.. ags, "--layer", layer];
-        if (AgilityDir(game.ExePath) is { } d3d12) ags = [.. ags, "--d3d12", d3d12];
-        if (DxvkDll(vendor.Vendor, game.ExePath) is { } d3d11) ags = [.. ags, "--d3d11", d3d11];
-        if (vendor.Vendor == GpuVendor.Nvidia && Aftermath?.Invoke(game) is { } am) ags = [.. ags, .. AftermathArgs(vendor.Vendor, am, NvAftermath.DllFor(game))];
-        return new WarmRun(vendor, gpu, exe, game, workDir, options, progress, StuckAfter, stagePath, MaxRecoveries, Environment, ags, Log);
+        var host = Host?.Invoke(game, workDir) ?? WarmHost.For(game, workDir, gpu, Log, SteamRoot, options.Vulkan);
+        try
+        {
+            var exe = warmExe ?? NativeTools.Find(ExeFor(vendor.Vendor, options.Vulkan))
+                      ?? throw new FileNotFoundException($"{ExeFor(vendor.Vendor, options.Vulkan)} not found next to the app or in {Path.Combine("proxy", "build", "Release")}");
+            // a Vulkan game's pipelines replay from its .foz, under its own cache variables: no staged layout, AGS or layers
+            if (options.Vulkan)
+                return new WarmRun(host, vendor, gpu, exe, game, workDir, options, progress, StuckAfter, null, MaxRecoveries, VulkanEnv(Environment, options.CacheEnv), ["--vulkan"], Log);
+            string? stagePath = null;
+            if (Games.XboxSource.AppUserModelId(game) == null && (stagePath = StagePath(game, workDir, out var why)) == null)
+                Log?.Report($"{game.Name}: the compile runs without the install's folder layout: {why}");
+            var reg = vendor.Vendor == GpuVendor.Amd ? Ags?.Invoke(game) : null;
+            var agsDll = reg == null ? null : AmdAgs.DllFor(game, NativeTools.Find(AmdAgs.DllName));
+            var ags = AgsArgs(vendor.Vendor, reg, agsDll == null ? null : host.WarmPath(agsDll), out var agsWhy);
+            if (agsWhy != null) Log?.Report($"{game.Name}: {agsWhy}");
+            if (Layer?.Invoke(game, workDir) is { } layer) ags = [.. ags, "--layer", host.WarmPath(layer)];
+            if (AgilityDir(game.ExePath) is { } d3d12) ags = [.. ags, "--d3d12", host.WarmPath(d3d12)];
+            if (DxvkDll(vendor.Vendor, game.ExePath) is { } d3d11) ags = [.. ags, "--d3d11", host.WarmPath(d3d11)];
+            if (vendor.Vendor == GpuVendor.Nvidia && Aftermath?.Invoke(game) is { } am)
+                ags = [.. ags, .. AftermathArgs(vendor.Vendor, am, NvAftermath.DllFor(game) is { } dll ? host.WarmPath(dll) : null)];
+            return new WarmRun(host, vendor, gpu, exe, game, workDir, options, progress, StuckAfter, stagePath, MaxRecoveries, Environment, ags, Log);
+        }
+        catch
+        {
+            host.Dispose();
+            throw;
+        }
     }
 
     /// <summary>scskiller_warm's --ags arguments: on AMD, for a game that registers with AGS (an Xbox app game holds its
@@ -127,7 +161,7 @@ public sealed class Warmer(IGpuVendorBackend vendor, string? warmExe = null) : I
     {
         try
         {
-            var dll = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(exePath))!, App.ScsKiller.Dll11);
+            var dll = Games.GameFiles.Find(Path.GetDirectoryName(Path.GetFullPath(exePath))!, App.ScsKiller.Dll11);
             return vendor == GpuVendor.Nvidia && Games.ReShade.IsDxvk(dll) ? dll : null;
         }
         catch (Exception e) when (e is ArgumentException or NotSupportedException or IOException) { return null; }
@@ -151,10 +185,10 @@ public sealed class Warmer(IGpuVendorBackend vendor, string? warmExe = null) : I
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or BadImageFormatException) { }
             // a protected or packed exe's exports can't be read from the file: the folder the Agility SDK installs to, or
             // its x64 subfolder (Fortnite's)
-            var d3d12 = Path.Combine(exeDir, "D3D12");
+            var d3d12 = Games.GameFiles.Find(exeDir, "D3D12");
             var dir = !string.IsNullOrEmpty(sdkPath) ? AgilityFolder(exeDir, sdkPath)
-                : File.Exists(Path.Combine(d3d12, "D3D12Core.dll")) ? d3d12 : Path.Combine(d3d12, "x64");
-            return dir != null && File.Exists(Path.Combine(dir, "D3D12Core.dll")) ? dir : null;
+                : File.Exists(Games.GameFiles.Find(d3d12, "D3D12Core.dll")) ? d3d12 : Games.GameFiles.Find(d3d12, "x64");
+            return dir != null && File.Exists(Games.GameFiles.Find(dir, "D3D12Core.dll")) ? dir : null;
         }
         catch (Exception e) when (e is ArgumentException or NotSupportedException or IOException) { return null; }
     }
@@ -164,10 +198,47 @@ public sealed class Warmer(IGpuVendorBackend vendor, string? warmExe = null) : I
     public static string? AgilityFolder(string exeDir, string? sdkPath)
     {
         if (string.IsNullOrEmpty(sdkPath) || Path.IsPathRooted(sdkPath) || sdkPath.Contains(':')) return null;
-        var dir = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(exeDir, sdkPath)));
+        var dir = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Games.GameFiles.Find(exeDir, sdkPath)));
         var rel = Path.GetRelativePath(exeDir, dir);
-        return rel == ".." || rel.StartsWith(@"..\", StringComparison.Ordinal) || Path.IsPathRooted(rel) ? null : dir;
+        return rel == ".." || rel.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) || Path.IsPathRooted(rel) ? null : dir;
     }
+
+    /// <summary>The D3D12SDKVersion the Agility SDK runtime in <paramref name="dir"/> exports; 0 when it can't be read.</summary>
+    public static int AgilitySdk(string dir)
+    {
+        try
+        {
+            using var pe = Carved.PeFile.Open(Path.Combine(dir, "D3D12Core.dll"));
+            return Carved.PeFile.ExportData(pe, "D3D12SDKVersion") is { RemainingBytes: >= 4 } data ? data.ReadInt32() : 0;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or BadImageFormatException or ArgumentException) { return 0; }
+    }
+
+    /// <summary>The highest Shader Model DirectX 12 compiles on Windows 10 (builds 19041 to 21999), with the game's Agility SDK
+    /// runtime of that version (null = none: the system's); null where it isn't known to fall short (Windows 11, a newer SDK).</summary>
+    public static Version? RuntimeShaderModel(int osBuild, int? agilitySdk) => osBuild is < 19041 or >= 22000 ? null : agilitySdk switch
+    {
+        null => new(6, 5),
+        4 or (>= 600 and <= 605) => new(6, 6),
+        >= 606 and <= 612 => new(6, 7),
+        >= 613 and <= 616 => new(6, 8),
+        _ => null,
+    };
+
+    /// <summary>Why pipelines of a plan whose shaders reach <paramref name="planShaderModel"/> will fail on this runtime, one
+    /// line; null when they won't (<see cref="RuntimeShaderModel"/>).</summary>
+    public static string? RuntimeWarning(string? planShaderModel, int osBuild, int? agilitySdk) =>
+        Version.TryParse(planShaderModel, out var needed) && RuntimeShaderModel(osBuild, agilitySdk) is { } runs && needed > runs
+            ? agilitySdk == null
+                ? $"Windows 10's DirectX 12 can't compile this game's Shader Model {needed} shaders, so pipelines that use them will fail. Updating to Windows 11 can fix it."
+                : $"The game's own DirectX 12 runtime can't compile its Shader Model {needed} shaders, so pipelines that use them will fail. Updating the game or Windows can fix it."
+            : null;
+
+    /// <summary><see cref="RuntimeWarning(string?, int, int?)"/> for the game's exe: with the Agility SDK it ships
+    /// (<see cref="AgilityDir"/>), read only when the system's runtime would fall short.</summary>
+    public static string? RuntimeWarning(string? planShaderModel, string exePath, int osBuild) =>
+        RuntimeWarning(planShaderModel, osBuild, null) == null ? null
+            : RuntimeWarning(planShaderModel, osBuild, AgilityDir(exePath) is { } dir ? AgilitySdk(dir) : null);
 
     const int MaxPath = 260;
     const string LongestStagedName = "scskiller_warm_times.csv";
@@ -182,7 +253,7 @@ public sealed class Warmer(IGpuVendorBackend vendor, string? warmExe = null) : I
         var install = Path.TrimEndingDirectorySeparator(Path.GetFullPath(game.InstallDir));
         var rel = Path.GetRelativePath(install, Path.GetFullPath(game.ExePath));
         why = Path.GetFileName(install).Length == 0 ? $"the install folder {game.InstallDir} is a drive root"
-            : Path.IsPathRooted(rel) || rel == "." || rel == ".." || rel.StartsWith(@"..\", StringComparison.Ordinal) ? $"{game.ExePath} is outside {game.InstallDir}"
+            : Path.IsPathRooted(rel) || rel == "." || rel == ".." || rel.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? $"{game.ExePath} is outside {game.InstallDir}"
             : null;
         if (why != null) return null;
         var path = Path.Combine(Path.GetFileName(install), rel);
@@ -205,7 +276,8 @@ public sealed class Warmer(IGpuVendorBackend vendor, string? warmExe = null) : I
 /// with the crash keys found so far; Done and StartAt then count the whole warm's items
 /// (<see cref="WarmPasses.Overall"/>), so a stopped careful warm resumes in its pass. A process started with --aftermath that
 /// fails or dies before its first item (the game's Aftermath may fault or hang there) is run again without it, once, from the
-/// warm's first item (<see cref="WarmResult.AftermathDropped"/>).</summary>
+/// warm's first item (<see cref="WarmResult.AftermathDropped"/>). The processes start through an <see cref="IWarmHost"/>,
+/// which may end one at a segment's end (a new one goes on from where it stopped) or halt the run.</summary>
 sealed class WarmRun : IWarmRun
 {
     static readonly TimeSpan CacheSampleInterval = TimeSpan.FromSeconds(5), ReportEvery = TimeSpan.FromMilliseconds(250);
@@ -213,48 +285,50 @@ sealed class WarmRun : IWarmRun
     const int MaxProcesses = 256;
     // Known state objects skipped in one compile before the retries lower the ray tracing threads too (a crash storm).
     const int MaxKnownSkips = 8;
-    Process _p = null!;
-    readonly EventWaitHandle _stop;
+    IWarmProcess _p = null!;
+    readonly IWarmHost _host;
     readonly object _lock = new();
     readonly TimeSpan _stuckAfter;
-    readonly TaskCompletionSource _doneSeen = new(TaskCreationOptions.RunContinuationsAsynchronously);   // the final done event
+    volatile TaskCompletionSource _doneSeen = new(TaskCreationOptions.RunContinuationsAsynchronously);   // the final done event
     bool _paused, _stopping;
     volatile string? _ended;   // why Stop had to end the process
 
     public Task<WarmResult> Completion { get; }
 
-    public WarmRun(IGpuVendorBackend vendor, GpuInfo gpu, string exe, Game game, string workDir, WarmOptions o, IProgress<WarmProgress>? progress, TimeSpan stuckAfter, string? stagePath,
+    /// <summary><paramref name="host"/> starts the processes and is disposed when the run ends.</summary>
+    public WarmRun(IWarmHost host, IGpuVendorBackend vendor, GpuInfo gpu, string exe, Game game, string workDir, WarmOptions o, IProgress<WarmProgress>? progress, TimeSpan stuckAfter, string? stagePath,
         int maxRecoveries, IReadOnlyDictionary<string, string>? env, string[]? extra = null, IProgress<string>? log = null)
     {
+        _host = host;
         _stuckAfter = stuckAfter;
-        var stopName = $"Local\\SCSKiller.Stop.{Guid.NewGuid():N}";
-        _stop = new EventWaitHandle(false, EventResetMode.ManualReset, stopName);
-        long before = vendor.GetCacheUsage().BytesOnDisk;
+        // a Vulkan game's cache variables may point the driver at a folder of the game's own: its growth is measured there
+        var redirect = o.Vulkan && Vulkan.VulkanPlan.CachePath(env, vendor.Vendor) is { } cache && Directory.Exists(cache) ? cache : null;
+        long before = Usage();
         var clock = Stopwatch.StartNew();
         var stderr = new System.Collections.Concurrent.ConcurrentQueue<string>();
         var skipKeys = new HashSet<string>(o.SkipKeys ?? [], StringComparer.OrdinalIgnoreCase);
         var passes = WarmPasses.Read(workDir);
         var (pass, from) = passes?.Locate(o.StartAt) ?? (0, o.StartAt);
+        var rt = 0;   // the last process's --rt-threads
         long Whole(long done) => passes?.Overall(pass, done) ?? done;
-        Process Launch(long start, int rtThreads, List<long> skip, IReadOnlyList<long> isolate)
+        long Usage()
         {
-            from = start;
-            var psi = new ProcessStartInfo(exe)
-            {
-                UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true,
-                StandardOutputEncoding = System.Text.Encoding.UTF8, WorkingDirectory = workDir,
-            };
+            if (redirect == null) return vendor.GetCacheUsage().BytesOnDisk;
+            try { return new DirectoryInfo(redirect).EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true }).Sum(f => f.Length); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return 0; }
+        }
+        IWarmProcess Launch(long start, int rtThreads, List<long> skip, IReadOnlyList<long> isolate)
+        {
+            (from, rt) = (start, rtThreads);
             var threads = passes != null && !passes.IsFast(pass) && o.CarefulThreads > 0 ? o.CarefulThreads : o.Threads;
-            foreach (var a in new[] { workDir, Path.GetFileName(game.ExePath), "--threads", threads.ToString(),
-                         "--priority", o.Priority == WarmPriority.Idle ? "idle" : "below", "--start", start.ToString(),
-                         "--stop-event", stopName, "--adapter-luid", gpu.AdapterLuid.ToString("X16") })
-                psi.ArgumentList.Add(a);
-            if (o.MemoryMB > 0) { psi.ArgumentList.Add("--memory-mb"); psi.ArgumentList.Add(o.MemoryMB.ToString()); }
-            if (rtThreads > 0) { psi.ArgumentList.Add("--rt-threads"); psi.ArgumentList.Add(rtThreads.ToString()); }
-            if (skip.Count > 0) { psi.ArgumentList.Add("--skip"); psi.ArgumentList.Add(string.Join(',', skip)); }
-            if (stagePath != null) { psi.ArgumentList.Add("--stage-path"); psi.ArgumentList.Add(stagePath); }
-            foreach (var a in extra ?? []) psi.ArgumentList.Add(a);
-            if (vendor.Caps.PackageKeyed && Games.XboxSource.AppUserModelId(game) is { } app) { psi.ArgumentList.Add("--package"); psi.ArgumentList.Add(app); }
+            List<string> args = [host.WarmPath(workDir), Path.GetFileName(game.ExePath), "--threads", threads.ToString(),
+                "--priority", o.Priority == WarmPriority.Idle ? "idle" : "below", "--start", start.ToString(), .. host.StopArgs, .. host.AdapterArgs(gpu)];
+            if (o.MemoryMB > 0) args.AddRange(["--memory-mb", o.MemoryMB.ToString()]);
+            if (rtThreads > 0) args.AddRange(["--rt-threads", rtThreads.ToString()]);
+            if (skip.Count > 0) args.AddRange(["--skip", string.Join(',', skip)]);
+            if (stagePath != null) args.AddRange(["--stage-path", stagePath]);
+            args.AddRange(extra ?? []);
+            if (vendor.Caps.PackageKeyed && !o.Vulkan && Games.XboxSource.AppUserModelId(game) is { } app) args.AddRange(["--package", app]);
             if (skipKeys.Count > 0)
             {
                 var keys = string.Join(',', skipKeys.Order(StringComparer.Ordinal));
@@ -262,20 +336,13 @@ sealed class WarmRun : IWarmRun
                 {
                     var file = Path.GetFullPath(Path.Combine(workDir, "skip-keys.txt"));
                     File.WriteAllText(file, keys);
-                    keys = "@" + file;
+                    keys = "@" + host.WarmPath(file);
                 }
-                psi.ArgumentList.Add("--skip-keys");
-                psi.ArgumentList.Add(keys);
+                args.AddRange(["--skip-keys", keys]);
             }
-            if (isolate.Count > 0) { psi.ArgumentList.Add("--isolate"); psi.ArgumentList.Add(string.Join(',', isolate)); }
-            foreach (var (k, v) in env ?? new Dictionary<string, string>()) psi.Environment[k] = v;
-            if (passes != null) { psi.ArgumentList.Add("--pass"); psi.ArgumentList.Add(passes.Number(pass).ToString()); }
-            var p = Process.Start(psi) ?? throw new InvalidOperationException("could not start " + exe);
-            try { WarmJob.Current.Add(p.Id); }   // dies with this SCSKiller process, whatever ends it (WarmJob)
-            catch (Exception) { p.Kill(entireProcessTree: true); throw; }
-            p.ErrorDataReceived += (_, e) => { if (e.Data is { Length: > 0 } l) { stderr.Enqueue(l); log?.Report($"{game.Name}: compile: {l}"); } };
-            p.BeginErrorReadLine();
-            return p;
+            if (isolate.Count > 0) args.AddRange(["--isolate", string.Join(',', isolate)]);
+            if (passes != null) args.AddRange(["--pass", passes.Number(pass).ToString()]);
+            return host.Start(exe, args, env ?? new Dictionary<string, string>(), l => { stderr.Enqueue(l); log?.Report($"{game.Name}: compile: {l}"); });
         }
         _p = Launch(from, 0, [], []);
         _ = Task.Run(() => GuardMemory(log, game.Name));
@@ -284,9 +351,10 @@ sealed class WarmRun : IWarmRun
             try { return await Run(); }
             catch
             {
-                Process p;
+                IWarmProcess p;
                 lock (_lock) p = _p;
-                try { p.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }   // exited meanwhile
+                try { p.Kill(); }
+                finally { _host.Dispose(); }
                 throw;
             }
         });
@@ -297,7 +365,7 @@ sealed class WarmRun : IWarmRun
             long growth = 0;
             long Growth()   // a directory walk for NVIDIA: not on every report
             {
-                if (sampled == null || sampled.Elapsed >= CacheSampleInterval) (growth, sampled) = (Math.Max(0, vendor.GetCacheUsage().BytesOnDisk - before), Stopwatch.StartNew());
+                if (sampled == null || sampled.Elapsed >= CacheSampleInterval) (growth, sampled) = (Math.Max(0, Usage() - before), Stopwatch.StartNew());
                 return growth;
             }
             long carried = 0, carriedSkips = 0;   // failures and skips the earlier processes counted (before their retry point, or in earlier passes)
@@ -305,10 +373,11 @@ sealed class WarmRun : IWarmRun
             string? note = null;
             var skip = new List<long>();
             var crashed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var added = new HashSet<string>(StringComparer.Ordinal);   // cache keys the host saw the processes add
             int removals = 0, knownSkips = 0;
             WarmEvent? last, done;
             string? error;
-            int code;
+            int? code;
             bool betweenPasses = false;   // stopped after a pass ended: the next one resumes from its first item
             bool resumable = false;       // gave up on device removals or hangs at a retry point
             bool dropped = false;         // run again without --aftermath
@@ -320,12 +389,35 @@ sealed class WarmRun : IWarmRun
                 var report = progress == null ? null : new Adjusted(progress, carried, carriedSkips, note ?? passNote, passes?.Total);
                 var lastPass = passes == null || pass == passes.Count - 1;
                 stage = null;   // this process's, never an earlier one's
-                (last, done, error) = await WarmOutput.Pump(_p.StandardOutput, report, Growth, ReportEvery,
-                    () => { if (lastPass || _stopping) _doneSeen.TrySetResult(); }, Whole, s => stage = s);
-                await _p.WaitForExitAsync();
-                code = _p.ExitCode;
+                (last, done, error) = await WarmOutput.Pump(_p.Output, report, Growth, ReportEvery,
+                    () => { if (lastPass || _stopping) _doneSeen.TrySetResult(); }, Whole, s => stage = host.HostPath(s));
+                code = await _p.Exited;
+                var end = await host.AfterProcess(doing => progress?.Report(new WarmProgress(Whole(last?.Done ?? from), passes?.Total ?? last?.Total ?? 0,
+                    carried + (last?.Failed ?? 0), 0, Growth(), Note: doing, DriverSkipped: carriedSkips + (last?.DriverSkipped ?? 0))));
+                added.UnionWith(end.Added);
                 lastCarried = false;
                 crashed.UnionWith(done?.Crashed ?? []);
+                bool stopping;
+                lock (_lock) stopping = _stopping;
+                var clean = error == null && (done is { Event: "retry" } || code == 0 && done != null);
+                // the host can't go on (a pass that ended cleanly as the last one still counts)
+                if (end.Halt is { } halt && !stopping && !(clean && done is { Event: "done", Stopped: false } && lastPass))
+                {
+                    (error, resumable) = (error ?? halt, clean);
+                    break;
+                }
+                // the host ended the process at a segment's end: a new one goes on from where it stopped
+                if (end.Segment && clean && done is { Event: "done", Stopped: true } segment)
+                {
+                    lock (_lock)
+                    {
+                        if (_stopping) break;
+                        (carried, carriedSkips, lastCarried, note) = (carried + segment.Failed, carriedSkips + segment.DriverSkipped, true, null);
+                        _doneSeen = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                        _p = Launch(segment.Done, rt, skip, []);
+                    }
+                    continue;
+                }
                 if (error == null && code == 0 && done is { Event: "done", Stopped: false } && !lastPass)
                 {
                     (carried, carriedSkips, lastCarried) = (carried + done.Failed, carriedSkips + done.DriverSkipped, true);
@@ -384,21 +476,25 @@ sealed class WarmRun : IWarmRun
                     _p = Launch(r.From, rtThreads, skip, removed ? r.Isolate ?? [] : []);
                 }
             }
-            _stop.Dispose();
-            growth = Math.Max(0, vendor.GetCacheUsage().BytesOnDisk - before);   // after exit: the driver writes its cache then
+            host.Dispose();
+            growth = Math.Max(0, Usage() - before);   // after exit: the driver writes its cache then
             // stopped between processes: resumes from the retry point, or from the next pass
             var stopped = done is { Event: "retry" } && _stopping || betweenPasses;
             var outcome = error == null && (stopped || code == 0 && done != null) ? stopped || done!.Stopped ? WarmOutcome.Stopped : WarmOutcome.Completed : WarmOutcome.Failed;
             if (_ended != null) (outcome, error) = (WarmOutcome.Failed, _ended);
             if (outcome == WarmOutcome.Failed)
-                error ??= code != 0 ? $"scskiller_warm exited with code {code}{(stderr.IsEmpty ? "" : ": " + string.Join(" | ", stderr.TakeLast(3)))}"
-                                    : Warmer.NoDoneError;
+            {
+                var said = stderr.IsEmpty ? "" : ": " + string.Join(" | ", stderr.TakeLast(3));
+                error ??= code == null ? Warmer.DiedError + said
+                    : code != 0 ? $"scskiller_warm exited with code {code}{said}"
+                    : Warmer.NoDoneError;
+            }
             var failed = carried + (lastCarried ? 0 : last?.Failed ?? 0);
             var skips = carriedSkips + (lastCarried ? 0 : last?.DriverSkipped ?? 0);
             return new WarmResult(outcome, Whole(last?.Done ?? from), passes?.Total ?? last?.Total ?? 0, failed, clock.Elapsed, growth,
                 Path.Combine(stage ?? Path.Combine(workDir, "stage"), "scskiller.log"), outcome == WarmOutcome.Failed ? error : null,
                 Crashed: crashed.Count > 0 ? crashed : null, DriverSkipped: skips, Resumable: resumable && outcome == WarmOutcome.Failed && _ended == null,
-                AftermathDropped: dropped);
+                AftermathDropped: dropped, CacheKeysAdded: added.Count > 0 ? added : null);
         }
     }
 
@@ -423,7 +519,7 @@ sealed class WarmRun : IWarmRun
         while (true)
         {
             await Task.Delay(MemoryCheckEvery);
-            Process p;
+            IWarmProcess p;
             lock (_lock)
             {
                 if (_stopping || Completion?.IsCompleted == true) return;
@@ -456,7 +552,7 @@ sealed class WarmRun : IWarmRun
         lock (_lock)
         {
             if (_paused || _stopping || _p.HasExited) return;
-            ProcessTree.Suspend(_p.Id, true);
+            _p.Suspend(true);
             _paused = true;
         }
     }
@@ -466,7 +562,7 @@ sealed class WarmRun : IWarmRun
         lock (_lock)
         {
             if (!_paused) return;
-            ProcessTree.Suspend(_p.Id, false);
+            _p.Suspend(false);
             _paused = false;
         }
     }
@@ -479,7 +575,7 @@ sealed class WarmRun : IWarmRun
             _stopping = true;
         }
         Resume();   // a suspended process can't see the event
-        try { _stop.Set(); } catch (ObjectDisposedException) { return; }
+        try { _host.Stop(); } catch (ObjectDisposedException) { return; }
         // No done event soon after the stop = stuck (the stop event is every process's, so a relaunch sees it too, and none
         // starts after a stop). After the done event the process may be writing the driver cache for minutes (NVIDIA writes
         // at exit): scskiller_warm's own exit limit (600 s) bounds that, not us. An ended run is Failed, so its resume point
@@ -488,10 +584,10 @@ sealed class WarmRun : IWarmRun
         {
             await Task.WhenAny(_doneSeen.Task, Completion, Task.Delay(_stuckAfter));
             if (_doneSeen.Task.IsCompleted || Completion.IsCompleted) return;
-            Process p;
+            IWarmProcess p;
             lock (_lock) p = _p;
             _ended = Warmer.StuckError;
-            try { p.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }   // exited meanwhile
+            p.Kill();
         });
     }
 }
@@ -521,7 +617,7 @@ public static class WarmOutput
                 if (WarmEvent.Parse(line) is not { } e) continue;
                 if (e.Event == "error") error ??= e.Message ?? "unknown error";
                 else if (e.Event is "done" or "retry") done = e;   // retry: the process ends, a new one goes on (WarmRun)
-                if (e.Event == "done") onDone?.Invoke();
+                if (e.Event is "done" or "stopping") onDone?.Invoke();   // stopping: the stop was seen, the done event follows
                 if (e is { Event: "stage", Stage: { Length: > 0 } st }) onStage?.Invoke(st);
                 if (e.Event is "start" or "progress" or "done" or "retry") last = e;
                 if (e.Event is "progress" or "done") Volatile.Write(ref latest, e);
@@ -759,7 +855,7 @@ static class ProcessTree
     }
 
     /// <summary>The process's creation time (FILETIME); null when it can't be opened or has exited.</summary>
-    static long? Created(int pid)
+    internal static long? Created(int pid)
     {
         var h = OpenProcess(0x1000 /* PROCESS_QUERY_LIMITED_INFORMATION */, false, pid);
         if (h == 0) return null;

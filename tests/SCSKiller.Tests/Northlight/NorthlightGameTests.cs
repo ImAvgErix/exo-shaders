@@ -38,7 +38,7 @@ public class NorthlightGameTests(ITestOutputHelper output)
         Assert.Equal(NorthlightReader.Family, engine.Family);
         Assert.Equal(AntiCheat.None, GameFiles.DetectAntiCheat(game));
         Assert.Equal("D3D11 or D3D12", engine.GraphicsApi);   // pc_dx11 ships beside pc_dxil
-        Assert.Equal(new PlanCheck(Readiness.Ready, $"{Planner.Untested}; also compiles every DirectX 11 shader (the game may run on either)"), new Planner().Check(game, engine, null, Ff7.Nvidia));
+        Assert.Equal(new PlanCheck(Readiness.Ready, $"{Planner.Untested}. Also compiles every DirectX 11 shader (the game may run on either)"), new Planner().Check(game, engine, null, Ff7.Nvidia));
         var before = Live();
         sw.Restart();
         var index = reader.Index(game, engine, new Progress<string>(output.WriteLine), CancellationToken.None);

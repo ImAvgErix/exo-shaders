@@ -161,7 +161,7 @@ public class BeforeAfterTests : IDisposable
         Assert.Equal("Frame generation was on in both runs.", BeforeAfter.Compare(on, on).Notes[^1]);
         Assert.DoesNotContain(notes, n => n.Contains("cold"));
         Assert.Contains("AMD's DirectX 11 driver cache can't be checked, so the before run may not have been fully cold",
-            BeforeAfter.Compare(before, after, notCold: true).Notes);   // a clear that didn't know a cache SCSKiller can't watch
+            BeforeAfter.Compare(before, after, notCold: BeforeAfter.MaybeWarm).Notes);   // a clear that didn't know a cache SCSKiller can't watch
         Assert.Contains("The game's DirectX 11 driver cache couldn't be told from another app's, so the after run may have used the before run's",
             BeforeAfter.Compare(before, after, afterHelped: true).Notes);
         Assert.Contains("The after run loaded 30 more pipelines from the game's own cache, not counted for SCSKiller", notes);

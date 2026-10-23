@@ -33,7 +33,7 @@ public sealed class GaijinSource : IGameSource
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
         var rel = lines.Select(l => l.Split('=', 2)).FirstOrDefault(p => p.Length == 2 && p[0].Trim().Equals("64BitExe", StringComparison.OrdinalIgnoreCase))?[1].Trim();
         if (string.IsNullOrEmpty(rel) || Path.IsPathRooted(rel)) return null;
-        var exe = Path.GetFullPath(Path.Combine(install, rel));
+        var exe = Path.GetFullPath(GameFiles.Under(install, rel));
         return GameFiles.Inside(install, exe) && File.Exists(exe) ? exe : null;
     }
 }

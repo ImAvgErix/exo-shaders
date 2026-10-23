@@ -46,6 +46,12 @@ public sealed record CompatReport(string GameId, string StoreBuildKey, CompatCho
     /// <summary>"10.0.26300": Windows' major, minor and build number only.</summary>
     public static string ThisWindows => Environment.OSVersion.Version is var v ? $"{v.Major}.{v.Minor}.{v.Build}" : "";
 
+    /// <summary>The system line of a problem report: "Windows: 10.0.26300".</summary>
+    public static string SystemLine() => "Windows: " + ThisWindows;
+
+    /// <summary>What the rating dialog says a report sends.</summary>
+    public const string WhatIsSent = "Sent with the rating: your CPU model, GPU model, driver version, Windows version, and what SCSKiller compiled for this game. Nothing else.";
+
     public static CompatCompile CompileOf(GameState s, bool maximumPlans) => new(
         s.Status == GameStatus.Unsupported && (s.WarmedAt != null || s.CompileFailed) ? CompatStatus.NotSupported
         : s.CompileFailed ? CompatStatus.Failed

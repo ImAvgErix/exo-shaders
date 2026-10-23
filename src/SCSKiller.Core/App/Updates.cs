@@ -466,9 +466,11 @@ public static class Busy
     public static string Name => @"Local\SCSKiller.Busy" + Scope;
     public static readonly TimeSpan ApplyingFor = TimeSpan.FromMinutes(2);   // an older marker is a crashed apply
 
+    public const string CompileStarted = "A compile started meanwhile. The update installs when SCSKiller quits after it has finished.";
+
     /// <summary>Held until disposed. The named object exists while any process has it open, so ownership (and its thread
     /// affinity, awkward across awaits) isn't needed.</summary>
-    public static IDisposable Hold(string? name = null) => new Mutex(false, name ?? Name);
+    public static IDisposable Hold(string? name = null) => NamedMutex.Open(name ?? Name);
 
     /// <summary>A compile worker's hold, taken before it reads the marker (the updater writes the marker before it reads
     /// <see cref="IsHeld"/>), so an update and a compile never both go ahead; null, holding nothing, while an update is
@@ -481,11 +483,17 @@ public static class Busy
         return null;
     }
 
-    public static bool IsHeld(string? name = null)
+    public static bool IsHeld(string? name = null) => NamedMutex.Held(name ?? Name);
+
+    /// <summary>The updater's handover: marks an update as applying, then null when it may go ahead, else why not (the
+    /// named objects can't be trusted here, or a compile holds <see cref="Name"/>), the mark taken back.</summary>
+    public static string? Handover(string dataDir, DateTimeOffset now, string? name = null, string? lockRoot = null)
     {
-        if (!Mutex.TryOpenExisting(name ?? Name, out var m)) return false;
-        m.Dispose();
-        return true;
+        MarkApplying(dataDir, now);
+        var refused = NamedMutex.Unsafe(lockRoot) is { } why ? why + ". No update installs until that is fixed."
+            : IsHeld(name) ? CompileStarted : null;
+        if (refused != null) ClearApplying(dataDir);
+        return refused;
     }
 
     static string Marker(string dataDir) => Path.Combine(dataDir, "applying");

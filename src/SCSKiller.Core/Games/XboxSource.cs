@@ -136,7 +136,7 @@ public sealed class XboxSource(IEnumerable<string>? driveRoots = null) : IGameSo
             var doc = XDocument.Load(config);
             var ns = doc.Root!.GetDefaultNamespace();
             return (doc.Root.Element(ns + "ExecutableList")?.Elements(ns + "Executable") ?? []).Where(e => !IsGameExecutable(e))
-                .Select(e => e.Attribute("Name")?.Value).OfType<string>().Select(n => Path.GetFullPath(Path.Combine(content, n)))
+                .Select(e => e.Attribute("Name")?.Value).OfType<string>().Select(n => Path.GetFullPath(GameFiles.Under(content, n)))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Xml.XmlException or ArgumentException or NotSupportedException) { return []; }
@@ -178,6 +178,41 @@ public sealed class XboxSource(IEnumerable<string>? driveRoots = null) : IGameSo
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Xml.XmlException) { return null; }
     }
+
+    /// <summary>The path an Xbox game's process runs from: its exe under the package's install folder
+    /// (<c>C:\Program Files\WindowsApps\&lt;full name&gt;</c>), not under Content. Null when no installed package holds it.</summary>
+    public static string? LaunchPath(Game g)
+    {
+        if (g.Store != Store.Xbox || !g.Id.StartsWith("xbox:", StringComparison.Ordinal)) return null;
+        var family = g.Id["xbox:".Length..];
+        var rel = Path.GetRelativePath(g.InstallDir, g.ExePath);
+        uint count = 0, len = 0;
+        GetPackagesByPackageFamily(family, ref count, null, ref len, 0);
+        if (count == 0 || len == 0) return null;
+        var names = new nint[count];
+        var buf = Marshal.AllocHGlobal((int)len * sizeof(char));
+        try
+        {
+            if (GetPackagesByPackageFamily(family, ref count, names, ref len, buf) != 0) return null;
+            foreach (var full in names.Take((int)count).Select(p => Marshal.PtrToStringUni(p)))
+            {
+                uint plen = 0;
+                GetPackagePathByFullName(full!, ref plen, null);
+                if (plen == 0) continue;
+                var path = new char[plen];
+                if (GetPackagePathByFullName(full!, ref plen, path) == 0 && Path.Combine(new string(path, 0, (int)plen - 1), rel) is var exe && File.Exists(exe))
+                    return exe;
+            }
+            return null;
+        }
+        finally { Marshal.FreeHGlobal(buf); }
+    }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    static extern int GetPackagesByPackageFamily(string packageFamilyName, ref uint count, [Out] nint[]? packageFullNames, ref uint bufferLength, nint buffer);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    static extern int GetPackagePathByFullName(string packageFullName, ref uint pathLength, [Out] char[]? path);
 
     // PackageFamilyNameFromId (appmodel.h)
     [StructLayout(LayoutKind.Sequential)]

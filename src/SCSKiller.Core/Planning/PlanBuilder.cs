@@ -26,7 +26,7 @@ sealed class PlanBuilder
     readonly IReadOnlyDictionary<string, ShaderInfo> bc;
     /// <summary>Shader maps; Global shaders pair across maps (one fullscreen VS serves pixel shaders from many global maps): pooled.</summary>
     readonly List<(string Platform, bool Pooled, IReadOnlyList<string> Shas, bool IsPipeline, string? Rs)> maps;
-    readonly bool mapRoots;   // a map names its pipeline's root signature (ShaderMap.RootSignature)
+    readonly bool mapRoots;   // a map names its root signature (ShaderMap.RootSignature)
     string? mapRs;            // ...the one StageSets is walking
     readonly Dictionary<string, string> platOfSha = [];
     readonly RulesFile rules;
@@ -49,6 +49,14 @@ sealed class PlanBuilder
     readonly Dictionary<string, HashSet<string>> settings = [];   // a recorded root signature without its samplers' parameters -> the sampler sets it comes with
     readonly Dictionary<string, byte[]> samplerSets = [];          // ...each by its hex
     int builtOk, builtN, ownOk, ownN; // own: recorded PSOs whose shaders carry a root signature, and those created with it
+
+    // view instancing: the views a PSO with an SV_ViewID shader declares, from the recording or the rule (ViewsOf)
+    readonly Dictionary<string, byte[]?> recordedViews = [];   // by shader: its recorded PSOs' most common views (null: none)
+    readonly ViRule? viRule;
+    readonly Dictionary<string, byte[]?> ruleViews = [];       // by shader: the rule's views, or null when the rule isn't for it
+    readonly HashSet<string>[] viewIdShaders = [[], [], []];   // the planned SV_ViewID shaders: as recorded, with the rule's, without
+    readonly Dictionary<string, byte[]?> templateViews = [];   // a recorded template's views, by key
+    const string ViShadingRate = "vi_shading_rate_unread";
 
     // decided from the recording and the caps
     bool verified, build, synth, dx12;
@@ -92,13 +100,14 @@ sealed class PlanBuilder
         this.budget.Progress = () => $"{seen.Count:N0} stage sets";
         this.rules = rules ?? RulesFile.Current;
         bc = index.Shaders;
-        maps = index.Maps.Select(m => (m.Platform, Pooled: false, Shas: m.Shaders, m.IsPipeline, Rs: m.IsPipeline ? m.RootSignature : null)).ToList();
+        maps = index.Maps.Select(m => (m.Platform, Pooled: false, Shas: m.Shaders, m.IsPipeline, Rs: m.RootSignature)).ToList();
         maps.AddRange(index.Maps.Where(m => m.Library == "Global").GroupBy(m => m.Platform)
             .Select(g => (g.Key, true, (IReadOnlyList<string>)g.SelectMany(m => m.Shaders).Distinct().ToList(), false, (string?)null)));
         mapRoots = maps.Any(m => m.Rs != null);
         foreach (var m in index.Maps) foreach (var h in m.Shaders) platOfSha[h] = m.Platform;
         rule = this.rules.RuleFor(engine) ?? RulesFile.Embedded.Rules.Single(r => r.Id == "ue-ff7"); // no rule: FF7's is what a recording gets checked against
         maxSrvs = RootSig.MaxSrvsFor(rule, bc.Values);
+        viRule = this.rules.ViFor(engine)?.ViewInstancing;
     }
 
     public Plan Build()
@@ -269,8 +278,43 @@ sealed class PlanBuilder
             if (pso.Stages.ContainsKey((int)Stage.Geometry)) gsTopo.TryAdd((pso.Topology, shape), t);
         }
         if (unbuilt > 0) log?.Report($"recorded: the rule's rebuild of {unbuilt} root signatures doesn't serialize with their static samplers: counted as not rebuilt (they replay as recorded)");
+        // each SV_ViewID shader's views: the ones its recorded PSOs declare most (none counts too)
+        var views = new Dictionary<string, Dictionary<string, int>>();
+        foreach (var r in recs.Where(r => r.Tag is 'G' or 'S'))
+        {
+            if (ParseState(r) is not { } state) continue;
+            var key = state.ViewInstancing is { } v ? Hex(v) : "";
+            foreach (var h in state.Stages.Values.Where(h => bc.TryGetValue(h, out var info) && info.ViewId))
+            {
+                var counts = views.TryGetValue(h, out var c) ? c : views[h] = [];
+                counts[key] = counts.GetValueOrDefault(key) + 1;
+            }
+        }
+        foreach (var (h, counts) in views) recordedViews[h] = counts.MaxBy(x => x.Value).Key is { Length: > 0 } top ? Convert.FromHexString(top) : null;
         void Add(string shape, (string, string, bool) t) { if (!templates.TryGetValue(shape, out var l)) templates[shape] = l = []; l.Add(t); }
     }
+
+    /// <summary>The views a stage set's PSOs declare (a view-instancing subobject): none without an SV_ViewID shader; else
+    /// what the recording shows for its first one, else the rule's (<see cref="ViRule"/>) when its library is one the rule
+    /// names. Each shader is counted for the log by where its views came from.</summary>
+    byte[]? ViewsOf(IReadOnlyDictionary<int, string> stages)
+    {
+        if (stages.Values.FirstOrDefault(s => bc[s].ViewId) is not { } h) return null;
+        if (recordedViews.TryGetValue(h, out var views))
+        {
+            viewIdShaders[0].Add(h);
+            return views;
+        }
+        if (!ruleViews.TryGetValue(h, out views))
+            ruleViews[h] = views = viRule is { } vi && (vi.Libraries is not { } libs || index.Maps.Any(m => libs.Contains(m.Library) && m.Shaders.Contains(h))) ? vi.Bytes() : null;
+        viewIdShaders[views != null ? 1 : 2].Add(h);
+        return views;
+    }
+
+    /// <summary>A recorded template's views (null: none).</summary>
+    byte[]? TemplateViews(string key) => templateViews.TryGetValue(key, out var v) ? v : templateViews[key] = ParseState(recByKey[key])?.ViewInstancing;
+
+    static bool SameViews(byte[]? a, byte[]? b) => a == null ? b == null : b != null && a.AsSpan().SequenceEqual(b);
 
     RtCollections.Nv? rasterNv;   // the NVAPI state every synthesized PSO is created with (an 'N' record each); null = none
     uint RtOptions => RtCollections.RecordedOptions(stateObjects.Concat(nvRecs));   // the recorded state objects' NVAPI creation options
@@ -492,8 +536,17 @@ sealed class PlanBuilder
         // the ones not matching fail harmlessly at replay), else a synthesized one
         var cands = gs != null ? gsTopo.Where(t => (topo == 0 || t.Key.Topology == topo) && t.Key.Shape == shape).Select(t => t.Value).ToList() is { Count: > 0 } l ? l : null
             : templates.GetValueOrDefault($"{shape}|{psOut}") ?? templates.GetValueOrDefault(shape);
+        // the views are in the PSO: a template serves only stage sets of its own views, where a synthesized one can replace it
+        var views = ViewsOf(stages);
+        if (cands != null && synth && topo != 0) cands = cands.Where(c => SameViews(TemplateViews(c.Key), views)).ToList() is { Count: > 0 } same ? same : null;
         if (rs == null || (cands == null && (!synth || topo == 0))) { Count(rs == null ? NoRs : gs != null ? "no_gs_template" : "no_template"); return; }
         if (have.Contains(Tuple(rs, stages))) { Count("already_recorded"); return; }
+        if (Planner.ShadingRateUnread(Infos(stages)))   // only without views (a template without them, or none and no views)
+        {
+            var plain = cands?.Where(c => TemplateViews(c.Key) == null).ToList();
+            if (plain != null ? plain.Count == 0 : views != null) { Count(ViShadingRate); return; }
+            cands = plain;
+        }
         if (Uncovered(rs, stages) is { } left) { Count(left); return; }
         usedRs.Add(rs);
         Count("generated");
@@ -510,12 +563,12 @@ sealed class PlanBuilder
             return;
         }
         var (rt, dsv) = Targets(stages);
-        var skey = $"{shape}|{topo}|{string.Join(',', rt)}|{dsv}";
+        var skey = $"{shape}|{topo}|{string.Join(',', rt)}|{dsv}|{(views != null ? Hex(views) : "")}";
         var layout = LayoutFor(stages, true);
         if (synthByShape.TryGetValue(skey, out var tkey)) items.Add(Item(tkey, rs, stages, layout));
         else // the first PSO of a shape is its template (and gets compiled as itself)
         {
-            var rec = new Rec('S', Stream(rs, stages, layout, topo, rt, dsv));
+            var rec = new Rec('S', Stream(rs, stages, layout, topo, rt, dsv, viewInstancing: views));
             synthByShape[skey] = rec.Key;
             synthesized.Add(rec);
         }
@@ -551,6 +604,8 @@ sealed class PlanBuilder
             }
             if (rs == null) { Count(NoRs); return; }
             if (!have.Contains(Tuple(rs, stages)) && Uncovered(rs, stages) is { } left) { Count(left); return; } // recorded: the game created it
+            var views = ViewsOf(stages);
+            if (views != null && !have.Contains(Tuple(rs, stages)) && Planner.ShadingRateUnread(Infos(stages))) { Count(ViShadingRate); return; }
             if (rsBlobs.TryGetValue(rs, out var blob)) facts.AddRootSignature(rs, blob); // VS units share PIXEL-only differences
             var l = stages.TryGetValue((int)Stage.Vertex, out var vs) ? layouts.TryGetValue(vs, out var r) ? r : layouts[vs] = facts.Layouts(bc[vs]) : none;
             var s = stages.TryGetValue((int)Stage.Pixel, out var ps) ? shapes.TryGetValue(ps, out var q) ? q : shapes[ps] = facts.Shapes(bc[ps]) : new([], Provenance.Exact);
@@ -561,7 +616,7 @@ sealed class PlanBuilder
                 if (!topos.TryGetValue(tk, out t!)) topos[tk] = t = facts.Topologies(stages).Value;
             }
             if (ps != null && (vs != null || stages.ContainsKey((int)Stage.Mesh))) pairs++;
-            cands.Add((new UnitCover.Candidate(stages, rs, l.Value, t, s.Value), l.Provenance, s.Provenance, crossPool != null));
+            cands.Add((new UnitCover.Candidate(stages, rs, l.Value, t, s.Value, views), l.Provenance, s.Provenance, crossPool != null));
         });
         if (pairedElsewhere.Count > 0)
             for (var i = 0; i < cands.Count; i++)
@@ -596,7 +651,7 @@ sealed class PlanBuilder
         {
             budget.Tick();
             var (pv, pp) = prov[c];
-            foreach (var u in UnitCover.Units(facts, c.Stages, c.Rs, p.Layout, p.Topology, p.Shape))
+            foreach (var u in UnitCover.Units(facts, c.Stages, c.Rs, p.Layout, p.Topology, p.Shape, c.Views))
                 if (counted.Add(u))
                 {
                     unitsBy[(int)(u.Stage == Stage.Vertex ? pv : u.Stage == Stage.Pixel ? pp : Provenance.Exact)]++;
@@ -610,8 +665,8 @@ sealed class PlanBuilder
             var dsv = !hasPs ? D32Float : Planner.Targets(bc[ps!]).Dsv;
             var link = hasPs && policy.ExportShape ? facts.Link(bc[ps!], p.Shape) : null;
             if (link is { Dsv: 0 } && dsv != 0) link = link with { Dsv = dsv }; // a PS writing depth keeps a depth buffer
-            synthesized.Add(new Rec('S', link != null ? Stream(c.Rs, stages, p.Layout, p.Topology, rt, link.Dsv, blend: link.Blend, depthStencil: link.DepthStencil)
-                : Stream(c.Rs, stages, p.Layout, p.Topology, rt, dsv, masks, ops.Length > 0 ? ops[0] : -1)));
+            synthesized.Add(new Rec('S', link != null ? Stream(c.Rs, stages, p.Layout, p.Topology, rt, link.Dsv, blend: link.Blend, depthStencil: link.DepthStencil, viewInstancing: c.Views)
+                : Stream(c.Rs, stages, p.Layout, p.Topology, rt, dsv, masks, ops.Length > 0 ? ops[0] : -1, viewInstancing: c.Views)));
             usedRs.Add(c.Rs);
             Count("generated");
         }
@@ -653,8 +708,8 @@ sealed class PlanBuilder
             foreach (var s in c.Shapes.DistinctBy(s => s != "").DefaultIfEmpty(f.Shape))   // a VS unit keys on whether a render target is bound
                 foreach (var l in c.Layouts.DefaultIfEmpty(f.Layout))
                     foreach (var t in c.Topologies.DefaultIfEmpty(f.Topology))
-                        units.UnionWith(UnitCover.Units(facts, c.Stages, c.Rs, l, t, s));
-            foreach (var s in c.Shapes) units.UnionWith(UnitCover.Units(facts, c.Stages, c.Rs, f.Layout, f.Topology, s));
+                        units.UnionWith(UnitCover.Units(facts, c.Stages, c.Rs, l, t, s, c.Views));
+            foreach (var s in c.Shapes) units.UnionWith(UnitCover.Units(facts, c.Stages, c.Rs, f.Layout, f.Topology, s, c.Views));
             foreach (var u in units) served[u] = served.GetValueOrDefault(u) + 1;
             units.Clear();
         }
@@ -663,7 +718,7 @@ sealed class PlanBuilder
         var ranked = picks.Select((p, i) =>
         {
             budget.Tick();
-            var fresh = UnitCover.Units(facts, p.Candidate.Stages, p.Candidate.Rs, p.Pick.Layout, p.Pick.Topology, p.Pick.Shape).Where(covered.Add).ToList();
+            var fresh = UnitCover.Units(facts, p.Candidate.Stages, p.Candidate.Rs, p.Pick.Layout, p.Pick.Topology, p.Pick.Shape, p.Candidate.Views).Where(covered.Add).ToList();
             var first = fresh.Count(u => compiled.Add(u.Shader)) > 0;
             var (v, s) = prov[p.Candidate];
             return (p, First: first, Prov: v > s ? v : s, Served: fresh.Sum(u => (long)served.GetValueOrDefault(u)), At: i);
@@ -694,9 +749,9 @@ sealed class PlanBuilder
     public const long CacheBudget = Vendors.AmdAppCache.DxcCacheCap;
     /// <summary><see cref="CacheBudget"/> in PSOs.</summary>
     public const long CachePsos = CacheBudget / PsoBytes;
-    /// <summary>What one game's plan may take where state is in the cache key: the driver's per-game cap (Intel), else
-    /// <see cref="CacheBudget"/>.</summary>
-    public static long CacheBudgetOf(VendorCaps caps) => caps.PerGameCacheCap ?? CacheBudget;
+    /// <summary>What one game's plan may take where state is in the cache key: the vendor's warm budget
+    /// (<see cref="VendorCaps.WarmCacheBudget"/>), else the driver's per-game cap (Intel), else <see cref="CacheBudget"/>.</summary>
+    public static long CacheBudgetOf(VendorCaps caps) => caps.WarmCacheBudget ?? caps.PerGameCacheCap ?? CacheBudget;
 
     /// <summary>A stage set's first candidates (what <see cref="UnitCover.Cover"/> zips from).</summary>
 
@@ -747,10 +802,15 @@ sealed class PlanBuilder
         }
         var fed = new HashSet<string>();
         var unfed = new List<ShaderInfo>();
+        var otherWaves = new HashSet<string>();   // shaders only in a [WaveSize] partition this GPU doesn't run ("wave_size")
         foreach (var (mapPlat, pooled, shas, isPipeline, root) in maps)
         {
             ct.ThrowIfCancellationRequested();
-            if (!OnPlatform(mapPlat)) continue;
+            if (!OnPlatform(mapPlat))
+            {
+                if (plat != "" && mapPlat.StartsWith(plat + " wave")) otherWaves.UnionWith(shas);
+                continue;
+            }
             var all = shas.Where(bc.ContainsKey).ToList();
             var ds = all.Where(Usable).Select(h => bc[h]).ToList();
             if (isPipeline && ds.Count < all.Count) continue; // a shipped pipeline stays whole or not at all
@@ -766,6 +826,7 @@ sealed class PlanBuilder
                 mapRs = null;
                 continue;
             }
+            mapRs = root;   // a map that names its root signature: every stage set of it uses that one
             var srcs = new Dictionary<string, List<ShaderInfo>>();
             var gss = new Dictionary<string, List<ShaderInfo>>(); // geometry shaders by output signature, fed by a VS with matching outputs
             foreach (var d in ds)
@@ -859,6 +920,7 @@ sealed class PlanBuilder
                         sink(st, Planner.Shape(st), p != null ? Planner.Sig(p.Outputs, false) : "");
                     }
             }
+            mapRs = null;
         }
 
         // global VS->GS chains also feed material pixel shaders (e.g. rendering into volume textures): pair across libraries
@@ -868,6 +930,7 @@ sealed class PlanBuilder
             if (!pooled && OnPlatform(mapPlat))
                 foreach (var h in shas.Where(h => Usable(h) && bc[h].Stage == Stage.Pixel)) Planner.Push(psByIn, Planner.Sig(bc[h].Inputs), bc[h]);
         if (ags.Count > 0) stats["vendor_extension"] = ags.Count;
+        if (otherWaves.Count > 0) stats["wave_size"] = otherWaves.Count;
         var gvsOut = gpool.Where(v => v.Stage == Stage.Vertex).ToLookup(v => Planner.Sig(v.Outputs));
         foreach (var g in gpool.Where(d => d.Stage == Stage.Geometry))
         {
@@ -1258,14 +1321,18 @@ sealed class PlanBuilder
         // a game with no DXIL library in its files traces rays inline (PRAGMATA: 748 RayQuery compute shaders, no library)
         var rtInline = rtLibs == 0 || engine.Family == "Unreal" && engine.Version.StartsWith('5')
             ? maps.Where(m => m.Platform == plat).SelectMany(m => m.Shas).Distinct().Count(h => bc.TryGetValue(h, out var s) && s.InlineRayTracing) : 0;
+        // the highest DXIL shader model the warm compiles (a shader the index doesn't have: its recorded bytes')
+        var maxSm = Rehydrate.References(body.Concat(replays).Concat(replayable)).Select(h =>
+            bc.TryGetValue(h, out var s) ? s.ShaderModel.Split('_') is [_, "6", var minor] && int.TryParse(minor, out var m) ? new Version(6, m) : null
+            : recBlobs.TryGetValue(h, out var b) ? Carved.Dxbc.DxilShaderModel(b) : null).Max();
         var plan = new Plan(game.Id, index.ContentHash, string.Join(" + ", new[] { plat, n11 > 0 ? $"D3D11 {plat11 ?? "DXBC"}" : "" }.Where(p => p != "")), caps.Profile,
             new PlanStats(pipelines + replayable.Count, items.Count + synthesized.Count + rtItems.Count + hitGroupItems.Count, synthesized.Count, usedRs.Count, dx12 && (verified || embeddedRs > 0 || mapRoots),
                 unitsBy[(int)Provenance.Exact], unitsBy[(int)Provenance.Inferred], unitsBy[(int)Provenance.Guessed], layoutCoverage, n11, packNew,
                 stats.GetValueOrDefault("rs_uncovered"), rtLibs - rtUnbuilt, inlineOnly || engine.NoRtPipelines || !rayTracing ? 0 : rtLibs - rtCovered - rtUnbuilt,
-                StageSets: seen.Count + unpaired - stats.GetValueOrDefault("rs_unserializable"), LeftOut: new[] { "no_rs", "no_template", "no_gs_template", "rs_uncovered", "own_rs_uncovered", "rs_unknown", "stream_output" }.Sum(stats.GetValueOrDefault),
+                StageSets: seen.Count + unpaired - stats.GetValueOrDefault("rs_unserializable") - stats.GetValueOrDefault(ViShadingRate), LeftOut: new[] { "no_rs", "no_template", "no_gs_template", "rs_uncovered", "own_rs_uncovered", "rs_unknown", "stream_output" }.Sum(stats.GetValueOrDefault),
                 MiddlewareSharedItems: packShared, RtStateObjects: replayable.Count, RtInline: rtInline,
                 RsRule: RootSig.RuleFor(engine)?.Id, BuiltOk: builtOk, BuiltN: builtN, D3D11Draws: items11.Count, Variants: synthCopies.Count + itemCopies.Count + replays.Count - pipelines,
-                CacheBudgetLeftOut: cacheLeftOut, RecordedOnly: !pairs),
+                CacheBudgetLeftOut: cacheLeftOut, RecordedOnly: !pairs, MaxShaderModel: maxSm?.ToString()),
             Path.Combine(outDir, "plan.bin"));
         budget.Check();
         PlanFile.Write(plan, body.Select(r => { budget.Tick(); return r; }));
@@ -1281,11 +1348,15 @@ sealed class PlanBuilder
             log?.Report($"warning: {stats.GetValueOrDefault("rs_unbuilt")} stage sets left out: the rule builds no root signature for their shaders ({unbuilt})");
         if (stats.TryGetValue("rs_uncovered", out var nu))
             log?.Report($"warning: {nu} stage sets left out: their root signature doesn't cover a resource their shaders declare "
-                + $"({string.Join("; ", uncoveredExample.Take(5).Select(e => $"{e.Key}, e.g. {e.Value[..12]}"))}); this engine's rule doesn't know those ranges"
-                + (recs.Count == 0 ? ": a recording teaches the planner the game's own root signatures" : ""));
+                + $"({string.Join(" / ", uncoveredExample.Take(5).Select(e => $"{e.Key}, e.g. {e.Value[..12]}"))}). "
+                + (build ? "This engine's rule doesn't know those ranges" + (recs.Count == 0 ? ", a recording teaches the planner the game's own root signatures" : "")
+                    : "A recorded root signature picked by resource counts, from other shaders, doesn't have those ranges"));
         if (stats.TryGetValue("own_rs_uncovered", out var no))
             log?.Report($"{no} stage sets left out: the root signature the game ships with them doesn't cover their shaders "
                 + $"({string.Join("; ", ownUncoveredExample.Take(5).Select(e => $"{e.Key}, e.g. {e.Value[..12]}"))})");
+        if (viewIdShaders.Any(v => v.Count > 0))
+            log?.Report($"view instancing: {viewIdShaders.Sum(v => v.Count)} planned shaders read SV_ViewID: {viewIdShaders[0].Count} as recorded, {viewIdShaders[1].Count} with the rule's"
+                + (viewIdShaders[2].Count > 0 ? $", {viewIdShaders[2].Count} without (none recorded, no rule for them)" : ""));
         if (stats.TryGetValue("rs_unknown", out var nk))
             log?.Report($"warning: {nk} stage sets left out: no readable bytes for their root signature in the rules, the recording or the game's index (e.g. {unknownRs![..12]})");
         return plan;

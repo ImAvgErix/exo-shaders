@@ -106,6 +106,35 @@ public static class ShaderContainer
         }
     }
 
+    /// <summary>Interns the lists and shader models a game's shaders share (many have identical bindings and signatures),
+    /// so an index of hundreds of thousands of shaders holds each distinct one once. Thread-safe.</summary>
+    public sealed class SharedLists
+    {
+        sealed class Seq<T> : IEqualityComparer<IReadOnlyList<T>>
+        {
+            public static readonly Seq<T> Instance = new();
+            public bool Equals(IReadOnlyList<T>? a, IReadOnlyList<T>? b) => a == b || a != null && b != null && a.SequenceEqual(b);
+            public int GetHashCode(IReadOnlyList<T> list)
+            {
+                var h = new HashCode();
+                foreach (var item in list) h.Add(item);
+                return h.ToHashCode();
+            }
+        }
+
+        readonly ConcurrentDictionary<IReadOnlyList<Binding>, IReadOnlyList<Binding>> bindings = new(Seq<Binding>.Instance);
+        readonly ConcurrentDictionary<IReadOnlyList<SigElement>, IReadOnlyList<SigElement>> sigs = new(Seq<SigElement>.Instance);
+        readonly ConcurrentDictionary<string, string> models = new();
+
+        public ShaderInfo Share(ShaderInfo s) => s with
+        {
+            ShaderModel = models.GetOrAdd(s.ShaderModel, s.ShaderModel),
+            Bindings = bindings.GetOrAdd(s.Bindings, s.Bindings),
+            Inputs = sigs.GetOrAdd(s.Inputs, s.Inputs),
+            Outputs = sigs.GetOrAdd(s.Outputs, s.Outputs),
+        };
+    }
+
     /// <summary>A mesh shader's per-primitive outputs (PSG1) follow its per-vertex ones in <see cref="ShaderInfo.Outputs"/>
     /// at this register plus their row: their rows count from 0, and a PS packs them after its own per-vertex inputs.</summary>
     public const int PrimitiveRow = 0x10000;
@@ -114,18 +143,26 @@ public static class ShaderContainer
     /// malformed container (ArgumentException).</summary>
     public const int MaxSigElements = 1024;
 
+    /// <summary>Bytes a signature element's semantic name may have (HLSL's are short): a longer one is a malformed container.</summary>
+    public const int MaxSemantic = 256;
+
+    /// <summary>Bytes of distinct semantic names a signature part may decode, whatever its size: real ones are a few
+    /// hundred, so a large part of overlapping names can't decode into far more strings than shaders use.</summary>
+    public const int SemanticBudget = 64 << 10;
+
     /// <summary>Bytes of distinct names a container's part may decode: its distinct names fit in it, so more means names
     /// that overlap (each a suffix of a longer one) and would decode into far more strings than the part holds.</summary>
     internal static long NameBudget(int partLength) => 2L * partLength + (64 << 10);
 
     /// <summary>The ASCII string at <paramref name="at"/> of its string table <paramref name="d"/>, up to its NUL, of any
-    /// length; ArgumentException when it starts outside the table, runs past it, or would take <paramref name="budget"/>
-    /// below 0. Callers cache names by offset, so a shared name is decoded once.</summary>
-    static string Name(ReadOnlySpan<byte> d, int at, ref long budget)
+    /// length up to <paramref name="max"/> bytes; ArgumentException when it starts outside the table, runs past it or
+    /// <paramref name="max"/>, or would take <paramref name="budget"/> below 0. Callers cache names by offset, so a shared
+    /// name is decoded once.</summary>
+    static string Name(ReadOnlySpan<byte> d, int at, ref long budget, int max = int.MaxValue)
     {
         if ((uint)at > (uint)d.Length) throw new ArgumentException("a name outside its string table");
-        var n = d[at..].IndexOf((byte)0);
-        if (n < 0) throw new ArgumentException("a name without its end");
+        var n = d[at..][..(int)Math.Min(max + 1L, d.Length - at)].IndexOf((byte)0);   // only as far as a name may go
+        if (n < 0) throw new ArgumentException(d.Length - at > max ? $"a name over {max} bytes" : "a name without its end");
         if ((budget -= 2L * n) < 0) throw new ArgumentException("names over the part's budget");   // UTF-16 once decoded
         return Encoding.ASCII.GetString(d.Slice(at, n));
     }
@@ -143,13 +180,13 @@ public static class ShaderContainer
             if (count > MaxSigElements || U(d, 4) + (long)count * size > d.Length) throw new ArgumentException($"{k}: {count} elements don't fit the part");
             var list = new List<SigElement>();
             var names = new Dictionary<int, string>();   // elements may share a name
-            var budget = NameBudget(d.Length);
+            long budget = SemanticBudget;
             for (var e = 0; e < (int)count; e++)
             {
                 var o = (int)U(d, 4) + e * size;
                 var b = size == 24 ? o - 4 : o; // 24-byte elements have no leading Stream field
                 var nameOff = (int)U(d, b + 4);
-                if (!names.TryGetValue(nameOff, out var name)) names[nameOff] = name = Name(d, nameOff, ref budget);
+                if (!names.TryGetValue(nameOff, out var name)) names[nameOff] = name = Name(d, nameOff, ref budget, MaxSemantic);
                 // next to the declared mask: an input's read components (ISGN ReadWriteMask, ISG1 AlwaysReads), an output's
                 // written ones (the declared mask without its NeverWrites components); a PSG1 element's: unknown
                 var read = k[0] == 'I' ? d[b + 25] : k == "PSG1" ? SigElement.UnknownReadMask : (byte)(d[b + 24] & ~d[b + 25]);
@@ -225,7 +262,7 @@ public static class ShaderContainer
         if (stage == Stage.Pixel && sigs.TryGetValue("IS", out var ins) && InputInterpolation(c) is { Count: > 0 } modes) // DXIL only
             sigs["IS"] = ins.Select(e => modes.TryGetValue((e.Semantic, e.Index), out var m) ? e with { Interpolation = m } : e).ToList();
         return new ShaderInfo(sha1, stage.Value, $"{prefix[kind]}_{(version >> 4) & 0xF}_{version & 0xF}", c.Length, counts, bindings,
-            sigs.GetValueOrDefault("IS") ?? [], sigs.GetValueOrDefault("OS") ?? [], stage == Stage.Geometry ? gsInput : 0, InlineRayTracing: Dxbc.InlineRayTracing(c), Payload: payload);
+            sigs.GetValueOrDefault("IS") ?? [], sigs.GetValueOrDefault("OS") ?? [], stage == Stage.Geometry ? gsInput : 0, InlineRayTracing: Dxbc.InlineRayTracing(c), Payload: payload, ViewId: Dxbc.ViewId(c));
     }
 
     /// <summary>A DXIL pixel shader's interpolation mode per named input (PSV0 signature elements: (semantic, index), the

@@ -29,19 +29,19 @@ public class D3D11Tests(ITestOutputHelper output)
         Assert.Equal(new PlanCheck(Readiness.Ready, FromSource), C("D3D12", "4.24"));
         Assert.Equal(new PlanCheck(Readiness.Ready, "no recording needed"), C("D3D12")); // 4.26: confirmed by two forks' recordings
         Assert.Equal(new PlanCheck(Readiness.Ready, FromSource), C("D3D12", "5.8")); // newer than any rule: the newest, not tested
-        Assert.Equal(new PlanCheck(Readiness.Unsupported, "runs on Vulkan"), C("Vulkan"));
-        Assert.Equal(new PlanCheck(Readiness.Ready, $"{FromSource}; also {All11} (the game may run on either)"), C(UnrealRhi.Ambiguous, "4.24"));
-        Assert.Equal(new PlanCheck(Readiness.Ready, $"{All11} (the game may run on either); for DirectX 12, {Planner.Record}"),
+        Assert.Equal(new PlanCheck(Readiness.Unsupported, "runs on Vulkan" + Planner.VulkanNotOnGpu), C("Vulkan"));
+        Assert.Equal(new PlanCheck(Readiness.Ready, $"{FromSource}. Also {All11} (the game may run on either)"), C(UnrealRhi.Ambiguous, "4.24"));
+        Assert.Equal(new PlanCheck(Readiness.Ready, $"{All11} (the game may run on either). For DirectX 12, {Planner.Record}"),
             C(UnrealRhi.Ambiguous, "4.19"));
         // AMD: the PS and CS only (a VS needs the game's input layouts)
         const string Amd11 = All11 + " but the vertex shaders";
-        Assert.Equal(new PlanCheck(Readiness.Ready, $"{Amd11}; {Planner.D3D11VsRecord}"), C("D3D11", caps: Ff7.Amd));
-        Assert.Equal(new PlanCheck(Readiness.Ready, $"{Amd11} (user setting); {Planner.D3D11VsRecord}"), C("D3D11 (user setting)", caps: Ff7.Amd));
-        Assert.Equal(new PlanCheck(Readiness.Ready, $"{Amd11} (the game may run on either); for DirectX 12, {Planner.Record}"), C(UnrealRhi.Ambiguous, "4.19", Ff7.Amd));
+        Assert.Equal(new PlanCheck(Readiness.Ready, $"{Amd11}. {Core.App.Format.Sentence(Planner.D3D11VsRecord)}"), C("D3D11", caps: Ff7.Amd));
+        Assert.Equal(new PlanCheck(Readiness.Ready, $"{Amd11} (user setting). {Core.App.Format.Sentence(Planner.D3D11VsRecord)}"), C("D3D11 (user setting)", caps: Ff7.Amd));
+        Assert.Equal(new PlanCheck(Readiness.Ready, $"{Amd11} (the game may run on either). For DirectX 12, {Planner.Record}"), C(UnrealRhi.Ambiguous, "4.19", Ff7.Amd));
         // a vendor whose D3D11 cache isn't measured
         var other = Ff7.Nvidia with { Profile = "unmeasured" };
         Assert.Equal(new PlanCheck(Readiness.Unsupported, "runs on DirectX 11"), C("D3D11", caps: other));
-        Assert.Equal(new PlanCheck(Readiness.Ready, $"{FromSource}; helps only when played on DirectX 12 (the game may run on DirectX 11)"), C(UnrealRhi.Ambiguous, "4.24", other));
+        Assert.Equal(new PlanCheck(Readiness.Ready, $"{FromSource}. Helps only when played on DirectX 12 (the game may run on DirectX 11)"), C(UnrealRhi.Ambiguous, "4.24", other));
     }
 
     static readonly SigElement Pos = new("SV_Position", 0, 0, 0xF, 1, 3), Uv = new("TEXCOORD", 0, 1, 0x3, 0, 3), Target = new("SV_Target", 0, 0, 0xF, 64, 3);

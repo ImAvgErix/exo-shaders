@@ -352,11 +352,12 @@ public class SantaMonicaReaderTests
     [Fact]
     public void LongNamesAreReadWhole()
     {
-        var semantic = new string('S', 300);
-        var vs = Container(("ISGN", Isgn([0, 0], Encoding.ASCII.GetBytes(semantic + "\0"))), ("SHEX", Shex));
-        var info = ShaderContainer.Parse(vs, "x", new(0, 0, 0, 0))!;
+        var semantic = new string('S', ShaderContainer.MaxSemantic);
+        byte[] Vs(string name) => Container(("ISGN", Isgn([0, 0], Encoding.ASCII.GetBytes(name + "\0"))), ("SHEX", Shex));
+        var info = ShaderContainer.Parse(Vs(semantic), "x", new(0, 0, 0, 0))!;
         Assert.Equal([semantic, semantic], info.Inputs.Select(i => i.Semantic));
         Assert.Same(info.Inputs[0].Semantic, info.Inputs[1].Semantic);   // one name, decoded once
+        Assert.Throws<ArgumentException>(() => ShaderContainer.Parse(Vs(semantic + "S"), "x", new(0, 0, 0, 0)));   // longer: a malformed container
 
         // a DXIL library whose RDAT names a ray generation function of 300 characters
         var function = new string('f', 300);

@@ -9,16 +9,19 @@
 #   native\scskiller_ags.dll        the recorder for games whose D3D12 device AGS creates (AMD)
 #   native\scskiller_warm.exe       the compile process
 #   native\segheap\scskiller_warm.exe
+#   native\VkLayer_scskiller.dll    the Vulkan recorder layer (Fossilize), registered per game
+#   native\fossilize-replay.exe     the Vulkan compile's replayer
+#   native\preload\*.dll            proxies that load the recorder ahead of DLSS/Streamline (NVIDIA)
 #   scskiller.exe, scskillerw.exe   beside the service, sharing its one .NET runtime: ScheduledTask.TaskExe (the
 #                                   "re-warm after a driver update" task) and Elevated.CliExe (cache size / Auto
 #                                   Shader Compilation, run as administrator)
-# The native binaries are taken from the SCSKiller 1.3.0 release (prebuilt\SOURCE.md); their source is proxy\.
+# The native binaries are taken from SCSKiller 1.4.0-alpha.2 (prebuilt\SOURCE.md); proxy\ holds the 1.3.x source only.
 #
 #   pwsh build\publish-service.ps1 [-NativeFrom <SCSKiller.App\current>] [-Out <dir>] [-SkipCli]
 
 [CmdletBinding()]
 param(
-    # SCSKiller 1.3.0's own native files, kept in prebuilt\.
+    # SCSKiller 1.4.0-alpha.2's own native files, kept in prebuilt\.
     [string]$NativeFrom = (Join-Path $PSScriptRoot '..\prebuilt'),
     [string]$Out,
     [switch]$SkipCli
@@ -35,7 +38,12 @@ $natives = @(
     'native\amd_ags_x64.dll',
     'native\scskiller_ags.dll',
     'native\scskiller_warm.exe',
-    'native\segheap\scskiller_warm.exe'
+    'native\segheap\scskiller_warm.exe',
+    'native\VkLayer_scskiller.dll',
+    'native\fossilize-replay.exe',
+    'native\preload\dinput8.dll',
+    'native\preload\version.dll',
+    'native\preload\winmm.dll'
 )
 $zlibCandidates = @('zlib-ng2.dll', 'cli\zlib-ng2.dll')
 

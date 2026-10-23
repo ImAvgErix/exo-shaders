@@ -536,29 +536,23 @@ public partial class AppTests
         bool? First(string import)
         {
             File.WriteAllBytes(_game.ExePath, DiscoveryAndVendorTests.Exe(import));
-            return Core.Games.GameFiles.StreamlineFirst(_game.ExePath, []);
+            return Core.Games.GameFiles.StreamlineFirst(_game.ExePath, system, []);
         }
-        var was = Core.Games.GameFiles.SystemDir;
-        try
-        {
-            Core.Games.GameFiles.SystemDir = system;
-            File.WriteAllBytes(Path.Combine(system, "plain.dll"), Planning.MiddlewarePackTests.Pe(null));
-            Assert.True(First("plain.dll"));
-            Assert.True(First("api-ms-win-core-synch-l1-2-0.dll"));
-            File.WriteAllBytes(Path.Combine(system, "uses12.dll"), DiscoveryAndVendorTests.Exe("d3d12.dll"));
-            Assert.False(First("uses12.dll"));   // the loader looks for its d3d12.dll in the exe's folder first
-            Assert.Null(First("nowhere.dll"));
+        File.WriteAllBytes(Path.Combine(system, "plain.dll"), Planning.MiddlewarePackTests.Pe(null));
+        Assert.True(First("plain.dll"));
+        Assert.True(First("api-ms-win-core-synch-l1-2-0.dll"));
+        File.WriteAllBytes(Path.Combine(system, "uses12.dll"), DiscoveryAndVendorTests.Exe("d3d12.dll"));
+        Assert.False(First("uses12.dll"));   // the loader looks for its d3d12.dll in the exe's folder first
+        Assert.Null(First("nowhere.dll"));
 
-            var forwarder = Planning.MiddlewarePackTests.Pe("wrap.dll");
-            System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(forwarder.AsSpan(0x58 + 116), 0x100);   // export directory size
-            System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(forwarder.AsSpan(0x200 + 20), 1);         // NumberOfFunctions
-            System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(forwarder.AsSpan(0x200 + 28), 0x1080);   // AddressOfFunctions
-            System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(forwarder.AsSpan(0x280), 0x10A0);        // inside the directory: a forwarder
-            "d3d12.D3D12CreateDevice"u8.CopyTo(forwarder.AsSpan(0x2A0));
-            File.WriteAllBytes(Path.Combine(_exeDir, "wrap.dll"), forwarder);
-            Assert.False(First("wrap.dll"));
-        }
-        finally { Core.Games.GameFiles.SystemDir = was; }
+        var forwarder = Planning.MiddlewarePackTests.Pe("wrap.dll");
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(forwarder.AsSpan(0x58 + 116), 0x100);   // export directory size
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(forwarder.AsSpan(0x200 + 20), 1);         // NumberOfFunctions
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(forwarder.AsSpan(0x200 + 28), 0x1080);   // AddressOfFunctions
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(forwarder.AsSpan(0x280), 0x10A0);        // inside the directory: a forwarder
+        "d3d12.D3D12CreateDevice"u8.CopyTo(forwarder.AsSpan(0x2A0));
+        File.WriteAllBytes(Path.Combine(_exeDir, "wrap.dll"), forwarder);
+        Assert.False(First("wrap.dll"));
     }
 
     /// <summary>A launch through a junction to the exe's folder: the proxy resolves the folder as it is on disk, so root= names

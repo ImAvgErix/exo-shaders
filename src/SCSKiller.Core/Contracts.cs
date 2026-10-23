@@ -31,7 +31,8 @@ public sealed record EngineInfo(
     bool ApiGuessed = false,              // GraphicsApi is the engine's default for Version, nothing in the game names one (Unreal: UnrealRhi.Resolve)
     string? Game = null,                  // "<Game.Id>[@<Game.Version>]", for an engine whose root-signature rule is one game's (Nixxes ports: RuleMatch.Games)
     int? MaxAnisotropy = null,            // the player's texture filtering from the game's config (Unreal: UnrealRhi.MaxAnisotropy); null = not known
-    string? Note = null);                 // a line for the game page about what the compile leaves out (FromSoftware: an archive no key opens)
+    string? Note = null,                  // a line for the game page about what the compile leaves out (FromSoftware: an archive no key opens)
+    bool OffersVulkan = false);           // the game can also run on Vulkan (a launch option or setting picks it) while GraphicsApi names its DirectX one
 
 /// <summary>Shader stage, numbered like D3D12_PIPELINE_STATE_SUBOBJECT_TYPE (the proxy's db uses the same numbers).</summary>
 public enum Stage { Vertex = 1, Pixel = 2, Domain = 3, Hull = 4, Geometry = 5, Compute = 6, Amplification = 24, Mesh = 25, Library = 100 }
@@ -58,7 +59,8 @@ public sealed record ShaderInfo(string Sha1, Stage Stage, string ShaderModel, in
     string? RootSignature = null,   // SHA-1 of the root-signature blob the game creates from the one the shader carries (RTS0), servable through ReadShaders and in ShaderIndex.RootSignatures; null = none
     bool InlineRayTracing = false,   // traces rays inline (RayQuery: Dxbc.InlineRayTracing)
     byte[]? EngineHeader = null,   // the engine's own header stored beside the shader, read by its root-signature rule (Dagor: dxil::ShaderHeader)
-    int Payload = 0);   // amplification shaders: the payload bytes they send; mesh shaders: the bytes they take (PSV0); the runtime rejects a pair that differs
+    int Payload = 0,   // amplification shaders: the payload bytes they send; mesh shaders: the bytes they take (PSV0); the runtime rejects a pair that differs
+    bool ViewId = false);   // reads SV_ViewID (PSV0): its pipeline needs a view instancing desc
 
 /// <summary>A group of shaders that can combine. <see cref="IsPipeline"/>: the game shipped this exact stage set as one
 /// pipeline (e.g. a PSO cache record), so no pairing is needed. <see cref="RootSignature"/>: the root signature the game
@@ -120,7 +122,10 @@ public sealed record VendorCaps(
                                     // layout/topology on AMD): a plan needs each stage unit once, not every VS x PS pair
     RtCacheGranularity RtCacheGranularity = RtCacheGranularity.WholeObject,  // what the driver caches of a ray tracing state object
     bool PackageKeyed = false,      // true: a packaged (Xbox) game's cache key follows its package identity: its warm runs with it
-    long? PerGameCacheCap = null);  // the driver evicts a game's own entries past this many bytes (Intel); null = no per-game cap
+    long? PerGameCacheCap = null,   // the driver evicts a game's own entries past this many bytes (Intel); null = no per-game cap
+    string? VulkanKey = null,       // what a Vulkan game's driver cache is keyed by ("exe-name", "device"); null = Vulkan not supported
+    long? VulkanCacheCap = null,    // the bytes one Vulkan cache file holds at most (VulkanPlan.Build plans what fits); null = no cap
+    long? WarmCacheBudget = null);  // what one game's plan may take where state is in the cache key (PlanBuilder.CacheBudgetOf); null = the default
 
 /// <summary>What a vendor's driver caches of a DXR state object (selftest dxr, ARCHITECTURE.md). <see cref="WholeObject"/>: only an
 /// exact repeat of the whole object hits (AMD; the safe default): the warm replays recorded objects. <see cref="Collection"/>:
@@ -183,8 +188,29 @@ public interface IAppCache
 /// <summary>One kind of a game's shader cache on disk (<see cref="IScsKiller.GameCaches"/>).</summary>
 public sealed record CachePart(string Name, IReadOnlyList<string> Files, long Bytes);
 
-/// <summary>A scskiller.db written by the proxy in record mode (format: proxy/proxy.cpp header).</summary>
-public sealed record Recording(string DbPath);
+/// <summary>A scskiller.db written by the proxy in record mode (format: proxy/proxy.cpp header); for a Vulkan game, the
+/// layer's .foz recording.</summary>
+public sealed record Recording(string DbPath)
+{
+    /// <summary>Vulkan: every .foz the plan reads (the layer's and Steam's), null = <see cref="DbPath"/> alone.</summary>
+    public IReadOnlyList<Vulkan.FozSource>? VulkanSources { get; init; }
+    /// <summary>Vulkan: the device the layer recorded on, null = not known.</summary>
+    public string? VulkanDevice { get; init; }
+    /// <summary>Vulkan: the game's driver cache is in Steam's shader cache folder (its launch environment points there).</summary>
+    public bool VulkanSteamCache { get; init; }
+}
+
+/// <summary>A game's launch line (<see cref="IScsKiller.LaunchLineOf"/>): <see cref="Set"/> when the store already carries
+/// it, <see cref="Refused"/> why it couldn't be set.</summary>
+public sealed record LaunchLine(string Text, bool Set, string? Refused = null);
+
+/// <summary>One game folder <see cref="IScsKiller.RemoveRecordersFromAllGames"/> went through; <see cref="Left"/> names
+/// what is still there, null = all of it came out.</summary>
+public sealed record RecorderRemoval(string GameId, string Folder, string? Left);
+
+/// <summary><see cref="IScsKiller.RemoveRecordersFromAllGames"/>'s result: the game folders, the Vulkan layers taken out
+/// and, in <see cref="VulkanLeft"/>, what of the layer couldn't be.</summary>
+public sealed record RecorderRemovals(IReadOnlyList<RecorderRemoval> Games, IReadOnlyList<string> VulkanLayers, string? VulkanLeft = null);
 
 public enum Readiness { Ready, NeedsRecording, Unsupported }
 public sealed record PlanCheck(Readiness Readiness, string Reason);
@@ -212,7 +238,9 @@ public sealed record PlanStats(long Recorded, long Generated, long SynthesizedTe
     long D3D11Draws = 0,          // of D3D11Shaders, the vertex stages drawn with a recorded layout ('3' items, Draws11)
     long Variants = 0,            // PSOs compiled again at other texture filtering settings (Planning.SamplerVariants): a warm item each, never counted as pipelines
     long? CacheBudgetLeftOut = null, // per-stage plans where state is in the cache key (AMD, Intel): cover PSOs left out to stay under PlanBuilder.CacheBudgetOf; null = another vendor, or a plan from before the budget
-    bool RecordedOnly = false);   // the full plan was over its budget (Planner.Build): only the recorded pipelines and the packs' are planned
+    bool RecordedOnly = false,    // the full plan was over its budget (Planner.Build): only the recorded pipelines and the packs' are planned
+    string? MaxShaderModel = null,   // the highest shader model the plan's shaders use ("6.6"); null = not known, or a plan from before this was kept
+    long DescriptorHeap = 0);     // Vulkan: recorded pipelines that need descriptor heaps (VK_EXT_descriptor_heap), left out where the driver lacks it
 
 /// <summary>Hash-only plan (no game bytes), persisted at <see cref="FilePath"/> in the planner's format.</summary>
 public sealed record Plan(string GameId, string IndexContentHash, string Platform, string VendorProfile, PlanStats Stats, string FilePath);
@@ -236,7 +264,9 @@ public enum WarmPriority { BelowNormal, Idle }
 public sealed record WarmOptions(int Threads, WarmPriority Priority, long StartAt = 0,
     int MemoryMB = 0,    // the staged warm process's private memory budget (scskiller_warm --memory-mb); 0 = none
     IReadOnlyCollection<string>? SkipKeys = null,   // record keys of items that crashed the GPU driver before: never replayed
-    int CarefulThreads = 0);   // a careful warm's passes (a pass file in the work folder): their threads; 0 = Threads
+    int CarefulThreads = 0,    // a careful warm's passes (a pass file in the work folder): their threads; 0 = Threads
+    bool Vulkan = false,       // the work folder holds a Vulkan plan: replayed by fossilize-replay, not scskiller_warm
+    IReadOnlyDictionary<string, string>? CacheEnv = null);   // Vulkan: the environment that points the driver at the game's cache; null = none
 /// <param name="Failed">PSOs the driver rejected (only that: one naming a shader this install lacks is never replayed)</param>
 /// <param name="Skipped">PSOs of the plan / recording not replayed because a shader is not in this install (another game
 /// build, built at run time, a middleware DLL without it); not in <paramref name="Total"/>. Set by the app from
@@ -257,7 +287,8 @@ public enum WarmOutcome { Completed, Stopped, Failed }
 /// <param name="Resumable">a Failed warm that stopped at a clean point (it gave up on device removals or hangs): Done is where the
 /// next compile goes on</param>
 public sealed record WarmResult(WarmOutcome Outcome, long Done, long Total, long Failed, TimeSpan Elapsed, long CacheGrowthBytes, string LogPath, string? Error,
-    long Skipped = 0, IReadOnlyCollection<string>? Crashed = null, long DriverSkipped = 0, bool Resumable = false, bool AftermathDropped = false);
+    long Skipped = 0, IReadOnlyCollection<string>? Crashed = null, long DriverSkipped = 0, bool Resumable = false, bool AftermathDropped = false,
+    IReadOnlyCollection<string>? CacheKeysAdded = null);   // driver cache keys the warm's process created (its own files); null = none seen
 
 public interface IWarmRun
 {
@@ -323,6 +354,9 @@ public sealed record GameState(
     bool ShaderModAsD3D12 = false,     // ...with ReShade installed as d3d12.dll: the recorder records under it only when chained
     bool RootUnconfirmed = false,      // a game the user added whose folder they haven't confirmed: never recorded (ScsKiller.SkipManual)
     bool StreamlineFirst = false,      // on NVIDIA, Streamline loads the first d3d12.dll (GameFiles.StreamlineFirst): never recorded (ScsKiller.SkipStreamline)
+    string? Preload = null,            // the preloader's name the recorder loads through ahead of Streamline (ScsKiller.PreloadNames); null = none needed
+    bool NoFrames = false,             // the recorder can't time the game's frames (ScsKiller.NoFramesOf)
+    string? PreloadHeld = null,        // the DLL names another program's files hold, so no preloader fits (ScsKiller.PreloadHeldSkip); null = not held
     bool AgsHost = false,              // AMD, and AGS makes the device (GameFiles.AgsMakesTheDevice): the recorder goes in as amd_ags_x64.dll (ScsKiller.AgsName)
     bool Vac = false,                  // Valve Anti-Cheat (Games.Vac): never recorded, compiled from its files like any game
     bool Records11 = false,            // the recorder goes in as d3d11.dll (ScsKiller.Records11)
@@ -356,7 +390,8 @@ public sealed record GameState(
     KeptCache? Kept = null,   // AMD: its compiled cache kept aside (Settings.KeepCachesAside); null = none kept
     long? LastWarmUnbuilt = null,   // the last complete warm: D3D11 items SCSKiller can't build a draw for yet (ScsKiller.Unbuilt11)
     bool Dxvk = false,              // DXVK as its d3d11.dll or dxgi.dll (Games.ReShade.Dxvk): it runs on Vulkan, a compile isn't used
-    bool DxvkCompiled = false)      // ... except DXVK's d3d11.dll on NVIDIA: the warm runs through it (Warmer.DxvkDll)
+    bool DxvkCompiled = false,      // ... except DXVK's d3d11.dll on NVIDIA: the warm runs through it (Warmer.DxvkDll)
+    string? RuntimeWarning = null)  // the plan's shaders need a D3D12 runtime this PC may lack (Warmer.RuntimeWarning); null = none
 {
     /// <summary>A client anti-cheat (any value but None, Other included) or VAC: never recorded outside a confirmed risk or offline session.</summary>
     public bool AnyAntiCheat => AntiCheat != AntiCheat.None || Vac;
@@ -450,7 +485,7 @@ public sealed record CarefulCompile(bool On, double? LaunchCompiled, TimeSpan? E
 public enum RecorderOverride { Default, On, Off }
 
 /// <summary>The DirectX a user picks for a game (<see cref="GameState.ApiOverride"/>).</summary>
-public enum DxApi { D3D11, D3D12 }
+public enum DxApi { D3D11, D3D12, Vulkan }
 
 /// <summary>A recording downloaded from the community database: its PSO records, when it came, and
 /// whether this PC's own recording is merged with it. OtherVersion: it doesn't match the game's files (another
@@ -530,6 +565,10 @@ public interface IScsKiller
     bool HasIntelGpu => false;
     /// <summary>The game's last launches with frame times, newest first (FrameSessions).</summary>
     IReadOnlyList<FrameSession> FrameHistory(string gameId) => [];
+    /// <summary>The launch options line the game needs, with <paramref name="make"/> set in its store; null = it needs none.</summary>
+    LaunchLine? LaunchLineOf(string gameId, bool make = false) => null;
+    /// <summary>A note on the game's cache in Steam's shader cache folder, one line; null = none.</summary>
+    string? SteamCacheNote(string gameId) => null;
     Settings Settings { get; set; }
 
     // userRequested: the user's refresh, which also fetches the server's data whatever its age (ScsKiller.UserFetchEvery)
@@ -625,6 +664,9 @@ public interface IScsKiller
     Task StartRiskSession(string gameId, bool confirmed, AntiCheat shown);
     /// <summary>A running game's folder is left alone: call again when it exits. Null = every game.</summary>
     void ReconcileRecorders(string? gameId = null);
+    /// <summary>Takes the recorder and its files out of every game folder SCSKiller put one in, and its Vulkan layer out;
+    /// what couldn't come out is listed.</summary>
+    RecorderRemovals RemoveRecordersFromAllGames(CancellationToken ct = default) => new([], []);
     /// <summary>What adding the exe would add, nothing saved: the resolved exe (where the recorder goes) and the suggested game
     /// folder; or, with <see cref="ManualAdd.Existed"/>, the listed game it belongs to. ArgumentException as AddManualGame.</summary>
     ManualAdd PreviewManualGame(string exePath);

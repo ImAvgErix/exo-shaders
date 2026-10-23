@@ -513,7 +513,8 @@ public partial class AppTests
         var rec = p.K.Store.LoadGame(p.Id);
         rec.CacheKeys.Clear();   // never compiled, never seen running
         p.K.Store.SaveGame(p.Id, rec);
-        p.K.StartBeforeAfter(p.Id, 5);
+        // another app's file in use stays where it is (DxQuarantine), so the clear may have missed some of the game's
+        using (File.OpenRead(CacheFile("0002a91d44444444.nvph", 65536))) p.K.StartBeforeAfter(p.Id, 5);
         Assert.True(p.Record!.ClearGap);
         p.At = p.At.AddMinutes(1);   // the app closed, the game played, the app starts again
         p.Launch(360);

@@ -26,7 +26,7 @@ export type App = {
   waitingCount: number
   speedNote: string
   librarySort: LibrarySort
-  gpu: { name: string; vendor: 'nvidia' | 'amd' | 'intel' | 'qualcomm' | 'other'; vendorName: string; driver: string; driverLine: string; notice?: string }
+  gpu: { name: string; vendor: 'nvidia' | 'amd' | 'intel' | 'qualcomm' | 'other'; vendorName: string; driver: string; driverLine: string; shaderDelivery?: { works: boolean; text: string }; windowsCleanup?: { kept: boolean; canUndo: boolean; text: string } | null; notice?: string }
   cache?: CacheInfo
   driverStale?: { notify: boolean; games: { id: string; name: string }[]; text: string }
   driverMode: string
@@ -149,6 +149,8 @@ export type GameDetail = Omit<Game, 'frames'> & {
   left?: { title: string; text: string }
   compile: { title: string; text: string; skippedTitle?: string; skippedText?: string }
   session?: { header: string; verdict: string; label: string; stateObjects?: string; rayQuery?: string; fromLibrary: number; cacheHits: number; compiles: number }
+  /** D3D12's own count of the last play: "92% of pipelines came from the cache". */
+  cacheUse?: { verdict: string; detail: string; percent: number; pipelines: number }
   frames?: FrameData & { verdict: string; summary: string; low1PctFps: number; avgFps: number }
   framesSummary?: FramesSummary
   hitchRows: { label: string; value: string }[]

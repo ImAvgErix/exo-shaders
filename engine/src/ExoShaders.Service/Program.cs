@@ -40,6 +40,12 @@ internal static class Program
             var store = new AppStore(AppStore.DefaultDir);
             return ScsKiller.RunOfflineCleanup(store, gameId, null, Environment.ProcessPath);
         }
+        // Exo Shaders' uninstall: every precompiled shader database Exo registered with Windows is taken out.
+        if (args is ["--asd-remove-all"])
+        {
+            ScsKiller.RemoveAllLocalAsd();
+            return 0;
+        }
 
         bool safe = false, logStderr = false;
         for (int i = 0; i < args.Length; i++)

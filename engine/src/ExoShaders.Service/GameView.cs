@@ -95,6 +95,7 @@ internal sealed class GameView(GameState state, ViewContext ctx)
         get
         {
             if (KeyLocked) return "Not supported";
+            if (Precompiled) return "Precompiled";
             if (s.CompileUnreached) return "The compile didn't help";
             if (PartlyCompiled) return "Partly compiled";
             switch (s.Status)
@@ -157,6 +158,7 @@ internal sealed class GameView(GameState state, ViewContext ctx)
         get
         {
             if (KeyLocked) return "muted";
+            if (Precompiled) return "accent";
             if (s.CompileUnreached || PartlyCompiled) return "warn";
             return s.Status switch
             {
@@ -177,6 +179,9 @@ internal sealed class GameView(GameState state, ViewContext ctx)
     public bool CanLaunch => s.AntiCheat == AntiCheat.None && !ScsKiller.IsUnchecked(s) && StoreLaunch.Supported(s.Game);
 
     public string Sub => Fmt.Engine(s.Engine) + " · " + Fmt.StoreName(s.Game);
+
+    /// <summary>Windows delivered its shaders already compiled for this card (ShaderDelivery): nothing to compile.</summary>
+    private bool Precompiled => s.Status == GameStatus.Unsupported && s.StatusReason == SCSKiller.Core.Vendors.ShaderDelivery.Reason;
 
     public List<object> Tags
     {

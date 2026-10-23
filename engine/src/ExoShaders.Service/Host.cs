@@ -123,6 +123,9 @@ internal sealed partial class Host
         k.UseChannels(null);   // what the app does while signed out
         k.Unseen = () => !_uiVisible;
         k.IdleWatchInterval = TimeSpan.FromSeconds(8);   // 3 s while a game plays, is followed or compiles
+        k.WatchPipelineCache = !_opt.Safe;   // D3D12's own cache hit counts during play (needs the ETW rights: PipelineCacheWatch)
+
+        k.LocalAsd = !_opt.Safe;   // Windows' driver-update listener for Exo's own precompiled shader databases (ScsKiller.LocalAsd)
 
         k.GameChanged += OnGameChanged;
         k.QueueChanged += OnQueueChanged;

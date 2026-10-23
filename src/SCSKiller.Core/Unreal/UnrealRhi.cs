@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using Microsoft.Win32;
 using SCSKiller.Core.Games;
 
 namespace SCSKiller.Core.Unreal;
@@ -441,10 +440,12 @@ public static class UnrealRhi
 
     /// <summary>The Steam launch options the user set for the game ("" if none, or not a Steam game): the newest
     /// userdata\*\config\localconfig.vdf, the app's block.</summary>
-    public static string LaunchOptions(Game game)
+    public static string LaunchOptions(Game game) => LaunchOptions(game, SteamRoot);
+
+    internal static string LaunchOptions(Game game, string steamRoot)
     {
         if (SteamSource.AppId(game.Id) is not { } app) return "";
-        var userdata = Path.Combine(SteamRoot, "userdata");
+        var userdata = Path.Combine(steamRoot, "userdata");
         var vdf = Directory.Exists(userdata)
             ? Directory.EnumerateDirectories(userdata).Select(u => new FileInfo(Path.Combine(u, "config", "localconfig.vdf"))).Where(f => f.Exists).MaxBy(f => f.LastWriteTimeUtc)
             : null;
@@ -488,7 +489,7 @@ public static class UnrealRhi
         var install = Path.GetFullPath(game.InstallDir).TrimEnd('\\', '/');
         bool StartsTheGame(string exe)
         {
-            var p = Path.GetFullPath(Path.Combine(install, exe));
+            var p = Path.GetFullPath(GameFiles.Under(install, exe));
             return p.Equals(Path.GetFullPath(game.ExePath), StringComparison.OrdinalIgnoreCase)
                 || Path.GetDirectoryName(p)!.Equals(install, StringComparison.OrdinalIgnoreCase) && Path.GetFileNameWithoutExtension(p).Equals(ExeStem(game), StringComparison.OrdinalIgnoreCase);
         }
@@ -502,5 +503,5 @@ public static class UnrealRhi
         return (entries.Select(Text).ToList(), def);
     }
 
-    static string SteamRoot => Registry.GetValue(@"HKEY_CURRENT_USER\Software\Valve\Steam", "SteamPath", null) as string ?? @"C:\Program Files (x86)\Steam";
+    static string SteamRoot => SteamSource.Root();
 }

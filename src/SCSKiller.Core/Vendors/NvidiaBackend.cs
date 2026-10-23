@@ -75,7 +75,8 @@ public sealed unsafe class NvidiaBackend : IGpuVendorBackend, IRefreshableGpu
     public VendorCaps Caps { get; } = new("nvidia-1", CacheKeyedByExeName: true, StateIndependentCache: true, CacheSizeConfigurable: true,
         PerStageCache: true,    // measured: a pipeline of stages cached in other pairings costs 0.40 ms, as an exact hit
         RtCacheGranularity: RtCacheGranularity.Collection,   // selftest dxr: collections cached on their own; Jedi's recorded ones 42.7 -> 3.35 ms after synthesized ones
-        PackageKeyed: true);
+        PackageKeyed: true,
+        VulkanKey: "exe-name");   // a Vulkan game's cache is keyed by its exe name, as a D3D12 one's
 
     public static string CacheDir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NVIDIA", "DXCache");
 

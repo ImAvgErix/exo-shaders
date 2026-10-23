@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using SCSKiller.Core.Carved;
+using SCSKiller.Core.Games;
 using SCSKiller.Core.Unreal;
 
 namespace SCSKiller.Core.ForzaTech;
@@ -42,8 +43,8 @@ public sealed class ForzaTechReader : IEngineReader
 
     public EngineInfo? Detect(Game game)
     {
-        var zip = Path.Combine(game.InstallDir, EngineZip);
-        if (!File.Exists(zip) || !Directory.Exists(Path.Combine(game.InstallDir, Library))) return null;
+        var zip = GameFiles.Find(game.InstallDir, EngineZip);
+        if (!File.Exists(zip) || !Directory.Exists(GameFiles.Find(game.InstallDir, Library))) return null;
         int programs = 0, rts0 = 0;
         var counts = new Counts();
         using (var a = Open(zip, counts, MaxZipEntries))
@@ -69,10 +70,11 @@ public sealed class ForzaTechReader : IEngineReader
         var counts = new Counts();
         int zips = 0, entries = 0, pairs = 0, unlinked = 0, bad = 0;
         var stamp = new StringBuilder();
-        foreach (var path in Zips(game))
+        var media = GameFiles.Find(game.InstallDir, Media);
+        foreach (var path in Zips(media))
         {
             ct.ThrowIfCancellationRequested();
-            var rel = Path.GetRelativePath(game.InstallDir, path);
+            var rel = GameFiles.Rel(game.InstallDir, path, media, Media);
             using var a = Open(path, counts, MaxZipEntries);
             if (a == null) { stamp.Append(Stamp(rel, path)); continue; }   // may hold shaders once it reads
             var list = ShaderEntries(a).ToList();
@@ -180,13 +182,12 @@ public sealed class ForzaTechReader : IEngineReader
             + (Capped > 0 ? "; warning: too many shader entries, the rest left out" : "");
     }
 
-    static IEnumerable<string> Zips(Game game)
+    static IEnumerable<string> Zips(string dir)
     {
-        var dir = Path.Combine(game.InstallDir, Media);
         try
         {
             return Directory.Exists(dir)
-                ? Directory.EnumerateFiles(dir, "*.zip", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true }).Order(StringComparer.OrdinalIgnoreCase).ToList()
+                ? GameFiles.EnumerateFiles(dir, "*.zip", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true }).Order(GameFiles.PathOrder).ToList()
                 : [];
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return []; }

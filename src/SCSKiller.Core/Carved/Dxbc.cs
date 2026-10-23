@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Numerics;
 
 namespace SCSKiller.Core.Carved;
 
@@ -69,6 +70,14 @@ public static class Dxbc
 
     static readonly byte[][] Programs = ["DXIL"u8.ToArray(), "SHEX"u8.ToArray(), "SHDR"u8.ToArray()];
 
+    /// <summary>A DXIL shader's shader model, from its program header's version byte (major, minor nibbles); null = not DXIL.</summary>
+    public static Version? DxilShaderModel(ReadOnlySpan<byte> c)
+    {
+        if (!Valid(c) || Part(c, "DXIL"u8) is not { Length: >= 4 } p) return null;
+        var v = U(p, 0);
+        return new Version((int)(v >> 4 & 0xF), (int)(v & 0xF));
+    }
+
     /// <summary>A DXIL shader's required wave lane range ([WaveSize], SM 6.6+) from PSV0's runtime info (after the 16-byte
     /// stage union: MinimumExpectedWaveLaneCount, MaximumExpectedWaveLaneCount); null = no requirement.</summary>
     public static (uint Min, uint Max)? WaveLanes(ReadOnlySpan<byte> c)
@@ -82,6 +91,10 @@ public static class Dxbc
     /// <summary>A DXIL shader that traces rays inline (RayQuery): SFI0's D3D_SHADER_REQUIRES_RAYTRACING_TIER_1_1.</summary>
     public static bool InlineRayTracing(ReadOnlySpan<byte> c) =>
         Valid(c) && Part(c, "SFI0"u8) is { Length: >= 8 } f && (BinaryPrimitives.ReadUInt64LittleEndian(f) & 0x100000) != 0;
+
+    /// <summary>A shader that reads SV_ViewID (view instancing): SFI0's D3D_SHADER_REQUIRES_VIEW_ID.</summary>
+    public static bool ViewId(ReadOnlySpan<byte> c) =>
+        Valid(c) && Part(c, "SFI0"u8) is { Length: >= 8 } f && (BinaryPrimitives.ReadUInt64LittleEndian(f) & 0x10000) != 0;
 
     /// <summary>A serialized root signature (D3D12SerializeRootSignature output): a container of RTS0 chunks only, no
     /// program. Generated binding metadata, never shader code: the only blobs packs and hash-only recordings keep.</summary>
@@ -215,6 +228,88 @@ public static class Dxbc
             }
         }
         return true;
+    }
+
+    /// <summary>A container holding one part, its checksum filled in (what the D3D12 runtime and the driver check).</summary>
+    public static byte[] Container(ReadOnlySpan<byte> fourcc, ReadOnlySpan<byte> part)
+    {
+        var c = new byte[44 + part.Length];
+        "DXBC"u8.CopyTo(c);
+        BinaryPrimitives.WriteUInt32LittleEndian(c.AsSpan(20), 1);
+        BinaryPrimitives.WriteInt32LittleEndian(c.AsSpan(24), c.Length);
+        BinaryPrimitives.WriteUInt32LittleEndian(c.AsSpan(28), 1);
+        BinaryPrimitives.WriteUInt32LittleEndian(c.AsSpan(32), 36);
+        fourcc.CopyTo(c.AsSpan(36));
+        BinaryPrimitives.WriteInt32LittleEndian(c.AsSpan(40), part.Length);
+        part.CopyTo(c.AsSpan(44));
+        Checksum(c).CopyTo(c.AsSpan(4));
+        return c;
+    }
+
+    /// <summary>The container's checksum: DXBC's MD5 variant over everything after the checksum field (its last block
+    /// carries the bit count up front and 2 x length + 1 at its end, in place of MD5's padding).</summary>
+    public static byte[] Checksum(ReadOnlySpan<byte> container)
+    {
+        var data = container[20..];
+        var length = (uint)data.Length;
+        var rest = (int)(length & 63);
+        var whole = data.Length - rest;
+        uint[] state = [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476];
+        for (var i = 0; i < whole; i += 64) Md5Block(state, data.Slice(i, 64));
+        Span<byte> last = stackalloc byte[64];
+        last.Clear();
+        if (rest < 56)
+        {
+            BinaryPrimitives.WriteUInt32LittleEndian(last, length << 3);
+            data[whole..].CopyTo(last[4..]);
+            last[4 + rest] = 0x80;
+        }
+        else
+        {
+            data[whole..].CopyTo(last);
+            last[rest] = 0x80;
+            Md5Block(state, last);
+            last.Clear();
+            BinaryPrimitives.WriteUInt32LittleEndian(last, length << 3);
+        }
+        BinaryPrimitives.WriteUInt32LittleEndian(last[60..], length << 1 | 1);
+        Md5Block(state, last);
+        var hash = new byte[16];
+        for (var i = 0; i < 4; i++) BinaryPrimitives.WriteUInt32LittleEndian(hash.AsSpan(4 * i), state[i]);
+        return hash;
+    }
+
+    static readonly uint[] Md5K =
+    [
+        0xD76AA478, 0xE8C7B756, 0x242070DB, 0xC1BDCEEE, 0xF57C0FAF, 0x4787C62A, 0xA8304613, 0xFD469501,
+        0x698098D8, 0x8B44F7AF, 0xFFFF5BB1, 0x895CD7BE, 0x6B901122, 0xFD987193, 0xA679438E, 0x49B40821,
+        0xF61E2562, 0xC040B340, 0x265E5A51, 0xE9B6C7AA, 0xD62F105D, 0x02441453, 0xD8A1E681, 0xE7D3FBC8,
+        0x21E1CDE6, 0xC33707D6, 0xF4D50D87, 0x455A14ED, 0xA9E3E905, 0xFCEFA3F8, 0x676F02D9, 0x8D2A4C8A,
+        0xFFFA3942, 0x8771F681, 0x6D9D6122, 0xFDE5380C, 0xA4BEEA44, 0x4BDECFA9, 0xF6BB4B60, 0xBEBFBC70,
+        0x289B7EC6, 0xEAA127FA, 0xD4EF3085, 0x04881D05, 0xD9D4D039, 0xE6DB99E5, 0x1FA27CF8, 0xC4AC5665,
+        0xF4292244, 0x432AFF97, 0xAB9423A7, 0xFC93A039, 0x655B59C3, 0x8F0CCC92, 0xFFEFF47D, 0x85845DD1,
+        0x6FA87E4F, 0xFE2CE6E0, 0xA3014314, 0x4E0811A1, 0xF7537E82, 0xBD3AF235, 0x2AD7D2BB, 0xEB86D391,
+    ];
+    static readonly int[] Md5Shift = [7, 12, 17, 22, 5, 9, 14, 20, 4, 11, 16, 23, 6, 10, 15, 21];
+
+    /// <summary>One MD5 block (64 bytes) into <paramref name="s"/>.</summary>
+    static void Md5Block(uint[] s, ReadOnlySpan<byte> block)
+    {
+        Span<uint> m = stackalloc uint[16];
+        for (var i = 0; i < 16; i++) m[i] = BinaryPrimitives.ReadUInt32LittleEndian(block[(4 * i)..]);
+        uint a = s[0], b = s[1], c = s[2], d = s[3];
+        for (var j = 0; j < 64; j++)
+        {
+            var (f, g) = (j >> 4) switch
+            {
+                0 => (b & c | ~b & d, j),
+                1 => (d & b | ~d & c, (5 * j + 1) & 15),
+                2 => (b ^ c ^ d, (3 * j + 5) & 15),
+                _ => (c ^ (b | ~d), 7 * j & 15),
+            };
+            (a, b, c, d) = (d, b + BitOperations.RotateLeft(a + f + Md5K[j] + m[g], Md5Shift[(j >> 4) * 4 + (j & 3)]), b, c);
+        }
+        s[0] += a; s[1] += b; s[2] += c; s[3] += d;
     }
 
     /// <summary>Stages a graphics pipeline is built from (not compute, not DXR libraries).</summary>

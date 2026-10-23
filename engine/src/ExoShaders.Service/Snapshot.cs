@@ -93,6 +93,8 @@ internal sealed partial class Host
                     vendorName = Fmt.Vendor(k.Vendor.Vendor),
                     driver = k.Vendor.Gpu.DriverVersion,
                     driverLine = k.GpuRestartNote ?? "Driver " + k.Vendor.Gpu.DriverVersion,
+                    shaderDelivery = Delivery(k.Vendor.Gpu),
+                    windowsCleanup = k.Vendor.Vendor == GpuVendor.Nvidia ? Cleanup() : null,
                     notice = Format.GpuNotice(k.Vendor.Gpu, settings.GpuNoticeDismissed, k.Vendor is IntelBackend),
                 },
                 cache = _cacheInfo,
@@ -402,5 +404,30 @@ internal sealed partial class Host
             oldDriverNote = c.OldDriver >= 1073741824L ? Format.Bytes(c.OldDriver) + " the new driver no longer uses" : null,
             autoShader = auto,
         };
+    }
+
+    private static (long At, object? Value)? _cleanup;
+
+    /// <summary>WindowsCleanup.Check for the page (NVIDIA from 621 keeps compiled pipelines in D3DSCache), read again at
+    /// most once a minute or right after a change. Null: no DirectX Shader Cache handler, nothing to keep out.</summary>
+    private static object? Cleanup(bool force = false)
+    {
+        if (!force && _cleanup is { } c && Environment.TickCount64 - c.At < 60_000) return c.Value;
+        var r = WindowsCleanup.Check();
+        object? value = r.Registered ? new { kept = !r.Automatic, canUndo = r.CanUndo, text = r.Text } : null;
+        _cleanup = (Environment.TickCount64, value);
+        return value;
+    }
+
+    private static (GpuInfo Gpu, long At, object Value)? _delivery;
+
+    /// <summary>ShaderDelivery.Check for the page, read again at most once a minute.</summary>
+    private static object Delivery(GpuInfo gpu)
+    {
+        if (_delivery is { } d && d.Gpu == gpu && Environment.TickCount64 - d.At < 60_000) return d.Value;
+        var r = SCSKiller.Core.Vendors.ShaderDelivery.Check(gpu);
+        var value = new { works = r.Works, text = r.Text };
+        _delivery = (gpu, Environment.TickCount64, value);
+        return value;
     }
 }

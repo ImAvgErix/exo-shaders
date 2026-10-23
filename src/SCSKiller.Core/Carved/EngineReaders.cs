@@ -4,7 +4,8 @@ namespace SCSKiller.Core.Carved;
 
 /// <summary>Several engine readers as one, tried in order. Detect: the first result that can be indexed, or that is
 /// encrypted with a fork a plan rule names (its key makes it compile, so it wins over the carver), else the first reader's
-/// that recognized the game (its reason is the most specific, e.g. Unreal's "encrypted" over the carver's "packed").
+/// that recognized the game (its reason is the most specific, e.g. Unreal's "encrypted" over the carver's "packed"); when a
+/// reader threw before any recognized the game, its error, not a later reader's fallback.
 /// Index and ReadShaders go to the reader of <see cref="EngineInfo.Family"/>, so an EngineInfo cached from an earlier scan
 /// still finds its reader. A reader listed under several families (the carver) is tried once.</summary>
 public sealed class EngineReaders(params (string Family, IEngineReader Reader)[] readers) : IEngineReader
@@ -22,7 +23,7 @@ public sealed class EngineReaders(params (string Family, IEngineReader Reader)[]
             catch (Exception ex) { error ??= ex; continue; } // one reader choking on the game's files doesn't stop the next
             if (e == null) continue;
             if (e.Unsupported == null && !e.Encrypted || e.Encrypted && RulesFile.Current.RuleFor(e)?.Match.Fork != null) return e;
-            first ??= e;
+            if (error == null) first ??= e;   // a reader that choked before it outranks a later one's fallback
         }
         if (first == null && error != null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(error);
         return first;

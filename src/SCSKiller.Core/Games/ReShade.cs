@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -84,8 +83,9 @@ public sealed record ReShadeInstall(string Dll, bool LoadsAddons, string? Ini, s
     /// <see cref="Loader"/> with its OptiScaler.ini (its sampler overrides change root signatures), each by name, size and
     /// write time (not ReShade.ini: ReShade rewrites it as it runs); null = nothing to copy (not <see cref="Layered"/>).</summary>
     public string? Fingerprint => !Layered ? null : string.Join('|', new[] { Dll }.Concat(Addons.Where(a => a is { Disabled: false, Kind: not AddonKind.NotPipeline }).Select(a => a.Path))
-        .Concat(Loader is { } o ? [o, Path.Combine(Path.GetDirectoryName(o)!, "OptiScaler.ini")] : [])
-        .Select(p => new FileInfo(p)).Select(f => $"{f.Name}:{f.Length}:{f.LastWriteTimeUtc.Ticks}"));
+        .Concat(Loader is { } o ? [o] : []).Select(p => new FileInfo(p)).Select(f => (f.Name, File: f))
+        .Concat(Loader is { } l ? [("OptiScaler.ini", new FileInfo(GameFiles.Find(Path.GetDirectoryName(l)!, "OptiScaler.ini")))] : [])
+        .Select(x => $"{x.Name}:{x.File.Length}:{x.File.LastWriteTimeUtc.Ticks}"));
 }
 
 public static class ReShade
@@ -212,7 +212,7 @@ public static class ReShade
         // ReShade reads its ini and resolves AddonPath in its own folder
         var (ini, log) = (Named("ReShade.ini"), Named("ReShade.log"));
         var (addonPath, disabled, proxy) = ini != null ? Config(new FileInfo(ini)) : (null, [], false);
-        var addonDir = addonPath != null ? GameFiles.DirKey(Path.Combine(dir, addonPath)) : dir;
+        var addonDir = addonPath != null ? GameFiles.DirKey(GameFiles.Find(dir, addonPath)) : dir;
         var verdicts = log != null ? LogVerdicts(new FileInfo(log)) : null;
         var addons = (addonDir == dir ? files! : List(addonDir) ?? []).Where(f => Ext(f, ".addon") || Ext(f, ".addon64")).Concat(addonDir == exeDir ? [] : hostAddons)
             .Select(f =>
@@ -254,9 +254,9 @@ public static class ReShade
     static IEnumerable<string> LibrariesOf(string opti)
     {
         var exeDir = Path.GetFullPath(Path.GetDirectoryName(opti)!);
-        var main = Inside(exeDir, OptiScalerValue(new FileInfo(Path.Combine(exeDir, "OptiScaler.ini")), "Libraries", "OptiDllPath")) ?? Path.Combine(exeDir, "OptiScaler");
+        var main = Inside(exeDir, OptiScalerValue(new FileInfo(GameFiles.Find(exeDir, "OptiScaler.ini")), "Libraries", "OptiDllPath")) ?? GameFiles.Find(exeDir, "OptiScaler");
         if (!Directory.Exists(main)) main = exeDir;
-        return OptiScalerLibraries.Select(n => new[] { Path.Combine(main, n), Path.Combine(exeDir, n) }.FirstOrDefault(File.Exists)).OfType<string>();
+        return OptiScalerLibraries.Select(n => new[] { GameFiles.Find(main, n), GameFiles.Find(exeDir, n) }.FirstOrDefault(File.Exists)).OfType<string>();
     }
 
     /// <summary><paramref name="relative"/> under <paramref name="dir"/>, canonical; null = rooted (a drive, UNC), escaping
@@ -266,7 +266,7 @@ public static class ReShade
         if (relative == null || Path.IsPathRooted(relative)) return null;
         try
         {
-            var full = Path.GetFullPath(Path.Combine(dir, relative));
+            var full = Path.GetFullPath(GameFiles.Find(dir, relative));
             return full.StartsWith(Path.TrimEndingDirectorySeparator(dir) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ? full : null;
         }
         catch (Exception e) when (e is ArgumentException or NotSupportedException or PathTooLongException) { return null; }
@@ -313,10 +313,10 @@ public static class ReShade
         catch (Exception e) when (e is BadImageFormatException or InvalidOperationException) { return new List<string>(); }
     }) as IReadOnlyList<string> ?? [];
 
-    static bool IsOptiScaler(FileInfo f) => Cached(f, "optiscaler", () => new[] { Middleware.ExportName(f.FullName), FileVersionInfo.GetVersionInfo(f.FullName).ProductName }
+    static bool IsOptiScaler(FileInfo f) => Cached(f, "optiscaler", () => new[] { Middleware.ExportName(f.FullName), PeVersionInfo.GetVersionInfo(f.FullName).ProductName }
         .Any(n => n?.StartsWith("OptiScaler", StringComparison.OrdinalIgnoreCase) == true)) is true;
 
-    static bool IsSpecialK(FileInfo f) => Cached(f, "specialk", () => new[] { Middleware.ExportName(f.FullName), FileVersionInfo.GetVersionInfo(f.FullName).ProductName }
+    static bool IsSpecialK(FileInfo f) => Cached(f, "specialk", () => new[] { Middleware.ExportName(f.FullName), PeVersionInfo.GetVersionInfo(f.FullName).ProductName }
         .Any(n => n != null && (n.StartsWith("SpecialK", StringComparison.OrdinalIgnoreCase) || n.StartsWith("Special K", StringComparison.OrdinalIgnoreCase)))) is true;
 
     static bool ExportsAddonApi(FileInfo f) => Cached(f, "addonexport", () =>
@@ -331,7 +331,7 @@ public static class ReShade
 
     static List<FileInfo>? List(string dir)
     {
-        try { return new DirectoryInfo(dir).EnumerateFiles("*", Flat).ToList(); }
+        try { return GameFiles.EnumerateFiles(new DirectoryInfo(dir), "*", Flat).ToList(); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { return null; }
     }
 
@@ -347,7 +347,7 @@ public static class ReShade
         if (r.Loader is { } opti)
         {
             File.Copy(r.Dll, Path.Combine(dest, "ReShade64.dll"));
-            File.WriteAllLines(Path.Combine(dest, "OptiScaler.ini"), ForStage(File.ReadAllLines(Path.Combine(Path.GetDirectoryName(opti)!, "OptiScaler.ini"))));
+            File.WriteAllLines(Path.Combine(dest, "OptiScaler.ini"), ForStage(File.ReadAllLines(GameFiles.Find(Path.GetDirectoryName(opti)!, "OptiScaler.ini"))));
             // ponytail: copied per warm process (FidelityFX and XeSS are tens of MB each); hard links if staging gets slow
             foreach (var lib in LibrariesOf(opti))
                 if (new FileInfo(lib).Length is var n && n <= maxFile && n <= budget && IsPe(lib, n))
@@ -370,7 +370,7 @@ public static class ReShade
 
     /// <summary>DXVK as the game's d3d11.dll or dxgi.dll beside its exe (<see cref="ScsKiller.ChainBlocker"/>, which rules out
     /// OptiScaler and Special K by name, and a variable DXVK reads): the game runs on Vulkan. ReShade is ruled out by its own identity.</summary>
-    public static bool Dxvk(string exeDir) => new[] { ScsKiller.Dll11, "dxgi.dll" }.Any(n => IsDxvk(Path.Combine(exeDir, n)));
+    public static bool Dxvk(string exeDir) => new[] { ScsKiller.Dll11, "dxgi.dll" }.Any(n => IsDxvk(GameFiles.Find(exeDir, n)));
 
     /// <summary>This DLL is DXVK's (<see cref="Dxvk"/>).</summary>
     public static bool IsDxvk(string dll)
@@ -384,7 +384,7 @@ public static class ReShade
     static readonly byte[][] DxvkVars = ["DXVK_LOG_LEVEL"u8.ToArray(), "DXVK_HUD"u8.ToArray()];
 
     static bool IsReShade(FileInfo f) =>
-        Cached(f, "product", () => FileVersionInfo.GetVersionInfo(f.FullName).ProductName == "ReShade") is true
+        Cached(f, "product", () => PeVersionInfo.GetVersionInfo(f.FullName).ProductName == "ReShade") is true
         || Names.Contains(f.Name, StringComparer.OrdinalIgnoreCase) && (Find(f, "description", Identity) >= 0 || ExportsAddonApi(f));
 
     static ReShadeAddon Classify(FileInfo f, IReadOnlyDictionary<string, AddonKind>? verdicts, string? log)
@@ -402,12 +402,12 @@ public static class ReShade
     /// version resource's ProductName or the file's stem, as ReShade takes it unless the add-on exports another.</summary>
     static bool Disables(string entry, ReShadeAddon a, FileInfo f) =>
         entry.IndexOf('@') is var at and >= 0 ? entry[(at + 1)..] == f.Name
-        : entry == (a.Mod == "RenoDX" ? "RenoDX" : Cached(f, "productname", () => FileVersionInfo.GetVersionInfo(f.FullName).ProductName ?? "") as string is { Length: > 0 } product
+        : entry == (a.Mod == "RenoDX" ? "RenoDX" : Cached(f, "productname", () => PeVersionInfo.GetVersionInfo(f.FullName).ProductName ?? "") as string is { Length: > 0 } product
             ? product : Path.GetFileNameWithoutExtension(f.Name));
 
     static AddonKind? Listed(string fileName) => RenoDxFolder(fileName) is { } folder && RenoDxTable.TryGetValue(folder, out var k) ? k : null;
 
-    static string OriginalName(string path) => Cached(new FileInfo(path), "original", () => FileVersionInfo.GetVersionInfo(path).OriginalFilename ?? "") as string ?? "";
+    static string OriginalName(string path) => Cached(new FileInfo(path), "original", () => PeVersionInfo.GetVersionInfo(path).OriginalFilename ?? "") as string ?? "";
 
     /// <summary>ReShade.ini's [ADDON] AddonPath (relative to ReShade's folder), DisabledAddons' entries, and whether [PROXY]
     /// EnableProxyLibrary is on (its first value a nonzero number by strtol, or "true") with a ProxyLibrary key, even empty.</summary>

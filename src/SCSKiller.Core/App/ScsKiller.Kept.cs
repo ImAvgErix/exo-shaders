@@ -144,7 +144,8 @@ public sealed partial class ScsKiller
     void ShowKept(string gameId)
     {
         var kept = KeptState(gameId);
-        var disk = Store.LoadGame(gameId).CacheKeys is { Count: > 0 } keys && AppCache != null ? AppCache.SizeOf(keys) : (long?)null;
+        if (Games.FirstOrDefault(x => x.Game.Id == gameId) is not { } s) return;
+        var disk = CacheOnDiskOf(s.Game, s.Engine, Store.LoadGame(gameId));
         GameState? state = null;
         lock (_lock)
             if (_games.FindIndex(x => x.Game.Id == gameId) is var i and >= 0 && (_games[i].Kept != kept || _games[i].CacheOnDisk != disk))

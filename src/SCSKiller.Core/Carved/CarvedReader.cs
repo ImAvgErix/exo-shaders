@@ -33,12 +33,12 @@ public sealed class CarvedReader : IEngineReader
     /// <summary>The engine a carved game is built with, by a file only it ships: REDengine 4 (Cyberpunk 2077)
     /// engine\shader_final.cache; Northlight 2 (Alan Wake 2, CONTROL Resonant) .rmdtoc archive tables. Else <see cref="Family"/>.</summary>
     public static string Fingerprint(string installDir) =>
-        File.Exists(Path.Combine(installDir, "engine", "shader_final.cache")) ? RedEngine4
+        File.Exists(GameFiles.Find(installDir, @"engine\shader_final.cache")) ? RedEngine4
         : IsNorthlight2(installDir) ? Northlight2 : Family;
 
     internal static bool IsNorthlight2(string installDir)
     {
-        try { return Directory.EnumerateFiles(installDir, "*.rmdtoc", new EnumerationOptions { RecurseSubdirectories = true, MaxRecursionDepth = 3, IgnoreInaccessible = true, AttributesToSkip = 0 }).Any(); }
+        try { return GameFiles.EnumerateFiles(installDir, "*.rmdtoc", new EnumerationOptions { RecurseSubdirectories = true, MaxRecursionDepth = 3, IgnoreInaccessible = true, AttributesToSkip = 0 }).Any(); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return false; }
     }
 
@@ -99,7 +99,7 @@ public sealed class CarvedReader : IEngineReader
     {
         try
         {
-            var pck = Path.ChangeExtension(exe, ".pck");
+            var pck = GameFiles.ChangeExtension(exe, ".pck");
             var embedded = !File.Exists(pck);
             using var f = File.OpenRead(embedded ? exe : pck);
             Span<byte> b = stackalloc byte[12];
@@ -159,15 +159,15 @@ public sealed class CarvedReader : IEngineReader
         var mapHashes = new HashSet<string>();
         int records = 0;
         using var content = IncrementalHash.CreateHash(HashAlgorithmName.SHA1);
-        void Stamp(string path)
+        void Stamp(string path, string rel)
         {
             var f = new FileInfo(path);
-            content.AppendData(Encoding.UTF8.GetBytes($"{Path.GetRelativePath(game.InstallDir, path)}|{f.Length}|{f.LastWriteTimeUtc.Ticks}\n"));
+            content.AppendData(Encoding.UTF8.GetBytes($"{rel}|{f.Length}|{f.LastWriteTimeUtc.Ticks}\n"));
         }
         foreach (var (path, seq) in perFile)
         {
-            var rel = Path.GetRelativePath(game.InstallDir, path);
-            Stamp(path);
+            var rel = GameFiles.Rel(game.InstallDir, path);
+            Stamp(path, rel);
             if ((path == dawnFile ? dawnRuns : Records(seq)?.Select(r => (Run: r, Root: (string?)null)).ToList()) is { } runs)
                 foreach (var (run, root) in runs)
                 {
@@ -179,7 +179,9 @@ public sealed class CarvedReader : IEngineReader
                 foreach (var pool in seq.Where(s => shaders.ContainsKey(s.Sha)).Select(s => s.Sha).Distinct().GroupBy(PlatformOf))
                     maps.Add(new ShaderMap(Sha1Hex(pool.Key == Platform ? rel : $"{rel}|{pool.Key}"), rel, pool.Key, pool.ToList()));
         }
-        if (dawnRuns != null) { Stamp(dawn!.RootFile); Stamp(dawn.PsoFile); }
+        if (dawnRuns != null)
+            foreach (var (path, rel) in new[] { (dawn!.RootFile, DawnStores.RootRel), (dawn.PsoFile, DawnStores.PsoRel) })
+                Stamp(path, GameFiles.Rel(game.InstallDir, path, path, rel));
         string PlatformOf(string sha) => platformOf.GetValueOrDefault(sha, Platform);
         located[game.Id] = locs;
 
@@ -276,11 +278,11 @@ public sealed class CarvedReader : IEngineReader
     static (List<FileInfo> Named, List<FileInfo> Other) Files(string dir)
     {
         var opts = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0, MaxRecursionDepth = 8 };
-        var all = new DirectoryInfo(dir).EnumerateFiles("*", opts).Where(f => f.Length >= 64 && !NotShaders.Contains(f.Extension)).ToList();
+        var all = GameFiles.EnumerateFiles(new DirectoryInfo(dir), "*", opts).Where(f => f.Length >= 64 && !NotShaders.Contains(f.Extension)).ToList();
         bool Named(FileInfo f) => Path.GetRelativePath(dir, f.FullName) is var rel
             && (rel.Contains("shader", StringComparison.OrdinalIgnoreCase) || rel.Contains("pso", StringComparison.OrdinalIgnoreCase));
-        return (all.Where(Named).OrderBy(f => f.FullName, StringComparer.OrdinalIgnoreCase).ToList(),
-            all.Where(f => !Named(f) && f.Length >= 64 << 10).OrderBy(f => f.Length).ThenBy(f => f.FullName, StringComparer.OrdinalIgnoreCase).ToList());
+        return (all.Where(Named).OrderBy(f => f.FullName, GameFiles.PathOrder).ToList(),
+            all.Where(f => !Named(f) && f.Length >= 64 << 10).OrderBy(f => f.Length).ThenBy(f => f.FullName, GameFiles.PathOrder).ToList());
     }
 
     /// <summary>Carves the install; returns bytes read. Named files: whole (Detect: sampled). Other files only while
@@ -389,7 +391,7 @@ public sealed class CarvedReader : IEngineReader
     {
         var apis = Imports(game);
         var core = new EnumerationOptions { RecurseSubdirectories = true, MaxRecursionDepth = 4, IgnoreInaccessible = true, AttributesToSkip = 0 };
-        bool d3d12 = dxil || apis.Contains("D3D12") || Directory.EnumerateFiles(game.InstallDir, "D3D12Core.dll", core).Any();
+        bool d3d12 = dxil || apis.Contains("D3D12") || GameFiles.EnumerateFiles(game.InstallDir, "D3D12Core.dll", core).Any();
         bool d3d11 = apis.Contains("D3D11");
         return d3d12 ? (d3d11 && !dxil ? UnrealRhi.Ambiguous : "D3D12") : d3d11 ? "D3D11" : apis.Contains("Vulkan") ? "Vulkan" : UnrealRhi.Ambiguous;
     }
@@ -410,7 +412,7 @@ public sealed class CarvedReader : IEngineReader
     {
         var apis = new HashSet<string>();
         if (Path.GetDirectoryName(game.ExePath) is not { } dir || !Directory.Exists(dir) || GameFiles.DetectAntiCheat(game) != AntiCheat.None) return apis;
-        var bins = Directory.EnumerateFiles(dir, "*.dll").Where(p => !Middleware.Any(m => Path.GetFileName(p).StartsWith(m, StringComparison.OrdinalIgnoreCase)));
+        var bins = GameFiles.EnumerateFiles(dir, "*.dll").Where(p => !Middleware.Any(m => Path.GetFileName(p).StartsWith(m, StringComparison.OrdinalIgnoreCase)));
         foreach (var p in bins.Prepend(game.ExePath))
             try
             {

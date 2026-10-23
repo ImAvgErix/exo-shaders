@@ -6,6 +6,19 @@ repository's root `CHANGELOG.md`.
 
 ## [Unreleased]
 
+**Precompiled shaders built on this PC**
+
+- A compiled DirectX 12 game also gets Windows' precompiled shader database (Advanced Shader Delivery) built on the PC
+  from its compile, with the graphics driver's own compiler, at idle priority after the compile. Exo registers it for
+  the game's exe, and the game then loads those pipelines ready-made: not bound by the driver cache's size or cleanup.
+  A driver update rebuilds it while the PC is idle. A game with a database from its store keeps the store's.
+  Microsoft's compiler is downloaded the first time it's needed. Needs Windows 11 24H2 and a driver with Windows'
+  compiler support (NVIDIA RTX 621.01 and newer).
+- A game a store delivered precompiled shaders for, installed again from another store (or as another copy), gets
+  them too: the store's database lists every pipeline the game builds, independent of driver and folder, so Exo builds
+  this PC's database from it for that copy, with no compile or recording of its own. Matched by the exe's file name and
+  the game's name together, never over a database of the copy's own.
+
 **Built on SCSKiller 1.3.0's own source**
 
 - The engine is SCSKiller 1.3.0 built from its published source, in place of the engine recovered from the

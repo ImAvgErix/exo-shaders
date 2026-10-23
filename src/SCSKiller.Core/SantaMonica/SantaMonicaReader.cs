@@ -6,6 +6,7 @@ using System.Text;
 using K4os.Compression.LZ4;
 using Microsoft.Win32.SafeHandles;
 using SCSKiller.Core.Carved;
+using SCSKiller.Core.Games;
 using SCSKiller.Core.Planning;
 using SCSKiller.Core.Unreal;
 
@@ -84,7 +85,7 @@ public sealed class SantaMonicaReader : IEngineReader
             ct.ThrowIfCancellationRequested();
             using var frame = Lz4Frame.Open(f.FullName);
             if (frame == null) { unreadable++; continue; }
-            var rel = Path.GetRelativePath(game.InstallDir, f.FullName);
+            var rel = GameFiles.Rel(game.InstallDir, f.FullName, f.DirectoryName!, PackDir);
             ShaderPack11? pack;
             try { pack = ShaderPack11.Read(frame, ref budget); }
             catch (InvalidDataException) { unreadable++; continue; }
@@ -230,7 +231,7 @@ public sealed class SantaMonicaReader : IEngineReader
             using var h = ShaderPack1.Open(f.FullName);
             if (h == null || ShaderPack1.Read(h) is not { } records) { notPacks++; continue; }
             packs++;
-            var rel = Path.GetRelativePath(game.InstallDir, f.FullName);
+            var rel = GameFiles.Rel(game.InstallDir, f.FullName, f.DirectoryName!, PackDir);
             content.AppendData(Encoding.UTF8.GetBytes($"{rel}|{f.Length}|{f.LastWriteTimeUtc.Ticks}\n"));
             var pool = new List<string>();
             foreach (var r in records)
@@ -324,8 +325,8 @@ public sealed class SantaMonicaReader : IEngineReader
 
     static IEnumerable<FileInfo> Packs(Game game)
     {
-        var dir = new DirectoryInfo(Path.Combine(game.InstallDir, PackDir));
-        return dir.Exists ? dir.EnumerateFiles("*.shaderpack", new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = 0 }) : [];
+        var dir = new DirectoryInfo(GameFiles.Find(game.InstallDir, PackDir));
+        return dir.Exists ? GameFiles.EnumerateFiles(dir, "*.shaderpack", new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = 0 }) : [];
     }
 }
 

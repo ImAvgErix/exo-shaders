@@ -1,9 +1,9 @@
-﻿using System.Diagnostics;
-using System.Reflection.PortableExecutable;
+﻿using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using System.Text;
 using SCSKiller.Core.App;
 using SCSKiller.Core.Carved;
+using SCSKiller.Core.StarEngine;
 
 namespace SCSKiller.Core.Games;
 
@@ -22,9 +22,13 @@ public sealed record AddedLibrary(List<string>? Folders = null, List<string>? Re
 public sealed class ManualSource(AppStore store) : IGameSource
 {
     // the app, the CLI and the scheduled task may change the list at once: one read-modify-write at a time per data folder
-    readonly string _mutex = @"Local\SCSKiller.manual-games." + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(store.DataDir).ToUpperInvariant())))[..16];
+    readonly string _mutex = MutexName(store.DataDir);
 
     public Store Store => Store.Manual;
+
+    /// <summary>The mutex that serializes changes to the list of the data folder <paramref name="dataDir"/>.</summary>
+    internal static string MutexName(string dataDir) =>
+        @"Local\SCSKiller.manual-games." + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(dataDir).ToUpperInvariant())))[..16];
 
     // game id -> its folder and whether it is confirmed, as the last read of the list had it (replaced whole under the mutex)
     volatile Dictionary<string, (string Root, bool Confirmed)> _roots = [];
@@ -72,13 +76,13 @@ public sealed class ManualSource(AppStore store) : IGameSource
         try
         {
             var dir = GameFiles.DirKey(folder);
-            var children = Directory.EnumerateDirectories(dir, "*", new EnumerationOptions { AttributesToSkip = 0 }).Select(GameFiles.DirKey)
+            var children = GameFiles.EnumerateDirectories(dir, "*", new EnumerationOptions { AttributesToSkip = 0 }).Select(GameFiles.DirKey)
                 .Where(d => !IsLibrary(d) && !GameFiles.WindowsFolder(Path.GetFileName(d))).ToList();
             bool Programs(string d) => !NotAGame.Any(n => Path.GetFileName(d).Contains(n, StringComparison.OrdinalIgnoreCase))
-                && Directory.EnumerateFiles(d, "*.exe", new EnumerationOptions { RecurseSubdirectories = true, MaxRecursionDepth = 2, AttributesToSkip = 0 }).Any();
-            if (Directory.Exists(Path.Combine(dir, "Engine"))
-                || Directory.EnumerateFiles(dir, "*.exe").Any() && children.Where(Programs).Take(2).Count() < 2) return [dir];
-            return children.Select(d => File.Exists(Path.Combine(d, "Content", "MicrosoftGame.config")) ? Path.Combine(d, "Content") : d).ToList();
+                && GameFiles.EnumerateFiles(d, "*.exe", new EnumerationOptions { RecurseSubdirectories = true, MaxRecursionDepth = 2, AttributesToSkip = 0 }).Any();
+            if (Directory.Exists(GameFiles.Find(dir, "Engine"))
+                || GameFiles.EnumerateFiles(dir, "*.exe").Any() && children.Where(Programs).Take(2).Count() < 2) return [dir];
+            return children.Select(d => File.Exists(GameFiles.Find(d, @"Content\MicrosoftGame.config")) ? GameFiles.Find(d, "Content") : d).ToList();
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { return []; }
     }
@@ -205,7 +209,7 @@ public sealed class ManualSource(AppStore store) : IGameSource
 
     T Locked<T>(Func<T> change)
     {
-        using var m = new Mutex(false, _mutex);
+        using var m = NamedMutex.Open(_mutex);
         try { m.WaitOne(); }
         catch (AbandonedMutexException) { }   // its holder died: the file was replaced whole or not at all (WriteAtomic)
         try { return change(); }
@@ -229,7 +233,7 @@ public sealed class ManualSource(AppStore store) : IGameSource
         // as discovery: no import table is read in an install with anti-cheat
         var clean = GameFiles.DetectAntiCheat(new Game("", "", Store.Manual, root, pick)) == AntiCheat.None;
         var graphics = clean ? GameFiles.ImportsGraphics(pick) : null;
-        var exe = graphics == true || GameFiles.IsShipping(pick) ? GameFiles.GameExe(root, pick) : GameFiles.FindExe(root, Path.GetRelativePath(root, pick)) ?? pick;
+        var exe = graphics == true || GameFiles.IsShipping(pick) ? GameFiles.GameExe(root, pick) : GameFiles.FindExe(root, GameFiles.Rel(root, pick)) ?? pick;
         if (Same(exe, pick) && graphics == false && !GameFiles.IsShipping(pick))   // a launcher FindExe kept: the one exe of the install that loads D3D, if there is one
             switch (GameFiles.GraphicsExes(root).Where(f => !Same(f, pick) && X64(f)).ToList())   // a 32-bit launcher is never the game
             {
@@ -278,7 +282,7 @@ public sealed class ManualSource(AppStore store) : IGameSource
         if (Path.GetDirectoryName(dir) is { } parent)
         {
             if (Path.GetFileName(parent).Equals("Binaries", StringComparison.OrdinalIgnoreCase) && Path.GetDirectoryName(parent) is { } project)
-                root = Path.GetDirectoryName(project) is { } above && Directory.Exists(Path.Combine(above, "Engine")) ? above : project;
+                root = Path.GetDirectoryName(project) is { } above && Directory.Exists(GameFiles.Find(above, "Engine")) ? above : project;
             else if (Path.GetFileName(parent).Equals("bin", StringComparison.OrdinalIgnoreCase) && Path.GetDirectoryName(parent) is { } game)
                 root = game;
             else if (Path.GetFileName(dir).StartsWith("bin", StringComparison.OrdinalIgnoreCase)) root = parent;
@@ -311,8 +315,8 @@ public sealed class ManualSource(AppStore store) : IGameSource
         {
             // a folder holding a program named like the game's is another build of it (DCS World's bin and bin-mt), not another game
             var name = Path.GetFileName(exe);
-            var games = Directory.EnumerateDirectories(full).Where(d => !NotAGame.Any(n => Path.GetFileName(d).Contains(n, StringComparison.OrdinalIgnoreCase))
-                && Directory.EnumerateFiles(d, "*.exe").Any() && !File.Exists(Path.Combine(d, name))).Take(2).Count();
+            var games = GameFiles.EnumerateDirectories(full).Where(d => !NotAGame.Any(n => Path.GetFileName(d).Contains(n, StringComparison.OrdinalIgnoreCase))
+                && GameFiles.EnumerateFiles(d, "*.exe").Any() && !File.Exists(GameFiles.Find(d, name))).Take(2).Count();
             if (games >= 2) return $"{full} looks like a folder of several games: pick this game's own folder.";
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return $"Couldn't read {full}: {e.Message}"; }
@@ -344,12 +348,13 @@ public sealed class ManualSource(AppStore store) : IGameSource
     {
         foreach (var f in new[] { exe, pick }.Distinct())
         {
-            var v = FileVersionInfo.GetVersionInfo(f);
+            var v = PeVersionInfo.GetVersionInfo(f);
             foreach (var n in new[] { v.ProductName, v.FileDescription })
                 if (n?.Trim() is { Length: > 0 } name && !Generic.Contains(name, StringComparer.OrdinalIgnoreCase)
                     && !name.Contains("Bootstrap", StringComparison.OrdinalIgnoreCase) && !name.Contains("launcher", StringComparison.OrdinalIgnoreCase))
-                    return name;
+                    return StarEngineReader.Channel(exe) is { } channel ? $"{name} ({channel})" : name;
         }
-        return Path.GetFileName(root);
+        // Star Citizen's channels (LIVE, PTU) are installs of one game: each is named by its folder
+        return StarEngineReader.Channel(exe) is { } star ? $"Star Citizen ({star})" : Path.GetFileName(root);
     }
 }

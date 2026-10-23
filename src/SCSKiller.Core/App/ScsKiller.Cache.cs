@@ -113,9 +113,8 @@ public sealed partial class ScsKiller
         var gamesDir = Path.Combine(Store.DataDir, "games");
         // a compile deletes the folders its staged exes made: these are an earlier build's. None predates the games folder.
         // ponytail: reads every D3DSCache WAL made since the games folder; cache the verdict per folder if that gets slow
-        if (Directory.Exists(gamesDir))
-            Add(CacheGroupKind.OldBuild, CompileLeftovers, D3DSCache.Made(Path.Combine(LocalAppData, "D3DSCache"), gamesDir,
-                Directory.GetCreationTimeUtc(gamesDir)).SelectMany(D3DSCache.CacheFiles));
+        if (OperatingSystem.IsWindows() && Directory.Exists(gamesDir) && FileTimes.CreatedUtc(gamesDir) is { } made)
+            Add(CacheGroupKind.OldBuild, CompileLeftovers, D3DSCache.Made(Path.Combine(LocalAppData, "D3DSCache"), gamesDir, made).SelectMany(D3DSCache.CacheFiles));
 
         // the vendor's OpenGL and Vulkan caches: their files carry no key SCSKiller learns
         var read = folders.Select(f => GameFiles.DirKey(f.Item2)).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -206,7 +205,7 @@ public sealed partial class ScsKiller
     {
         var gamesDir = Path.Combine(Store.DataDir, "games");
         var listed = games.Select(s => s.Game).Concat(HiddenGames).Select(g => Store.GameDir(g.Id)).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var dir in Directory.Exists(gamesDir) ? Directory.EnumerateDirectories(gamesDir) : [])
+        foreach (var dir in (Directory.Exists(gamesDir) ? Directory.EnumerateDirectories(gamesDir) : []).Order(StringComparer.OrdinalIgnoreCase))
         {
             if (listed.Contains(dir)) continue;
             var id = AppStore.GameId(Path.GetFileName(dir));

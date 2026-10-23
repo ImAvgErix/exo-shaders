@@ -59,6 +59,7 @@ if (played && details[played.id]) {
     framesSummary: played.frames,
     hitchRows: [{ label: 'Shader stutters', value: '9' }, { label: 'Worst stutter', value: '154 ms' }, { label: 'Other hitches', value: '2' }],
     earlierSessions: [{ label: 'Oct 12, 41 min', value: '23 stutters' }, { label: 'Oct 9, 1 h 12 min', value: '61 stutters' }],
+    cacheUse: { verdict: '92% of pipelines came from the cache', detail: '11,352 of 12,340 pipelines from the cache, 988 compiled. Lookups: 24,680, 22,704 in the driver cache, 0 in precompiled databases; 988 stored. Creating 12,340 pipelines took 41.3 s.', percent: 92, pipelines: 12340 },
   })
   played.beforeAfter = { ...played.beforeAfter, shown: true, enabled: true, stage: 'done', text: 'View before and after', note: '', chip: 'Before and after', hasMenu: true }
   details[played.id].beforeAfter = played.beforeAfter
@@ -213,7 +214,7 @@ function handle(method: string, p: Record<string, unknown>): unknown {
     case 'recorder.uninstall': case 'recorder.alongside': case 'recorder.offline': case 'recorder.startOffline': case 'recorder.checkRisk': case 'recorder.startRisk': case 'driver.setAutoShader':
       throw new Error('Exo Shaders sets this itself: there is no option for it')
     case 'game.compile': case 'queue.add': case 'library.addAllReady': case 'recorder.clear': case 'game.clearCache':
-    case 'cache.delete': case 'cache.freeOldDriver': case 'driver.setCacheLimit':
+    case 'cache.delete': case 'cache.freeOldDriver': case 'driver.setCacheLimit': case 'driver.setCleanupGuard':
       throw new Error('not available in safe mode')
     default:
       return { ok: true }

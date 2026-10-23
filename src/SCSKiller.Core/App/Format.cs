@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace SCSKiller.Core.App;
 
 /// <summary>Text the app and the CLI show.</summary>
@@ -43,6 +45,10 @@ public static class Format
     public static string Session(FrameSession e) => NoPlay(e.Low1PctFps) ? NoPlayText
         : $"1% low {e.Low1PctFps:0} fps · " + (e.Stutters == 0 ? "no stutters" : $"{e.Stutters:N0} stutter{(e.Stutters == 1 ? "" : "s")}");
 
+    /// <summary>The game page's hint before any session: null where the recorder can't run for this game.</summary>
+    public static string? SessionHint(GameState s) => s.RecorderSkip is ScsKiller.SkipUnsupported or ScsKiller.SkipVulkanSteamOnly ? null
+        : "Play with it on and your last session shows here: how much was ready and what still stuttered.";
+
     /// <summary>"Carved DXBC", "Unity 2022.3.10"; just the family (or <paramref name="family"/>) when the reader found no
     /// version: Carved and FromSoft say "-", Unity "?".</summary>
     public static string Engine(EngineInfo e, string? family = null) =>
@@ -66,21 +72,23 @@ public static class Format
     }
 
     /// <summary>"FSR4: 80 known pipelines, compiled with the game", "DLSS: compiled by the NVIDIA driver itself",
-    /// "XeSS: detected; added after a recording sees them".</summary>
-    public static string Middleware(MiddlewareTag t) => t.Label + (t.Pipelines > 0 ? $": {t.Pipelines:N0} known pipelines, compiled with the game"
-        : t.Label == "DLSS" ? ": compiled by the NVIDIA driver itself" : ": detected, added after a recording sees them");
+    /// "XeSS: detected; added after a recording sees them". DLSS off NVIDIA (<paramref name="nvidia"/> false): "runs only on NVIDIA".</summary>
+    public static string Middleware(MiddlewareTag t, bool nvidia = true) => t.Label + (t.Pipelines > 0 ? $": {t.Pipelines:N0} known pipelines, compiled with the game"
+        : t.Label == "DLSS" ? nvidia ? ": compiled by the NVIDIA driver itself" : ": runs only on NVIDIA"
+        : ": detected, added after a recording sees them");
 
     /// <summary>The Library's notice that this GPU can't compile, or on Intel that its support is experimental
     /// (<paramref name="intel"/>: the Intel backend is in use); null on NVIDIA and AMD, or once closed for this GPU
-    /// (<paramref name="dismissedFor"/>: <see cref="Settings.GpuNoticeDismissed"/>).</summary>
-    public static string? GpuNotice(GpuInfo gpu, string? dismissedFor, bool intel = false) => gpu.Vendor is GpuVendor.Nvidia or GpuVendor.Amd || dismissedFor == gpu.Name ? null
-        : gpu.Vendor switch
+    /// (<paramref name="dismissedFor"/>: <see cref="Settings.GpuNoticeDismissed"/>). <paramref name="why"/>: another reason this
+    /// GPU can't compile, shown on any vendor.</summary>
+    public static string? GpuNotice(GpuInfo gpu, string? dismissedFor, bool intel = false, string? why = null) => dismissedFor == gpu.Name ? null
+        : why ?? (gpu.Vendor is GpuVendor.Nvidia or GpuVendor.Amd ? null : gpu.Vendor switch
         {
             GpuVendor.Intel when intel => "Intel support is experimental. DirectX 12 games need a recording first.",
             GpuVendor.Intel => "Intel support is experimental and off. Turn it on in Settings.",
             GpuVendor.Qualcomm => "SCSKiller doesn't compile on Qualcomm GPUs yet: how Qualcomm's driver caches shaders hasn't been measured.",
             _ => "SCSKiller doesn't compile on this GPU yet: it only knows how NVIDIA and AMD drivers cache shaders.",
-        };
+        });
 
     /// <summary>A Library row's note: a few words for the status's reason (the whole one is in the row's tooltip and on the
     /// game's page); null when the status title says it. Read from the core's reasons (ScsKiller.Evaluate, Planner.Check,
@@ -88,13 +96,13 @@ public static class Format
     public static string? ShortNote(GameState s)
     {
         var r = s.StatusReason;
-        bool Has(string part) => r.Contains(part, StringComparison.Ordinal);
+        bool Has(string part) => r.Contains(part, StringComparison.OrdinalIgnoreCase);
         bool Starts(string part) => r.StartsWith(part, StringComparison.Ordinal);
         var partly = ScsKiller.IsPartlyWarmed(s);
         return s.Status switch
         {
             _ when s.CompileUnreached => "This game needs a custom loader",
-            GameStatus.Warmed when r == ScsKiller.OverCacheLimitReason => "Too big for the shader cache",
+            GameStatus.Warmed when r is ScsKiller.OverCacheLimitReason or ScsKiller.OverGameCapReason => "Too big for the shader cache",
             GameStatus.Warmed when r == ScsKiller.CacheFullReason => "Shader cache full",
             GameStatus.Warmed when ScsKiller.IsPartlyCompiled(s) => Sentence(ScsKiller.PartlyCompiledNote(s)),
             GameStatus.Warmed when partly => $"Driver {s.WarmedDriverVersion} · {s.Careful!.LaunchCompiled * 100:0}% still compiled",
@@ -131,6 +139,7 @@ public static class Format
             _ when Has(ScsKiller.ManualNoRecording) => "Needs a recording: confirm its folder",
             _ when s.Engine?.Encrypted == true => null,   // the title: "Encrypted game files"
             _ when r is Codecs.NoOodleDll or Codecs.NoNativeOodle => r,
+            _ when r.EndsWith(", which isn't supported on this GPU yet", StringComparison.Ordinal) => "Vulkan not supported on this GPU yet",
             _ when s.Engine?.Unsupported is { } u => u.StartsWith("no D3D shaders", StringComparison.Ordinal) ? "No DirectX shaders" : "Engine not supported yet",
             _ when r == ScsKiller.CheckingReason => null,   // the title: "Checking…"
             _ when r == ScsKiller.NotCheckedReason => "Open to check",
@@ -149,7 +158,7 @@ public static class Format
 
     /// <summary>Recorder in, not long enough yet: the DirectX 12 hint stays, a DirectX 11 run never loads the recorder.</summary>
     public static string RecorderOnNote(GameState s) => "recorder on: play for about 5 minutes"
-        + (s.StatusReason.Contains(Planning.Planner.Dx12Only, StringComparison.Ordinal) ? ", " + Planning.Planner.Dx12Only : "");
+        + (s.StatusReason.Contains(Planning.Planner.Dx12Only, StringComparison.OrdinalIgnoreCase) ? ", " + Planning.Planner.Dx12Only : "");
 
     static string StaleNote(string r) =>
         r.StartsWith("driver changed:", StringComparison.Ordinal) ? $"Driver {r[(r.LastIndexOf(' ') + 1)..]} cleared its cache"
@@ -162,9 +171,19 @@ public static class Format
         : r.StartsWith("game shaders changed", StringComparison.Ordinal) ? "Game shaders changed"
         : r.StartsWith("SCSKiller can now compile", StringComparison.Ordinal) ? "SCSKiller can compile more"
         : r.StartsWith("Maximum mode", StringComparison.Ordinal) ? "Maximum mode: more to compile"
+        : r.Contains(". " + ScsKiller.RedoesNote, StringComparison.Ordinal) ? r   // what compiling again costs: the whole reason
         : Sentence(FirstClause(r));   // "N new pipelines recorded"
 
-    static string FirstClause(string t) => t.Split([": ", "; ", " ("], 2, StringSplitOptions.None)[0];
-    static string Sentence(string t) => t.Length > 0 ? char.ToUpperInvariant(t[0]) + t[1..] : t;
-    static string InDb(string reason) => reason.Contains(ScsKiller.InDbSupportersNote, StringComparison.Ordinal) ? ScsKiller.InDbSupportersNote : ScsKiller.InDbNote;
+    // a clause ends at ": ", " (" or a sentence's ". " (not "e.g. a")
+    static readonly Regex ClauseEnd = new(@": | \(|\. (?!\p{Ll})");
+
+    static string FirstClause(string t) => ClauseEnd.Split(t, 2)[0];
+
+    public static string Sentence(string t) => t.Length > 0 ? char.ToUpperInvariant(t[0]) + t[1..] : t;
+
+    /// <summary>"<paramref name="first"/>. <paramref name="next"/>", <paramref name="next"/> capitalized; just the first without one.</summary>
+    public static string Then(string first, string? next) =>
+        string.IsNullOrEmpty(next) ? first : first + (first.EndsWith('.') ? " " : ". ") + Sentence(next);
+
+    static string InDb(string reason) => reason.Contains(ScsKiller.InDbSupportersNote, StringComparison.OrdinalIgnoreCase) ? ScsKiller.InDbSupportersNote : ScsKiller.InDbNote;
 }

@@ -66,7 +66,7 @@ public class PlanRulesTests : IDisposable
         var raw = JsonNode.Parse(ContentFile.Embedded("SCSKiller.Core.Planning.plan-rules.json"))!["rules"]!.AsArray();
         Assert.Empty(RulesFile.Embedded.Dropped);
         Assert.Equal(raw.Count, RulesFile.Embedded.Rules.Count);
-        Assert.Equal(Ids.Values.Concat(["re-pragmata", "re-re8", "nixxes-got", "nixxes-rc", "ue-kuro"]).Order(), RulesFile.Embedded.Rules.Where(r => r.RootSignature != null).Select(r => r.Id).Order());
+        Assert.Equal(Ids.Values.Concat(["re-pragmata", "re-re8", "nixxes-got", "nixxes-rc", "ue-kuro", "ue-wukong", "snowdrop-helix"]).Order(), RulesFile.Embedded.Rules.Where(r => r.RootSignature != null).Select(r => r.Id).Order());
     }
 
     /// <summary>Every engine family, version and fork gets the rule the code gave it, with its verification and static samplers.</summary>

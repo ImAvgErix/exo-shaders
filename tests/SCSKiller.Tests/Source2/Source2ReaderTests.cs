@@ -83,7 +83,7 @@ public class Source2ReaderTests
         });
         var reader = new Source2Reader();
         var engine = reader.Detect(game)!;
-        Assert.Equal(new EngineInfo(Source2Reader.Family, "72", null, "D3D11", false, null), engine);
+        Assert.Equal(new EngineInfo(Source2Reader.Family, "72", null, "D3D11", false, null, OffersVulkan: true), engine);   // Source 2 games also run on Vulkan
         var index = reader.Index(game, engine, null, CancellationToken.None);
         Assert.Equal(new[] { Vs, Ps, Gs, Cs }.Select(Sha).Order(), index.Shaders.Keys.Order());
         Assert.Equal([[Sha(Vs), Sha(Ps), Sha(Gs)], [Sha(Cs)]], index.Maps.Select(m => m.Shaders.ToList()));
@@ -97,7 +97,7 @@ public class Source2ReaderTests
 
         // DirectX 11: no root signatures; NVIDIA warms every stage, AMD the PS and CS
         Assert.Equal(new PlanCheck(Readiness.Ready, "compiles every DirectX 11 shader"), new Planner().Check(game, engine, null, Ff7.Nvidia));
-        Assert.Equal(new PlanCheck(Readiness.Ready, $"compiles every DirectX 11 shader but the vertex shaders; {Planner.D3D11VsRecord}"), new Planner().Check(game, engine, null, Ff7.Amd));
+        Assert.Equal(new PlanCheck(Readiness.Ready, $"compiles every DirectX 11 shader but the vertex shaders. {Core.App.Format.Sentence(Planner.D3D11VsRecord)}"), new Planner().Check(game, engine, null, Ff7.Amd));
     }
 
     [Fact]
@@ -149,6 +149,6 @@ public class Source2ReaderTests
         if (boot != null) File.WriteAllText(Path.Combine(Directory.CreateDirectory(Path.Combine(game.InstallDir, "game", "citadel", "cfg")).FullName, "boot.vcfg"), boot);
         Assert.Equal(api, Source2Reader.Api(game, launch));
         if (api.StartsWith("Vulkan"))
-            Assert.Equal(new PlanCheck(Readiness.Unsupported, $"runs on {api}"), new Planner().Check(game, new EngineInfo(Source2Reader.Family, "72", null, api, false, null), null, Ff7.Nvidia));
+            Assert.Equal(new PlanCheck(Readiness.Unsupported, $"runs on {api}{Planner.VulkanNotOnGpu}"), new Planner().Check(game, new EngineInfo(Source2Reader.Family, "72", null, api, false, null), null, Ff7.Nvidia));
     }
 }

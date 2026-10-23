@@ -248,7 +248,7 @@ public class LuminousReaderTests
         Assert.Equal(4, got.Count);
 
         Assert.Equal(new PlanCheck(Readiness.Ready, "compiles every DirectX 11 shader"), new Planner().Check(game, engine, null, Ff7.Nvidia));
-        Assert.Equal(new PlanCheck(Readiness.Ready, $"compiles every DirectX 11 shader but the vertex shaders; {Planner.D3D11VsRecord}"), new Planner().Check(game, engine, null, Ff7.Amd));
+        Assert.Equal(new PlanCheck(Readiness.Ready, $"compiles every DirectX 11 shader but the vertex shaders. {Core.App.Format.Sentence(Planner.D3D11VsRecord)}"), new Planner().Check(game, engine, null, Ff7.Amd));
     }
 
     [Fact]

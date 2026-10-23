@@ -73,6 +73,7 @@ type Notice =
 ```
 ExoShaders.Service.exe [--data-dir <dir>] [--safe] [--log-stderr]
 ExoShaders.Service.exe --offline-cleanup <gameId>     (internal: the engine's cleanup helper, same as the app)
+ExoShaders.Service.exe --asd-remove-all              (Exo Shaders' uninstall: takes out every precompiled shader database Exo registered with Windows)
 ```
 
 - Data folder: `%LOCALAPPDATA%\SCSKiller` (the official app's, so existing compiles stay valid). `--data-dir` (or env
@@ -182,6 +183,7 @@ type App = {
     name: string, vendor: "nvidia" | "amd" | "intel" | "qualcomm" | "other", vendorName: string, // "NVIDIA"
     driver: string,             // "617.42"
     driverLine: string,         // what the app shows under the GPU name: "Driver 617.42" or the restart note
+    windowsCleanup?: {kept: boolean, canUndo: boolean, text: string} | null, // NVIDIA: whether Windows' automatic cleanup can delete D3DSCache (driver.setCleanupGuard)
     notice?: string             // unsupported/experimental GPU notice (dismiss with app.dismissGpuNotice)
   }
   cache?: {                     // driver shader cache; read in the background, absent until first read
@@ -464,6 +466,7 @@ to the settings policy; their setters are refused.
 |---|---|---|
 | `game.caches` | `{id}` | `{parts: {name, bytes, size, files: number, own: boolean}[], title: string, text: string, ownText?: string, note: string, gap?: string}`: what the "Clear the shader cache of X?" dialog shows (`own` = the game's own cache, deleted only with `includeGameCache`) |
 | `game.clearCache` | `{id, includeGameCache?: boolean}` | `{ok: true}` or error `"Nothing was cleared: no shader-cache files of this game were found."` |
+| `game.asdUndo` | `{id, allow?: boolean}` | take out the game's precompiled shader database (built on this PC from its compile and registered with Windows for its exe as installer "Exo") and its files; kept off for the game until called with `allow: true` |
 | `game.putBackKept` | `{id}` | put an AMD kept-aside cache back now |
 | `game.dropKept` | `{id}` | Settings › Kept aside › Remove |
 
@@ -557,6 +560,7 @@ type Inventory = {
 |---|---|---|
 | `settings.get` | – | `Settings` (read-only: the settings policy sets them) |
 | `driver.setCacheLimit` | `{index}` (`settings.meta.cacheSizes`) | NVIDIA shader cache size. Runs the bundled CLI elevated (Windows asks for administrator permission), as the app does. `{ok: true, text}` / `{ok: false, text}` (`"Cancelled."` when UAC is declined). Confirm first with `CACHE_LIMIT_CONFIRM`. |
+| `driver.setCleanupGuard` | `{on: boolean}` | `on`: Windows' automatic cleanup (SilentCleanup, Storage Service) no longer runs the DirectX Shader Cache handler, which can empty D3DSCache, where NVIDIA from 621 keeps compiled pipelines; `off`: undo. Clears or sets bit 0 of that handler's `Autorun` value only. Runs the bundled CLI elevated (`cleanup-guard on\|off`). `{ok, text}` as `driver.setCacheLimit`. |
 
 ## GameDetail (`game.detail`)
 
