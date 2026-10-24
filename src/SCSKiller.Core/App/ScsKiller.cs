@@ -1368,9 +1368,11 @@ public sealed partial class ScsKiller : IScsKiller
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { Log?.Report($"{g.Name}: couldn't save its record: {e.Message}"); }
         long? psos = PlanItems(rec.Plan?.Stats);
         long? recorded = rec.Plan?.Stats.Recorded;
-        TimeSpan? fast = psos is { } n ? TimeSpan.FromSeconds(n / (RateOn(rec, gpuNow.Id) ?? WarmRate(gpuNow.Id))) : null;
-        TimeSpan? careful = cap != null && psos is { } np && recorded is { } nr ? TimeSpan.FromSeconds(nr / DefaultCarefulPsoPerSecond + (np - nr) / (RateOn(rec, gpuNow.Id) ?? WarmRate(gpuNow.Id))) : null;
         var (_, engine, antiCheat, check, _, streamlineFirst, _, _, apiDetected, _, _) = Evaluated(g, rec, force, out fresh, abandoned);
+        var rate = RateFor(rec, engine, gpuNow);
+        TimeSpan? fast = psos is { } n ? CompileEstimate.Of(n, n, null, rate.PerSecond).Time : null;
+        TimeSpan? careful = cap != null && psos is { } np && recorded is { } nr
+            ? CompileEstimate.Of(np, np - nr, null, rate.PerSecond).Time + TimeSpan.FromSeconds(nr / DefaultCarefulPsoPerSecond) : null;
         driverStale = rec.WarmedAt != null && !CurrentDriver(gpuNow, rec.WarmedDriverId, rec.WarmedDriverVersion);
         var counted = rec.Pending;
         var pending = PendingOf(g, rec, engine);   // after the import and the scan's engine: derived from what they and any download left
@@ -1513,11 +1515,15 @@ public sealed partial class ScsKiller : IScsKiller
         var playing = IsPlaying(g.Id);
         GameState? listed = null;
         if (playing) lock (_lock) listed = _games.Find(x => x.Game.Id == g.Id);
+        var warmChanged = status == GameStatus.Stale ? WarmChanged(g, rec, engine, gpuNow) : null;
+        (TimeSpan? Time, TimeSpan? Low) next = rec.Careful && careful != null ? (careful, null)   // a careful compile replays every item
+            : psos is { } items ? NextCompile(items, status == GameStatus.Stale, pending.Recorded + (pending.Planned ?? 0), !pending.Unknown && pending.Planned != null,
+                warmChanged, rec.ResumeAt > 0 && rec.ResumeGpu == gpuNow.Id ? rec.ResumeAt : 0, rate.PerSecond) : (fast, null);
         var state = WithRecorder(new GameState(g, engine, antiCheat, status, reason,
                 Collections.Member(g.Id) != null && !Indexed(g, rec) ? null : rec.ShaderCount,   // an index of another exe: the whole install's, from before the split
                 rec.Plan?.Stats,
             psos * (long)(rec.BytesPerPso ?? DefaultBytesPerPsoOf(engine)),
-            rec.Careful && careful != null ? careful : fast,
+            next.Time,
             rec.WarmedDriverVersion, rec.WarmedAt, rec.LastWarmTime, ours,
             playing ? listed?.LastSession : session,
             CacheOnDiskOf(g, engine, rec),
@@ -1533,7 +1539,8 @@ public sealed partial class ScsKiller : IScsKiller
                 Careful = cap != null ? new CarefulCompile(rec.Careful, rec.FirstLaunch?.Compiled, careful, recorded) : null,
                 NewShadersOverride = rec.NewShaders, RtSkipped = rtSkipped, RayTracingOverride = rec.RayTracing, LeftOutOfAddAll = rec.LeftOutOfAddAll, CacheCapGB = rec.CacheCapGB, PlanCacheCapGB = rec.PlanCacheCapGB,
                 ApiOverride = rec.ApiOverride, ApiDetected = apiDetected,
-                RecordedSinceWarm = pending.Recorded, NewOnly = status == GameStatus.Stale && !pending.Unknown && WarmChanged(g, rec, engine, gpuNow) == null, CommunityDbPsos = entry?.Psos ?? 0, PsoPerSecond = RateOn(rec, gpuNow.Id),
+                RecordedSinceWarm = pending.Recorded, NewOnly = status == GameStatus.Stale && !pending.Unknown && warmChanged == null, CommunityDbPsos = entry?.Psos ?? 0, PsoPerSecond = RateOn(rec, gpuNow.Id),
+                EstimateLow = next.Low, EstimateLearned = rate.Learned && next.Low == null, LastWarmCold = rec.LastWarmCold == true,
                 Official = OfficialInUse(g.Id) is { } o ? new CommunityInfo(o.Psos, o.DownloadedAt, File.Exists(RecordingPath(g.Id))) : null,
                 LastFrames = playing ? listed?.LastFrames : frames, ReShade = reshade != null, ShaderMod = shaderMod?.Mod ?? (antiCheat != AntiCheat.None ? ReShade.RenoDxByName(g) : null), ShaderModBlocks = reshade?.Blocks == true, ShaderModLayer = reshade?.Layered == true,
                 ShaderModAsD3D12 = reshade is { Layered: true, AsD3D12: true }, RtUnseen = rtUnseen, RtToPlan = rtToPlan, RecordedEnough = rec.RecordedLong, RootUnconfirmed = unconfirmed, Vac = vac, Records11 = As11(engine, rec, Vendor.Caps),
@@ -2214,33 +2221,56 @@ public sealed partial class ScsKiller : IScsKiller
     public static int MaxCompileMemoryGB(long totalPhysicalBytes) => Math.Max(16, RamGB(totalPhysicalBytes) - 2);
     public const double DefaultAmdPsoPerSecond = 160;
 
-    /// <summary>The estimate's rate for a game without its own measured warm: the games' measured rates as one
-    /// (<see cref="MeasuredRate"/>), else the first complete warm measured on this PC on this driver (<see cref="SeedWarmRate"/>),
-    /// else <see cref="DefaultWarmRate"/>.</summary>
-    double WarmRate(string? driverId) => MeasuredRate(Games) ?? ((_warmRates ??= Store.LoadWarmRates()).GetValueOrDefault(RateKey(driverId, SkipD3DSCacheFlush())) is > 0 and var r ? r : DefaultWarmRate(Vendor.Vendor));
+    /// <summary>The cold rate of the game's next compile (<see cref="CompileEstimate.RateFor"/>), the stand-ins measured on this
+    /// driver: the games of its engine and API as one, every game as one (<see cref="MeasuredRate"/>), the last cold warm
+    /// (<see cref="SeedWarmRate"/>), then <see cref="DefaultWarmRate"/>.</summary>
+    CompileEstimate.Rate RateFor(GameRecord rec, EngineInfo? engine, GpuSnapshot gpu)
+    {
+        var games = Games;
+        var kind = EngineApi(engine);
+        var seeded = (_warmRates ??= Store.LoadWarmRates()).GetValueOrDefault(RateKey(gpu.Id, SkipD3DSCacheFlush())) is > 0 and var r ? r : (double?)null;
+        return CompileEstimate.RateFor(rec, RateDriver(gpu.Id, SkipD3DSCacheFlush()), kind == null ? null : MeasuredRate(games.Where(s => EngineApi(s.Engine) == kind)),
+            MeasuredRate(games), seeded, DefaultWarmRate(Vendor.Vendor));
+    }
     Dictionary<string, double>? _warmRates;
+
+    /// <summary>Games whose compile rates are alike: one engine family on one graphics API.</summary>
+    static string? EngineApi(EngineInfo? e) => e == null ? null : e.Family + "|" + ApiKey(e.GraphicsApi);
+
+    /// <summary>The game's next compile (<see cref="CompileEstimate.Of"/>) of its plan's <paramref name="items"/>: a stale game's
+    /// <paramref name="fresh"/> new pipelines, and every item at most while they aren't <paramref name="counted"/> or its cache may no
+    /// longer hold the rest (<see cref="CacheMayHold"/>); else every item but the ones a stopped compile on this driver created
+    /// (<paramref name="resumed"/>).</summary>
+    internal static (TimeSpan Time, TimeSpan? Low) NextCompile(long items, bool stale, long fresh, bool counted, string? warmChanged, long resumed, double rate)
+    {
+        if (stale && counted && warmChanged == null) return CompileEstimate.Of(items, fresh, null, rate);
+        if (stale && (!counted || CacheMayHold(warmChanged))) return CompileEstimate.Of(items, fresh, items, rate);
+        return CompileEstimate.Of(items, items - resumed, null, rate);
+    }
+
+    /// <summary>Why a game is stale while its cache may still hold most of its last compile: a game update or changed shaders
+    /// (most stay as they were), part of the cache gone. Every other reason (another driver, the cache gone, another exe or
+    /// cache key) compiles it all again onto a cold cache.</summary>
+    internal static bool CacheMayHold(string? warmChanged) =>
+        warmChanged is IndexChangedReason or TrimmedPartReason || warmChanged?.StartsWith("game updated since the warm", StringComparison.Ordinal) == true;
 
     string RateKey(string? driverId, bool noflush) => $"{Vendor.Vendor}|{RateDriver(driverId, noflush)}";
 
     /// <summary>The driver id a measured rate is kept under: with skipped D3DSCache flushes a compile runs at another rate.</summary>
     static string? RateDriver(string? driverId, bool noflush) => driverId != null && noflush ? driverId + "|noflush" : driverId;
 
-    /// <summary>The game's measured rate when it was measured on this driver: NVIDIA 621 compiles at a fraction of 617's.</summary>
-    double? RateOn(GameRecord r, string? driverId) => driverId != null && (r.PsoPerSecondDriver ?? r.WarmedDriverId) == RateDriver(driverId, SkipD3DSCacheFlush()) ? r.PsoPerSecond : null;
+    /// <summary>The game's measured rate when it was measured on this driver, the way the next compile runs: NVIDIA 621 compiles at
+    /// a fraction of 617's. An earlier build's rate keeps its driver (<see cref="CompileEstimate.Migrate"/>).</summary>
+    double? RateOn(GameRecord r, string? driverId) => driverId != null && r.PsoPerSecondDriver == RateDriver(driverId, SkipD3DSCacheFlush()) ? r.PsoPerSecond : null;
 
     /// <summary>A warm that measures the compile rate: the game's driver cache held nothing for this driver when it started
     /// (never warmed, cleared, or a new driver, which drops the old cache). A re-warm on the same driver mostly hits, at
     /// several times the rate.</summary>
     public static bool ColdWarm(GameRecord rec, string? driverId) => rec.WarmedAt == null || driverId == null || rec.WarmedDriverId != driverId;
 
-    /// <summary>The games' measured cold rates as one: their plans' items over the time each takes at its rate. Null: none measured.</summary>
-    public static double? MeasuredRate(IEnumerable<GameState> games)
-    {
-        var m = games.Where(g => g is { PsoPerSecond: > 0, Plan: not null })
-            .Select(g => (Items: (double)PlanItems(g.Plan)!.Value, Rate: g.PsoPerSecond!.Value))
-            .Where(g => g.Items > 0).ToList();
-        return m.Count > 0 ? m.Sum(g => g.Items) / m.Sum(g => g.Items / g.Rate) : null;
-    }
+    /// <summary>The games' cold rates measured on this driver as one: their plans' items over the time each takes at its rate. Null: none measured.</summary>
+    public static double? MeasuredRate(IEnumerable<GameState> games) =>
+        CompileEstimate.Pool(games.Where(g => g is { PsoPerSecond: > 0, Plan: not null }).Select(g => ((double)PlanItems(g.Plan)!.Value, g.PsoPerSecond!.Value)));
 
     /// <summary>Keeps the last cold warm's rate on a driver as this vendor's rate there (the warms keep their own per game).</summary>
     void SeedWarmRate(double psoPerSecond, string? driverId, bool noflush)
@@ -3318,7 +3348,7 @@ public sealed partial class ScsKiller : IScsKiller
     {
         // the keys stay: they are this exe name's, so the cache the game builds by itself still counts in CacheOnDisk
         if (!IsUnreached(rec)) rec.UnreachedWarm = null;   // a verdict on an older warm: with WarmedAt gone it would apply again
-        (rec.WarmedAt, rec.LastWarmTime, rec.LastCacheGrowthBytes, rec.ResumeAt) = (null, null, null, 0);
+        (rec.WarmedAt, rec.LastWarmTime, rec.LastWarmCold, rec.LastCacheGrowthBytes, rec.ResumeAt) = (null, null, null, null, 0);
         if (!WarmMissesGame(rec)) (rec.WarmedDriverVersion, rec.WarmedDriverId) = (null, null);   // CantReach compares the driver the warm missed on
         (rec.LastWarmFailed, rec.LastWarmSkipped, rec.LastWarmNeedsRecording, rec.LastWarmCrashed, rec.LastWarmDriverSkipped, rec.LastWarmUnbuilt, rec.LastWarmInvalid,
             rec.LastWarmUnsupported) = (null, null, null, null, null, null, null, null);
@@ -8712,7 +8742,16 @@ public sealed partial class ScsKiller : IScsKiller
                 switch (result.Outcome)
                 {
                     case WarmOutcome.Completed:
-                        bool cold = ColdWarm(rec, driverId);   // before the fields it reads are set to this warm
+                        // cold: nothing compiled on this driver on record (before the fields it reads are set to this warm), and not
+                        // a rate only a cache still holding the game gives (NVIDIA kept DirectX 11 caches across a driver update)
+                        var rateKey = RateDriver(driverId, result.D3DSCacheNoFlush);
+                        var measured = items >= CompileEstimate.MinItems && seconds > 1;
+                        bool cold = ColdWarm(rec, driverId);
+                        if (cold && measured && CompileEstimate.Rewarm(items / seconds, rec.PsoPerSecondDriver == rateKey ? rec.PsoPerSecond : null))
+                        {
+                            cold = false;
+                            Log?.Report($"{game.Name}: {items / seconds:N0} pipelines a second is a rewarm's, the cache still held the game: not its compile rate");
+                        }
                         // the earlier warms' cache files gone, made again or shrunk during this one (AMD evicts at its cap, at
                         // device creation): what they compiled may be gone too
                         if (compiled != null && CacheFilesChanged(id, rec) is { } lostDuring)
@@ -8735,7 +8774,7 @@ public sealed partial class ScsKiller : IScsKiller
                         (rec.WarmedAgsApp, rec.AgsMissed) = (agsUsed?.App, rec.AgsMissed && agsUsed == null);   // after a miss, AGS returns only once the game's keys prove it
                         (rec.WarmedPlanItems, rec.IdleHeldBack) = (rec.PlanItems, null);
                         rec.WarmedLayer = layer?.Fingerprint;
-                        (rec.WarmedAt, rec.LastWarmTime, rec.LastCacheGrowthBytes) = (DateTimeOffset.Now, TimeSpan.FromSeconds(seconds), result.CacheGrowthBytes);
+                        (rec.WarmedAt, rec.LastWarmTime, rec.LastWarmCold, rec.LastCacheGrowthBytes) = (DateTimeOffset.Now, TimeSpan.FromSeconds(seconds), cold, result.CacheGrowthBytes);
                         (rec.LastWarmFailed, rec.LastWarmSkipped, rec.LastWarmNeedsRecording, rec.WarmedKeys) = (result.Failed - unbuilt, result.Skipped, needsRecording, [.. cacheKeys]);
                         rec.WarmedFiles = AppCache is AmdAppCache amd ? amd.D3D12FileNames(cacheKeys)
                             : AppCache?.FilesOf(cacheKeys).Select(f => f.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -8786,10 +8825,10 @@ public sealed partial class ScsKiller : IScsKiller
                         (rec.CompileFailedBuild, rec.WarmedD3DSCache, rec.WarmedD3DSCacheBytes, rec.D3DSCacheDamaged, completed) = (null, true, null, false, true);   // the bytes once the dbs are folded
                         (rec.ResumeAt, rec.ResumeItems, rec.ResumeSeconds, rec.ResumeFailed) = (0, 0, 0, 0);
                         (rec.WarmedCareful, rec.FirstLaunch) = (carefulPasses > 0, null);   // judged again by the next launch
-                        if (cold && items >= 1000 && seconds > 1 && carefulPasses == 0)   // a careful warm's rate mixes both schedules
+                        if (cold && measured && carefulPasses == 0)   // a careful warm's rate mixes both schedules
                         {
                             // the hook's outcome, not the plan: without d3dscache's import the warm ran at the flushing rate
-                            (rec.PsoPerSecond, rec.PsoPerSecondDriver) = (items / seconds, RateDriver(driverId, result.D3DSCacheNoFlush));
+                            (rec.PsoPerSecond, rec.PsoPerSecondDriver) = (items / seconds, rateKey);
                             SeedWarmRate(rec.PsoPerSecond.Value, driverId, result.D3DSCacheNoFlush);
                             var n = result.Done - options.StartAt;   // the growth is the last segment's
                             if (result.CacheGrowthBytes > 0 && n > 0) rec.BytesPerPso = (double)result.CacheGrowthBytes / n;

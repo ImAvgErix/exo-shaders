@@ -241,7 +241,13 @@ type Game = {
   api?: string                  // "DirectX 12" (when no API picker is shown)
   status: "warmed" | "ready" | "needsRecording" | "stale" | "unsupported"   // engine status
   statusText: string            // the app's status word: "Warmed", "Ready to compile", "Needs a 5-min recording",
-                                // "Needs rebuilding", "Partly compiled", "Not supported yet", "Encrypted game files", ...
+                                // "Needs rebuilding", "Partly compiled", "Not supported yet", ...
+                                // "Ready · some files encrypted": an Unreal game some of whose files no key opens (the rest
+                                // compiles); "Not supported" (status "unsupported", tone "muted"): its encrypted files' key
+                                // can't be read from them. From what it waits for: "Start it once from Steam" (its launcher
+                                // clears the cache at a new install or season, or Steam's Vulkan download comes with its first
+                                // start), "Ready, ray tracing needs a recording" (tone "primary": the rest compiles now,
+                                // actions.compileText says so), "Needs a recording" / "Needs a 5-min recording"
   tone: "accent" | "primary" | "muted" | "warn"   // the app's status colour (accent = done, primary = actionable)
   statusTitle: string           // detail header: statusText, or "In queue (position 2)", or the queue stage ("Compiling", "Paused: ...")
   statusReason: string          // detail line under it: progress while compiling, else the app's reason sentence
@@ -259,7 +265,15 @@ type Game = {
   cacheBytes?: number           // measured driver cache, else estimate
   cacheText: string             // "1.2 GB" | "≈ 1.2 GB" (estimate) | "—"
   cacheEstimated: boolean
-  compileTime?: string          // last compile time, else estimate ("12 min")
+  compileTime?: string          // estimate's time, else the last compile's when it started cold ("12 min")
+  estimate?: {                  // how long its next compile takes on this PC: reading its shaders, planning and preparing
+                                // the files, then its pipelines at a cold rate. Absent until a plan says what it compiles.
+    seconds: number,            // the time; a stale game's new pipelines only when its cache still holds the rest
+    lowSeconds?: number,        // ...it may take as little as this: a stale game's new pipelines alone, when its cache
+                                // may no longer hold the rest (a game update, changed shaders, part of the cache gone)
+    learned: boolean            // the rate is this game's own compile on this driver; false: another driver's, a stopped
+                                // compile's, its engine's, this PC's or the vendor's default stands in (a rough estimate)
+  }
   compiledAt?: string           // ISO date of the last compile (WarmedAt)
   compiledDriver?: string
   recommended: boolean          // in the "Recommended to compile" group

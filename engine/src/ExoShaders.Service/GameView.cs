@@ -80,9 +80,10 @@ internal sealed class GameView(GameState state, ViewContext ctx)
     /// protected, as Wuthering Waves' is): Exo Shaders calls it not supported instead of
     /// asking for a key. Reading the key from the running game would mean going around its
     /// anti-cheat, which Exo Shaders never does. Engine.Encrypted is only left set once the stored key, the exe scan
-    /// and the community's public key list (UnrealKeys.Get) all failed to open the game's files.
+    /// and the community's public key list (UnrealKeys.Get) all failed to open the game's files. A game with only some
+    /// files encrypted (KeyMissing) compiles the rest, so it isn't locked: it reads as its status says.
     /// </summary>
-    private bool KeyLocked => ScsKiller.NeedsAesKey(s);
+    private bool KeyLocked => s.Engine is { Encrypted: true };
 
     /// <summary>The game page's note when the AES key came from a public key list rather than the game's own files.</summary>
     public string? KeyNote => !KeyLocked && s.Engine is { Family: "Unreal" } && ctx.KeySource(Id) == SCSKiller.Core.Unreal.PublicKeys.SourceName
@@ -104,12 +105,16 @@ internal sealed class GameView(GameState state, ViewContext ctx)
                     if (Partly) return "Partly warmed";
                     return s.Plan is { RecordedOnly: true } ? "Warmed (recorded pipelines only)" : "Warmed";
                 case GameStatus.Ready:
-                    return "Ready to compile";
+                    return s.Engine is { KeyMissing: true } ? "Ready · some files encrypted" : "Ready to compile";
             }
             if (ScsKiller.NeedsOfflineSession(s)) return "Needs an offline session";
             switch (s.Status)
             {
                 case GameStatus.NeedsRecording:
+                    // what it waits for: its first start from Steam (a launcher that clears the cache, Steam's Vulkan download),
+                    // a recording of its ray tracing only (the rest compiles now), or a recording of the game
+                    if (ScsKiller.NeedsSteamStart(s)) return "Start it once from Steam";
+                    if (RtPartial) return "Ready, ray tracing needs a recording";
                     if (ScsKiller.NeverRecorded(s)) return "Played, nothing recorded";
                     return ScsKiller.RecordedEnough(s) ? "Needs a recording" : "Needs a 5-min recording";
                 case GameStatus.Stale:
@@ -119,7 +124,6 @@ internal sealed class GameView(GameState state, ViewContext ctx)
             if (s.StatusReason == "not checked yet: open it to check") return "Not checked";
             if (s.StatusReason == "the compile can't reach this game: it reads its shaders from a different driver cache than the one SCSKiller fills. Clear its cache to free the space") return "Not compatible";
             if (s.ShaderModBlocks) return "Not compiled";
-            if (s.Engine is { Encrypted: true }) return "Encrypted game files";
             return s.NotPlanned ? "Not supported" : "Not supported yet";
         }
     }
@@ -136,7 +140,7 @@ internal sealed class GameView(GameState state, ViewContext ctx)
                     : ScsKiller.RtAfterRecording(s) ? " · ray tracing needs a 5-min recording" : "";
                 return "driver " + s.WarmedDriverVersion + extra;
             }
-            if (!ScsKiller.NeedsOfflineSession(s) && s.Status == GameStatus.NeedsRecording)
+            if (!ScsKiller.NeedsOfflineSession(s) && !ScsKiller.NeedsSteamStart(s) && s.Status == GameStatus.NeedsRecording)
             {
                 if (s.AnyAntiCheat && !s.RiskEligible) return ScsKiller.AntiCheatName(s) + " blocks recording";
                 if (s.RecordingPaused) return ScsKiller.PausedNote(ctx.Settings);
@@ -164,6 +168,7 @@ internal sealed class GameView(GameState state, ViewContext ctx)
             {
                 GameStatus.Warmed => Partly ? "warn" : "accent",
                 GameStatus.Ready => "primary",
+                GameStatus.NeedsRecording when RtPartial => "primary",   // ready but for its ray tracing: Compile does the rest
                 GameStatus.Unsupported => "muted",
                 _ => "warn",
             };
@@ -219,7 +224,10 @@ internal sealed class GameView(GameState state, ViewContext ctx)
     // ---------------------------------------------------------------- DetailVm: status
 
     private bool Partial => ScsKiller.IsPartial(s.Plan);
-    private bool RtPartial => s.Status == GameStatus.NeedsRecording && ScsKiller.NeedsRtRecording(s);
+    /// <summary>It waits for a recording of its ray tracing alone (the engine's reason says so): the rest compiles now. A game
+    /// that waits for something else keeps no partial compile, though its plan's ray tracing needs a recording too: Marvel
+    /// Rivals, waiting for its first start from Steam, was offered one the engine then refused as not ready.</summary>
+    private bool RtPartial => s.Status == GameStatus.NeedsRecording && s.StatusReason.StartsWith(ScsKiller.RtNeedsRecording, StringComparison.Ordinal);
     private bool RtAfter => ScsKiller.RtAfterRecording(s);
     private bool NoAntiCheat => !s.AnyAntiCheat;
     private bool CanRecord => NoAntiCheat && !s.RootUnconfirmed && !s.StreamlineFirst;
@@ -276,7 +284,7 @@ internal sealed class GameView(GameState state, ViewContext ctx)
                         t = NoDbNote(FullNote);
                         break;
                     default:
-                        t = s.Engine is { Encrypted: true } ? "needs the game's AES key" : NoDbNote(s.StatusReason);
+                        t = NoDbNote(s.StatusReason);
                         break;
                 }
             }
@@ -823,13 +831,13 @@ internal sealed class GameView(GameState state, ViewContext ctx)
             string text;
             if (s.WarmedAt is { } at)
             {
-                text = "Compiled " + Fmt.When(at) + (s.LastWarmTime is { } t ? " in " + Format.Duration(t) : "") + ", for driver " + s.WarmedDriverVersion + "."
+                text = "Compiled " + Fmt.When(at) + (s.LastWarmTime is { } t && s.LastWarmCold ? " in " + Format.Duration(t) : "") + ", for driver " + s.WarmedDriverVersion + "."
                     + (ScsKiller.NothingFailed(s) ? " Nothing failed." : "")
                     + (ScsKiller.RefusedLine(s) is { } r ? " " + r : "")
                     + (OnDisk is { } d ? " It uses " + Format.Bytes(d) + " of disk space." : "")
                     + " The game may still run its own shader step when it starts.";
             }
-            else if (s.LastWarmTime is { } last)
+            else if (s.LastWarmTime is { } last && s.LastWarmCold)
                 text = "Its shader cache was cleared. The last compile took " + Format.Duration(last) + ".";
             else
                 text = (s.EstimatedWarmTime is { } est ? "It takes about " + Format.Duration(est) + " and runs in the background, so you can keep using the PC." : "It runs in the background, so you can keep using the PC.")
@@ -1028,6 +1036,9 @@ internal sealed class GameView(GameState state, ViewContext ctx)
             cacheText = Fmt.Cache(s),
             cacheEstimated = !s.CacheOnDisk.HasValue && s.EstimatedCacheBytes.HasValue,
             compileTime = Fmt.CompileTime(s) is { } ct ? Format.Duration(ct) : null,
+            estimate = s.EstimatedWarmTime is { } est
+                ? new { seconds = Math.Round(est.TotalSeconds), lowSeconds = s.EstimateLow is { } low ? Math.Round(low.TotalSeconds) : (double?)null, learned = s.EstimateLearned }
+                : null,
             compiledAt = s.WarmedAt is { } wa ? Fmt.Iso(wa) : null,
             compiledDriver = s.WarmedDriverVersion,
             recommended = ctx.Recommended.Contains(Id),

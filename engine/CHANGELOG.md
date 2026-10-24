@@ -19,6 +19,26 @@ repository's root `CHANGELOG.md`.
   this PC's database from it for that copy, with no compile or recording of its own. Matched by the exe's file name and
   the game's name together, never over a database of the copy's own.
 
+**Statuses and times you can trust**
+
+- An Unreal game some of whose files no key opens (Teamfight Tactics) reads "Ready · some files encrypted" and compiles
+  the rest. It said "Not supported" while its compile was offered and ran. Only a game whose shaders all stay
+  encrypted is not supported.
+- A game says what it waits for. One whose launcher clears the shader cache at its first start of a new install or
+  season (Marvel Rivals), or whose Vulkan shaders come with Steam's download at its first start, says "Start it once
+  from Steam" instead of asking for a recording. One whose ray tracing alone needs a recording reads "Ready, ray tracing
+  needs a recording", and Compile does the rest.
+- Compile times are learned on this PC. A game's estimate is its own compile's rate on this driver; until it has one, a
+  stand-in marked as rough: its own rate on another driver or from a stopped compile, its engine's on this driver, this
+  PC's, or the vendor's default. Reading its shaders, planning and preparing its files count in the time. A stale game
+  is estimated for its new pipelines, and after a game update for its new ones up to all of them, since its cache may no
+  longer hold the rest. On NVIDIA 621 every estimate had fallen to 450 pipelines a second, because the rates compiles
+  measured were looked up under another key: Counter-Strike 2 read 5 min, where its one cold compile took 1 h 22 min.
+- A rewarm onto a cache that still held the game no longer counts as a compile: NVIDIA kept DirectX 11 caches across
+  the 621 update, and VALORANT's 33 s rewarm made its 4-min compile read "under a minute". Such a rate is never kept as
+  the game's, and its time isn't shown as the last compile's. A compile's time no longer counts the minutes it was
+  paused while you played.
+
 **Built on SCSKiller 1.3.0's own source**
 
 - The engine is SCSKiller 1.3.0 built from its published source, in place of the engine recovered from the

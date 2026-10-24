@@ -120,7 +120,9 @@ internal static class Fmt
         return "—";
     }
 
-    public static TimeSpan? CompileTime(GameState s) => s.LastWarmTime ?? s.EstimatedWarmTime;
+    /// <summary>How long its next compile takes (the engine's estimate, reading and preparing included), else its last compile's
+    /// time when that started cold: a rewarm onto a cache that still held the game says nothing of a compile.</summary>
+    public static TimeSpan? CompileTime(GameState s) => s.EstimatedWarmTime ?? (s.LastWarmCold ? s.LastWarmTime : null);
 
     public static string TagTip(MiddlewareTag t) => Format.Middleware(t) + "\n    " + string.Join(", ", t.Dlls);
 
@@ -171,7 +173,7 @@ internal static class Fmt
     {
         if (ScsKiller.Stalled(q)) return null;
         WarmProgress? p = q.Progress;
-        if (p is null || !(p.PerSecond > 0.0)) return g is null ? null : g.EstimatedWarmTime ?? g.LastWarmTime;
+        if (p is null || !(p.PerSecond > 0.0)) return g is null ? null : CompileTime(g);
         return TimeSpan.FromSeconds((p.Total - p.Done) / (p.SteadyPerSecond > 0.0 ? p.SteadyPerSecond : p.PerSecond));   // the last minutes' rate: the 30 s one swings 3x
     }
 

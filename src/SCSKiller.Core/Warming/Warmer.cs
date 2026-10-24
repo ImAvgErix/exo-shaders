@@ -426,6 +426,7 @@ sealed class WarmRun : IWarmRun
     readonly IWarmHost _host;
     readonly object _lock = new();
     readonly TimeSpan _stuckAfter;
+    readonly Stopwatch _clock = new();   // the warm's time, stopped while it is paused (a game plays): its rate is the compile's
     volatile TaskCompletionSource _doneSeen = new(TaskCreationOptions.RunContinuationsAsynchronously);   // the final done event, or a stopping one
     bool _paused, _stopping;
     volatile string? _ended;   // why Stop had to end the process
@@ -447,7 +448,7 @@ sealed class WarmRun : IWarmRun
             catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return 0; }
         }
         long before = Usage();
-        var clock = Stopwatch.StartNew();
+        _clock.Start();
         var stderr = new System.Collections.Concurrent.ConcurrentQueue<string>();
         var skipKeys = new HashSet<string>(o.SkipKeys ?? [], StringComparer.OrdinalIgnoreCase);
         // old crashers each process creates alone first: the proxy passes over those behind its start or of another pass
@@ -651,7 +652,7 @@ sealed class WarmRun : IWarmRun
             }
             var failed = carried + (lastCarried ? 0 : last?.Failed ?? 0);
             var skips = carriedSkips + (lastCarried ? 0 : last?.DriverSkipped ?? 0);
-            return new WarmResult(outcome, Whole(last?.Done ?? from), passes?.Total ?? last?.Total ?? 0, failed, clock.Elapsed, growth,
+            return new WarmResult(outcome, Whole(last?.Done ?? from), passes?.Total ?? last?.Total ?? 0, failed, _clock.Elapsed, growth,
                 Path.Combine(stage ?? Path.Combine(workDir, "stage"), "scskiller.log"), outcome == WarmOutcome.Failed ? error : null,
                 Crashed: crashed.Count > 0 ? crashed : null, DriverSkipped: skips, Resumable: resumable && outcome == WarmOutcome.Failed && _ended == null,
                 AftermathDropped: dropped, CacheKeysAdded: added.Count > 0 ? added : null, Full: outcome == WarmOutcome.Completed ? full : null,
@@ -715,6 +716,7 @@ sealed class WarmRun : IWarmRun
             if (_paused || _stopping || _p.HasExited) return;
             _p.Suspend(true);
             _paused = true;
+            _clock.Stop();
         }
     }
 
@@ -725,6 +727,7 @@ sealed class WarmRun : IWarmRun
             if (!_paused) return;
             _p.Suspend(false);
             _paused = false;
+            _clock.Start();
         }
     }
 

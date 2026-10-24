@@ -425,7 +425,10 @@ public sealed record GameState(
     long? CacheInUse = null,   // NVIDIA: of CacheOnDisk, what its files hold (NvidiaAppCache.UsedOf); null = not read, or another vendor
     long? WindowsCache = null,   // NVIDIA from 621: the bytes of its own D3DSCache folders on record, not in CacheOnDisk; null = none
     long? DeliveredShaders = null,   // the bytes of its Advanced Shader Delivery dbs (D3DSCache.Delivered); null = none
-    bool? DeliveryFits = null)   // one of them was compiled by this driver (D3DSCache.Fits); null = not known, or none
+    bool? DeliveryFits = null,   // one of them was compiled by this driver (D3DSCache.Fits); null = not known, or none
+    TimeSpan? EstimateLow = null,   // the next compile may take as little as this: a stale game's new pipelines alone, its cache still holding the rest (App.CompileEstimate.Of); null = EstimatedWarmTime
+    bool EstimateLearned = false,   // EstimatedWarmTime is from this game's own compile on this driver (App.CompileEstimate.RateFor), not a stand-in rate
+    bool LastWarmCold = false)      // LastWarmTime is a compile that started cold, not a rewarm onto a cache that held the game (App.GameRecord.LastWarmCold)
 {
     /// <summary>What its compiled cache takes on disk: the driver's part and Windows'. Null = unknown.</summary>
     public long? DiskBytes => CacheOnDisk is null && WindowsCache is null ? null : (CacheOnDisk ?? 0) + (WindowsCache ?? 0);

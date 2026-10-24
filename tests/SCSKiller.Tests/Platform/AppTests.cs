@@ -7526,7 +7526,7 @@ public partial class AppTests : IDisposable
         var s = k.Games.Single();
         var rec = k.Store.LoadGame(_game.Id);
         Assert.Equal(15000, ScsKiller.PlanItems(s.Plan));
-        Assert.Equal(TimeSpan.FromSeconds(15000 / rec.PsoPerSecond!.Value), s.EstimatedWarmTime);
+        Assert.Equal(TimeSpan.FromSeconds(15000 / CompileEstimate.PrepItemsPerSecond + 15000 / rec.PsoPerSecond!.Value), s.EstimatedWarmTime);   // reading and preparing the files, then its pipelines
         Assert.Equal(15000 * (long)rec.BytesPerPso!.Value, s.EstimatedCacheBytes);
         Assert.Equal(rec.PsoPerSecond, ScsKiller.MeasuredRate([s]));
     }
@@ -7552,7 +7552,7 @@ public partial class AppTests : IDisposable
         var rec = k.Store.LoadGame(_game.Id);
         Assert.Equal(1000.0, rec.PsoPerSecond);
         Assert.Equal(20000.0 * 1024 / 10000, rec.BytesPerPso);
-        Assert.Equal(TimeSpan.FromSeconds(10), s.EstimatedWarmTime);
+        Assert.Equal(TimeSpan.FromSeconds(10000 / CompileEstimate.PrepItemsPerSecond + 10), s.EstimatedWarmTime);
 
         var after = Killer(new FakeReader(new EngineInfo("Unreal", "4.26", null, "D3D12", false, null)), driver: "101.00");
         await after.ScanAsync(default);
@@ -8055,7 +8055,7 @@ public partial class AppTests : IDisposable
         await k.WhenQueueIdle().WaitAsync(TimeSpan.FromSeconds(10));
         var s = k.Games.Single();
         // the recorded PSOs at the careful rate, the rest at the game's measured fast rate (10000 in 10 s)
-        var careful = TimeSpan.FromSeconds(1000 / ScsKiller.DefaultCarefulPsoPerSecond + 9000 / 1000.0);
+        var careful = TimeSpan.FromSeconds(10000 / CompileEstimate.PrepItemsPerSecond + 9000 / 1000.0) + TimeSpan.FromSeconds(1000 / ScsKiller.DefaultCarefulPsoPerSecond);
         Assert.Equal((GameStatus.Warmed, "warmed for driver 100.01"), (s.Status, s.StatusReason));
         Assert.Equal(new CarefulCompile(false, null, careful, 1000), s.Careful);
         Assert.Equal((20, 0, 0), (warmer.Options!.Threads, warmer.Options.CarefulThreads, warmer.Passes));
@@ -8069,7 +8069,7 @@ public partial class AppTests : IDisposable
         Assert.Equal(0.75, s.Careful!.LaunchCompiled);
         Assert.Equal("partly warmed for driver 100.01: 75% of the 400 pipelines its first launch created still compiled. " +
                      $"A careful compile ({ScsKiller.AmdCarefulThreads} threads, in passes) reaches more of them, in about {ScsKiller.Duration(careful)}", s.StatusReason);
-        Assert.Equal(TimeSpan.FromSeconds(10), s.EstimatedWarmTime);   // the fast compile's, measured
+        Assert.Equal(TimeSpan.FromSeconds(10000 / CompileEstimate.PrepItemsPerSecond + 10), s.EstimatedWarmTime);   // the fast compile's, measured
 
         k.SetCarefulCompile(_game.Id, true);
         await Task.Delay(20);   // the next warm ends after both launches
@@ -12906,11 +12906,11 @@ public partial class AppTests : IDisposable
         k.Store.SaveGame(second.Id, rec);
         await k.ScanAsync(default);
         TimeSpan? Estimate() => k.Games.Single(s => s.Game.Id == second.Id).EstimatedWarmTime;
-        Assert.Equal(TimeSpan.FromSeconds(4800 / ScsKiller.DefaultAmdPsoPerSecond), Estimate());
+        Assert.Equal(TimeSpan.FromSeconds(4800 / CompileEstimate.PrepItemsPerSecond + 4800 / ScsKiller.DefaultAmdPsoPerSecond), Estimate());
 
         await WarmOnce(k, _game.Id);   // FakeWarmer: 10000 items in 10 s
         await k.ScanAsync(default);
-        Assert.Equal(TimeSpan.FromSeconds(4.8), Estimate());
+        Assert.Equal(TimeSpan.FromSeconds(4800 / CompileEstimate.PrepItemsPerSecond + 4800 / 1000.0), Estimate());
         Assert.Equal(ScsKiller.DefaultPsoPerSecond, ScsKiller.DefaultWarmRate(GpuVendor.Nvidia));
     }
 
@@ -12929,7 +12929,7 @@ public partial class AppTests : IDisposable
         k.Store.SaveGame(second.Id, rec);
         await k.ScanAsync(default);
         await k.ScanAsync(default);   // the estimate reads the games the scan before measured
-        Assert.Equal(TimeSpan.FromSeconds(4800 / 500.0), k.Games.Single(s => s.Game.Id == second.Id).EstimatedWarmTime);
+        Assert.Equal(TimeSpan.FromSeconds(4800 / CompileEstimate.PrepItemsPerSecond + 4800 / 500.0), k.Games.Single(s => s.Game.Id == second.Id).EstimatedWarmTime);
     }
 
     [Fact]

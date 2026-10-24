@@ -74,6 +74,7 @@ public sealed class GameRecord
     public string? WarmedDriverId { get; set; }              // what staleness compares (ScsKiller.DriverId); null = an earlier build's warm
     public DateTimeOffset? WarmedAt { get; set; }
     public TimeSpan? LastWarmTime { get; set; }
+    public bool? LastWarmCold { get; set; }                  // ...and it started cold (CompileEstimate.Rewarm): a rewarm's time isn't a compile's; null = an earlier build's (CompileEstimate.Migrate)
     public long? LastCacheGrowthBytes { get; set; }
     public long? LastWarmFailed { get; set; }                // the last complete warm: PSOs the driver rejected
     public long? LastWarmSkipped { get; set; }               // ...and PSOs skipped: a shader not in this install (never replayed)
@@ -479,9 +480,9 @@ public sealed class AppStore(string dataDir)
     public Dictionary<string, string> LoadNotified() => Load<Dictionary<string, string>>(Path.Combine(DataDir, "notified.json")) ?? [];
     public void SaveNotified(Dictionary<string, string> notified) => Save(Path.Combine(DataDir, "notified.json"), notified);
 
-    /// <summary>Vendor -> warm rate (PSO/s) of the first complete warm measured on this PC, for games not warmed yet.</summary>
-    // keyed "<vendor>|<driver id>"; an earlier build's vendor-only keys are never read
-    public Dictionary<string, double> LoadWarmRates() => Load<Dictionary<string, double>>(Path.Combine(DataDir, "warmrates.json")) ?? [];
+    /// <summary>"&lt;vendor&gt;|&lt;driver id&gt;[|noflush]" -> warm rate (PSO/s) of the last cold warm on that driver, for games
+    /// not warmed yet; an earlier build's vendor-only keys go (<see cref="CompileEstimate.MigrateWarmRates"/>).</summary>
+    public Dictionary<string, double> LoadWarmRates() => CompileEstimate.MigrateWarmRates(Load<Dictionary<string, double>>(Path.Combine(DataDir, "warmrates.json")) ?? []);
     public void SaveWarmRates(Dictionary<string, double> rates) => Save(Path.Combine(DataDir, "warmrates.json"), rates);
 
     /// <summary>Update channel -> signed_at of the newest signed feed accepted (FeedTrust: no replay of an older feed).</summary>
@@ -552,6 +553,7 @@ public sealed class AppStore(string dataDir)
         // a plan saved under another data folder (the portable build's copy, a moved portable folder): the one in this game's folder
         if (r.Plan is { } p && Path.GetDirectoryName(p.FilePath) != GameDir(gameId) && Path.Combine(GameDir(gameId), Path.GetFileName(p.FilePath)) is var here && File.Exists(here))
             r.Plan = p with { FilePath = here };
+        CompileEstimate.Migrate(r);   // before the held copy: read the same way at every load, never a change a save writes over another path's
         _held.AddOrUpdate(r, JsonSerializer.SerializeToNode(r, Json)!.AsObject());
         return r;
     }
